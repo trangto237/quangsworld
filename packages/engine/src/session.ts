@@ -1,0 +1,83 @@
+import type { ConceptState, Mission, Question } from '@atlas/shared';
+import { pickQuestion } from '@atlas/knowledge';
+import { targetDifficulty } from './irt';
+import { applyAnswer, newConceptState, scheduleReview } from './mastery';
+
+/**
+ * Drives a single mission: picks the next question (interleaving the mission's
+ * concepts, pitched at each concept's current mastery, re-queuing missed
+ * concepts), applies answers to mastery, and reschedules reviews at the end.
+ */
+export class MissionSession {
+  readonly mission: Mission;
+  states: Record<string, ConceptState>;
+  private seen = new Set<string>();
+  private perConcept = new Map<string, { n: number; correct: number }>();
+  private retry: string[] = [];
+  private turn = 0;
+  answered = 0;
+  correct = 0;
+  bestStreak = 0;
+  private streak = 0;
+
+  constructor(mission: Mission, states: Record<string, ConceptState>, private rand: () => number = Math.random) {
+    this.mission = mission;
+    this.states = { ...states };
+    for (const c of mission.concepts) this.states[c] ??= newConceptState(c);
+  }
+
+  next(): Question | undefined {
+    const cs = this.mission.concepts;
+    // A missed concept comes back two questions later (spacing within the session).
+    let conceptId = this.retry.length && this.turn % 2 === 0 ? this.retry.shift()! : cs[this.turn % cs.length];
+    this.turn++;
+    for (let i = 0; i <= cs.length; i++) {
+      const d = targetDifficulty(this.states[conceptId].mastery);
+      const q = pickQuestion({ conceptId, difficulty: d, exclude: this.seen, rand: this.rand });
+      if (q) {
+        this.seen.add(q.id);
+        return q;
+      }
+      conceptId = cs[(cs.indexOf(conceptId) + 1) % cs.length];
+    }
+    // Everything seen: allow repeats rather than stalling the battle.
+    this.seen.clear();
+    const q = pickQuestion({ conceptId: cs[0], difficulty: targetDifficulty(this.states[cs[0]].mastery), rand: this.rand });
+    if (q) this.seen.add(q.id);
+    return q;
+  }
+
+  answer(q: Question, correct: boolean, msSpent: number, now = Date.now()): ConceptState {
+    const s = applyAnswer(this.states[q.conceptId] ?? newConceptState(q.conceptId), { correct, difficulty: q.difficulty, msSpent, now });
+    this.states[q.conceptId] = s;
+    const pc = this.perConcept.get(q.conceptId) ?? { n: 0, correct: 0 };
+    pc.n++;
+    if (correct) pc.correct++;
+    this.perConcept.set(q.conceptId, pc);
+    this.answered++;
+    if (correct) {
+      this.correct++;
+      this.streak++;
+      this.bestStreak = Math.max(this.bestStreak, this.streak);
+    } else {
+      this.streak = 0;
+      if (!this.retry.includes(q.conceptId)) this.retry.push(q.conceptId);
+    }
+    return s;
+  }
+
+  get accuracy() {
+    return this.answered ? this.correct / this.answered : 0;
+  }
+
+  get currentStreak() {
+    return this.streak;
+  }
+
+  /** Final states with spaced-repetition schedules updated from session accuracy. */
+  finish(now = Date.now()): Record<string, ConceptState> {
+    const out: Record<string, ConceptState> = {};
+    for (const [cid, pc] of this.perConcept) out[cid] = scheduleReview(this.states[cid], pc.correct / pc.n, now);
+    return out;
+  }
+}

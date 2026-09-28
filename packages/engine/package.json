@@ -1,0 +1,12 @@
+{
+  "name": "@atlas/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@atlas/knowledge": "workspace:*",
+    "@atlas/shared": "workspace:*"
+  },
+  "scripts": { "typecheck": "tsc -p ." }
+}

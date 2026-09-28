@@ -1,0 +1,22 @@
+{
+  "name": "learning-os",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Learning OS (Project Atlas) — game-first adaptive learning platform",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:kid": "pnpm --filter @atlas/kid dev",
+    "dev:parent": "pnpm --filter @atlas/parent dev",
+    "build": "pnpm -r --filter './apps/*' build && node scripts/merge-dist.mjs",
+    "preview": "node scripts/serve.mjs",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

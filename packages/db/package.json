@@ -1,0 +1,19 @@
+{
+  "name": "@atlas/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@atlas/engine": "workspace:*",
+    "@atlas/knowledge": "workspace:*",
+    "@atlas/shared": "workspace:*",
+    "drizzle-orm": "^0.45.3",
+    "sql.js": "^1.14.2"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.11",
+    "fake-indexeddb": "^6.2.5"
+  },
+  "scripts": { "typecheck": "tsc -p ." }
+}
