@@ -17,6 +17,8 @@ export interface HeatCell {
   domain: string;
   mastery: number;
   attempts: number;
+  /** Has a mastery estimate (from placement or practice). */
+  assessed: boolean;
   recentAccuracy: number | null;
 }
 
@@ -96,6 +98,7 @@ export function computeInsights({ states, attempts, sessions, now = Date.now() }
       domain: c.domain,
       mastery: Math.round(s?.mastery ?? 0),
       attempts: s?.attempts ?? 0,
+      assessed: !!s,
       recentAccuracy: r && r.n ? r.c / r.n : null,
     };
   });
@@ -110,7 +113,7 @@ export function computeInsights({ states, attempts, sessions, now = Date.now() }
       mastery: ss.length ? Math.round(ss.reduce((a, s) => a + s.mastery, 0) / ss.length) : 0,
       mastered: ss.filter(isMastered).length,
       total: cs.length,
-      practised: ss.filter((s) => s.attempts > 0).length,
+      practised: ss.length,
     };
   });
 

@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "@atlas/ui/styles.css";
+@source "../../../packages/ui/src";
+
+/* Chart tokens: validated categorical slots (subjects) + one-hue sequential ramp, stepped separately for dark. */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec; --seq-400: #3987e5; --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+  --viz-grid: #e5e7eb;
+  --viz-empty: #f1f5f9;
+}
+.dark {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --seq-100: #104281; --seq-200: #184f95; --seq-300: #1c5cab; --seq-400: #256abf; --seq-500: #3987e5; --seq-600: #6da7ec; --seq-700: #b7d3f6;
+  --viz-grid: #1e293b;
+  --viz-empty: #1e293b;
+}

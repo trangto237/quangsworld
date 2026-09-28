@@ -4,16 +4,18 @@ import { hashString, rng, shuffle } from '@atlas/shared';
 
 export interface SubjectMeta {
   id: SubjectId;
+  /** Categorical slot (1-based) — the parent app maps it to a light/dark-validated series color. */
+  slot: number;
   name: string;
   emoji: string;
   color: string;
 }
 
 export const SUBJECTS: SubjectMeta[] = [
-  { id: 'english', name: 'English', emoji: '🗣️', color: '#6366f1' },
-  { id: 'math', name: 'Mathematics', emoji: '📐', color: '#10b981' },
-  { id: 'logic', name: 'Logic', emoji: '♞', color: '#f59e0b' },
-  { id: 'literature', name: 'Literature', emoji: '📜', color: '#ec4899' },
+  { id: 'english', slot: 1, name: 'English', emoji: '🗣️', color: '#2a78d6' },
+  { id: 'math', slot: 2, name: 'Mathematics', emoji: '📐', color: '#eb6834' },
+  { id: 'logic', slot: 3, name: 'Logic', emoji: '♞', color: '#1baf7a' },
+  { id: 'literature', slot: 4, name: 'Literature', emoji: '📜', color: '#eda100' },
 ];
 
 export interface World {

@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
+  },
   "dependencies": {
     "@atlas/engine": "workspace:*",
     "@atlas/knowledge": "workspace:*",
@@ -15,5 +18,7 @@
     "@types/sql.js": "^1.4.11",
     "fake-indexeddb": "^6.2.5"
   },
-  "scripts": { "typecheck": "tsc -p ." }
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
 }
