@@ -156,17 +156,17 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
           <div className="truncate font-display font-semibold">{mission.title}</div>
           {concept && <div className="truncate text-xs text-white/50">{concept.name}</div>}
         </div>
-        <div className="ml-auto flex items-center gap-2 font-bold tabular-nums sm:gap-4">
-          <span className="rounded-full bg-amber-400/20 px-3 py-1 text-amber-300" title="Energy">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap font-bold tabular-nums sm:gap-4">
+          <span className="rounded-full bg-amber-400/20 px-2.5 py-1 text-amber-300 sm:px-3" title="Energy">
             ⚡ {hud?.energy ?? 0}
           </span>
-          <span title="Castle hearts" aria-label={`${hud?.hearts ?? 3} hearts`}>
+          <span className="text-xs sm:text-sm" title="Castle hearts" aria-label={`${hud?.hearts ?? 3} hearts`}>
             {Array.from({ length: hud?.maxHearts ?? 3 }, (_, i) => (i < (hud?.hearts ?? 3) ? '❤️' : '🖤')).join('')}
           </span>
           <span className="hidden text-white/70 sm:inline" title="Enemies defeated">
             👾 {hud?.defeated ?? 0}/{hud?.total ?? '?'}
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1" title="Answer streak">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 sm:px-3" title="Answer streak">
             🔥 {session.currentStreak}
           </span>
         </div>
@@ -176,7 +176,7 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
         {/* Battlefield */}
         <div className="flex flex-col lg:flex-1">
           <div className="relative">
-            <div ref={canvasRef} className="aspect-video w-full bg-slate-900" />
+            <div ref={canvasRef} className="mx-auto aspect-video w-full bg-slate-900 lg:max-w-[calc((100dvh-8.5rem)*16/9)]" />
             {loading && <div className="absolute inset-0 grid place-items-center text-white/60">Summoning the battlefield…</div>}
             {hud?.bossHp != null && (
               <div className="absolute left-1/2 top-2 w-2/3 -translate-x-1/2">
@@ -225,7 +225,10 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
         {/* Question panel */}
         <aside className="border-t border-white/10 bg-slate-100 p-4 text-slate-900 lg:w-[440px] lg:border-l lg:border-t-0 dark:bg-slate-900 dark:text-slate-100">
           {question ? (
-            <QuestionCard question={question} onAnswer={onAnswer} compact />
+            <>
+              <QuestionCard question={question} onAnswer={onAnswer} compact />
+              <p className="mt-4 hidden text-xs text-slate-500 lg:block">Keyboard: 1–4 to answer{question.audio ? ' · R to replay' : ''}</p>
+            </>
           ) : (
             !loading && <p className="text-center text-slate-500">No more challenges — finish the battle!</p>
           )}
