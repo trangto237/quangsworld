@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal, useQuery, useRepo } from '@atlas/ui';
 import type { StudentProfile } from '@atlas/db';
 import { useKid } from '../store';
+import { T, TB, tr } from '../i18n';
 
 export function ProfilePicker() {
   const repo = useRepo();
@@ -42,15 +43,21 @@ export function ProfilePicker() {
         <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Atlas</h1>
         {!family || students.length === 0 ? (
           <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
-            <p className="text-lg font-semibold">Your adventure is almost ready!</p>
-            <p className="mt-2 text-white/80">Ask a parent to create your hero profile first.</p>
+            <p className="text-lg font-semibold">
+              <T en="Your adventure is almost ready!" />
+            </p>
+            <p className="mt-2 text-white/80">
+              <T en="Ask a parent to create your hero profile first." />
+            </p>
             <a href="/parent/" className="mt-5 inline-block rounded-xl bg-amber-400 px-5 py-3 font-display font-bold text-amber-950 shadow-[0_4px_0_#b45309]">
-              Open parent setup →
+              <TB en="Open parent setup →" />
             </a>
           </div>
         ) : (
           <>
-            <p className="mt-2 text-lg text-white/80">Who's playing?</p>
+            <p className="mt-2 text-lg text-white/80">
+              <T en="Who's playing?" />
+            </p>
             <div className="mt-8 flex flex-wrap justify-center gap-5">
               {students.map((s) => (
                 <button key={s.id} onClick={() => pick(s)} className="group flex w-32 flex-col items-center gap-2 rounded-2xl p-3 transition hover:bg-white/10">
@@ -61,18 +68,22 @@ export function ProfilePicker() {
               ))}
             </div>
             <a href="/parent/" className="mt-10 inline-block text-sm text-white/60 underline-offset-4 hover:underline">
-              Parent dashboard
+              <T en="Parent dashboard" />
             </a>
           </>
         )}
       </div>
-      <Modal open={!!pinFor} onClose={() => setPinFor(null)} title={`Hi ${pinFor?.name}! Enter your PIN`}>
+      <Modal open={!!pinFor} onClose={() => setPinFor(null)} title={tr('help', 'Hi {name}! Enter your PIN', { name: pinFor?.name ?? '' })}>
         <div className="flex justify-center gap-3" aria-live="polite">
           {[0, 1, 2, 3].map((i) => (
             <span key={i} className={`size-4 rounded-full ${i < pin.length ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
           ))}
         </div>
-        {error && <p className="mt-3 text-center text-sm font-semibold text-rose-600">Not quite — try again.</p>}
+        {error && (
+          <p className="mt-3 text-center text-sm font-semibold text-rose-600">
+            <T en="Not quite — try again." />
+          </p>
+        )}
         <div className="mt-5 grid grid-cols-3 gap-2">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, i) =>
             d === '' ? (

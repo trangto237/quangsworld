@@ -6,6 +6,8 @@ import type { ConceptDef } from '@atlas/shared';
 import { Button, Modal, cx, useQuery } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { useKid } from '../store';
+import { LESSONS_VI } from '@atlas/knowledge';
+import { T, TB, useLang } from '../i18n';
 
 export function WorldScreen({ student, worldId }: { student: StudentProfile; worldId: string }) {
   const go = useKid((s) => s.go);
@@ -13,6 +15,7 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const concepts = conceptsInWorld(world);
   const states = useQuery((r) => r.getStates(student.id), [student.id]);
   const [open, setOpen] = useState<ConceptDef | null>(null);
+  const lang = useLang();
 
   return (
     <div className="min-h-dvh text-white" style={{ background: `radial-gradient(circle at 30% 0%, ${world.color}, #020617 70%)` }}>
@@ -20,8 +23,12 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
       <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="text-center">
           <div className="text-6xl">{world.emoji}</div>
-          <h1 className="mt-2 font-display text-3xl font-bold">{world.name}</h1>
-          <p className="text-white/70">{world.blurb}</p>
+          <h1 className="mt-2 font-display text-3xl font-bold">
+            <T en={world.name} />
+          </h1>
+          <p className="text-white/70">
+            <T en={world.blurb} />
+          </p>
         </div>
         {/* A winding path of mission nodes */}
         <ol className="relative mx-auto mt-8 max-w-md">
@@ -36,7 +43,11 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
                   onClick={() => setOpen(c)}
                   className="relative w-[70%] rounded-2xl bg-slate-950/70 p-4 text-left ring-2 ring-white/10 backdrop-blur transition hover:ring-amber-300"
                 >
-                  {due && <span className="absolute -right-2 -top-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold">Review</span>}
+                  {due && (
+                    <span className="absolute -right-2 -top-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold">
+                      <T en="Review" />
+                    </span>
+                  )}
                   <div className="font-display text-lg font-semibold">{c.missionName}</div>
                   <div className="text-xs text-white/60">{c.name}</div>
                   <div className="mt-1 text-lg tracking-widest" aria-label={`${st} of 3 stars`}>
@@ -55,15 +66,23 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
             <p className="text-sm text-slate-500 dark:text-slate-400">{open.name}</p>
             {open.lesson && (
               <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                <b>📖 Scroll of wisdom:</b> {open.lesson}
+                <b>
+                  <T en="📖 Scroll of wisdom" />:
+                </b>{' '}
+                {open.lesson}
+                {lang !== 'en' && LESSONS_VI[open.id] && (
+                  <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">
+                    🇻🇳 {LESSONS_VI[open.id]}
+                  </span>
+                )}
               </div>
             )}
             <div className="mt-5 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={() => go({ name: 'battle', mission: conceptMission(open.id, 3), fromPlan: false })}>
-                ⚡ Quick (3 min)
+                <TB en="⚡ Quick (3 min)" />
               </Button>
               <Button variant="game" onClick={() => go({ name: 'battle', mission: conceptMission(open.id, 6), fromPlan: false })}>
-                ⚔️ Battle (6 min)
+                <TB en="⚔️ Battle (6 min)" />
               </Button>
             </div>
           </div>

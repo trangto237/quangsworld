@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TOWERS, loadBattle, type BattleConfig, type BattleController, type HudState, type Skin, type Theme, type TowerKind } from '@atlas/game';
 import { getConcept, type PresentedQuestion } from '@atlas/knowledge';
 import { Button, Modal, cx } from '@atlas/ui';
 import { QuestionCard } from './QuestionCard';
 import { stopSpeaking } from '../lib/speech';
+import { T, TB, tr, useLang } from '../i18n';
 
 export interface ArenaProps {
   title: string;
@@ -22,11 +23,13 @@ export interface ArenaProps {
   onEnd: (victory: boolean, retreated: boolean) => void;
   /** Note under a wrong answer during battle. */
   wrongNote?: string;
-  retreatText?: ReactNode;
+  retreatText?: string;
   /** Shown above the board until the first tower is built. */
   hint?: string;
   /** Called on any learner activity (for active-time tracking). */
   onActivity?: () => void;
+  /** Whether the tap-a-word glossary is allowed for a question (off for English in the placement trial). */
+  glossary?: (q: PresentedQuestion) => boolean;
   /** A liberation bar in the header (trial realms) instead of an enemy counter. */
   progress?: { value: number; max: number; label: string };
 }
@@ -48,6 +51,7 @@ export function BattleArena(p: ArenaProps) {
   const [confirmRetreat, setConfirmRetreat] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef(0);
+  const lang = useLang();
   const props = useRef(p);
   props.current = p;
 
@@ -143,7 +147,7 @@ export function BattleArena(p: ArenaProps) {
           </span>
           {p.progress ? (
             <span className="hidden items-center gap-2 text-xs text-white/70 sm:flex" title={p.progress.label}>
-              {p.progress.label}
+              <T en={p.progress.label} />
               <span className="h-2 w-24 overflow-hidden rounded-full bg-white/15">
                 <span className="block h-full bg-gradient-to-r from-amber-300 to-pink-400 transition-all" style={{ width: `${(p.progress.value / p.progress.max) * 100}%` }} />
               </span>
@@ -163,7 +167,11 @@ export function BattleArena(p: ArenaProps) {
         <div className="flex flex-col lg:flex-1">
           <div className="relative">
             <div ref={canvasRef} className="mx-auto aspect-video w-full bg-slate-900 lg:max-w-[calc((100dvh-8.5rem)*16/9)]" />
-            {loading && <div className="absolute inset-0 grid place-items-center text-white/60">Summoning the battlefield…</div>}
+            {loading && (
+              <div className="absolute inset-0 grid place-items-center text-white/60">
+                <T en="Summoning the battlefield…" />
+              </div>
+            )}
             {hud?.bossHp != null && (
               <div className="absolute left-1/2 top-2 w-2/3 -translate-x-1/2">
                 <div className="h-3 overflow-hidden rounded-full bg-black/50 ring-1 ring-red-400">
@@ -171,7 +179,11 @@ export function BattleArena(p: ArenaProps) {
                 </div>
               </div>
             )}
-            {toast && <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 animate-pop whitespace-nowrap rounded-full bg-black/70 px-4 py-2 text-sm font-bold">{toast}</div>}
+            {toast && (
+              <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 animate-pop whitespace-nowrap rounded-2xl bg-black/70 px-4 py-2 text-center text-sm font-bold">
+                <TB en={toast} />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 overflow-x-auto border-y border-white/10 bg-slate-900 px-3 py-2">
             {towers.map((k) => {
@@ -186,38 +198,55 @@ export function BattleArena(p: ArenaProps) {
                     selected === k ? 'bg-amber-400/20 ring-amber-400' : 'bg-white/5 ring-white/10 hover:ring-white/30',
                     !afford && 'opacity-50',
                   )}
-                  title={`${t.name}: ${t.blurb} Carries ${t.ammo} shots.`}
+                  title={`${tr(lang, t.name)}: ${t.blurb} (➶${t.ammo})`}
                 >
                   <span className="text-3xl leading-none">{t.glyph}</span>
                   <span className="text-left text-xs">
-                    <span className="block font-bold">{t.name}</span>
+                    <span className="block font-bold">
+                      <TB en={t.name} />
+                    </span>
                     <span className="text-amber-300">⚡{t.cost}</span> <span className="text-sky-300">➶{t.ammo}</span>
                   </span>
                 </button>
               );
             })}
-            <p className="ml-2 hidden text-xs text-white/50 xl:block">Tap a square to build · tap a tower to upgrade · correct answers reload ➶ ammo</p>
+            <p className="ml-2 hidden text-xs text-white/50 xl:block">
+              <T en="Tap a square to build · tap a tower to upgrade · correct answers reload ➶ ammo" />
+            </p>
           </div>
-          {p.hint && hud && hud.towersOnField === 0 && <p className="bg-indigo-900/60 px-3 py-2 text-center text-sm text-indigo-100">💡 {p.hint}</p>}
+          {p.hint && hud && hud.towersOnField === 0 && (
+            <p className="bg-indigo-900/60 px-3 py-2 text-center text-sm text-indigo-100">
+              💡 <T en={p.hint} />
+            </p>
+          )}
         </div>
 
         <aside className="border-t border-white/10 bg-slate-100 p-4 text-slate-900 lg:w-[440px] lg:border-l lg:border-t-0 dark:bg-slate-900 dark:text-slate-100">
           {question ? (
             <>
-              <QuestionCard question={question} onAnswer={onAnswer} compact wrongNote={p.wrongNote} />
-              <p className="mt-4 hidden text-xs text-slate-500 lg:block">Keyboard: 1–4 to answer{question.audio ? ' · R to replay' : ''}</p>
+              <QuestionCard question={question} onAnswer={onAnswer} compact wrongNote={p.wrongNote} glossary={p.glossary ? p.glossary(question) : true} />
+              <p className="mt-4 hidden text-xs text-slate-500 lg:block">
+                <T en="Keyboard: 1–4 to answer" />
+                {question.audio ? <T en=" · R to replay" /> : null}
+              </p>
             </>
           ) : (
-            !loading && <p className="text-center text-slate-500">Hold the line — finish off the Glitches!</p>
+            !loading && (
+              <p className="text-center text-slate-500">
+                <T en="Hold the line — finish off the Glitches!" />
+              </p>
+            )
           )}
         </aside>
       </div>
 
-      <Modal open={confirmRetreat} onClose={() => setConfirmRetreat(false)} title="Leave the battle?">
-        <div className="text-sm text-slate-600 dark:text-slate-300">{p.retreatText ?? 'Your answers so far are saved and still count.'}</div>
+      <Modal open={confirmRetreat} onClose={() => setConfirmRetreat(false)} title={tr(lang, 'Leave the battle?')}>
+        <div className="text-sm text-slate-600 dark:text-slate-300">
+          <T en={p.retreatText ?? 'Your answers so far are saved and still count.'} />
+        </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setConfirmRetreat(false)}>
-            Keep fighting
+            <TB en="Keep fighting" />
           </Button>
           <Button
             variant="danger"
@@ -226,7 +255,7 @@ export function BattleArena(p: ArenaProps) {
               end(false, true);
             }}
           >
-            Leave
+            <TB en="Leave" />
           </Button>
         </div>
       </Modal>

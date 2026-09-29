@@ -5,6 +5,7 @@ import { Button, cx, useQuery, useRepo } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { getEquipped, setEquipped } from '../lib/equipped';
 import { useKid } from '../store';
+import { T, TB, tr, useLang } from '../i18n';
 
 const TABS: { id: ShopCategory; label: string }[] = [
   { id: 'tower', label: '♜ Towers' },
@@ -20,6 +21,7 @@ export function Shop({ student }: { student: StudentProfile }) {
   const go = useKid((s) => s.go);
   const [tab, setTab] = useState<ShopCategory>('tower');
   const [msg, setMsg] = useState<string | null>(null);
+  const lang = useLang();
   const wallet = useQuery((r) => r.getWallet(student.id), [student.id]);
   const owned = useQuery((r) => r.listUnlocks(student.id), [student.id]);
   const equipped = useQuery((r) => getEquipped(r, student.id), [student.id]);
@@ -28,7 +30,7 @@ export function Shop({ student }: { student: StudentProfile }) {
   const buy = async (item: ShopItem) => {
     try {
       await repo.purchase(student.id, item.id);
-      setMsg(`${item.emoji} ${item.name} unlocked!`);
+      setMsg(`${item.emoji} ${tr(lang, '{name} unlocked!', { name: tr(lang, item.name) })}`);
     } catch (e) {
       setMsg((e as Error).message);
     }
@@ -50,8 +52,12 @@ export function Shop({ student }: { student: StudentProfile }) {
     <div className="min-h-dvh bg-gradient-to-b from-slate-900 to-slate-950 text-white">
       <TopBar student={student} back={() => go({ name: 'hub' })} />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <h1 className="font-display text-3xl font-bold">🛒 The Armoury</h1>
-        <p className="text-white/60">Spend the coins and gems you earn in battle.</p>
+        <h1 className="font-display text-3xl font-bold">
+          <T en="🛒 The Armoury" />
+        </h1>
+        <p className="text-white/60">
+          <T en="Spend the coins and gems you earn in battle." />
+        </p>
         <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
           {TABS.map((t) => (
             <button
@@ -59,7 +65,7 @@ export function Shop({ student }: { student: StudentProfile }) {
               onClick={() => setTab(t.id)}
               className={cx('shrink-0 rounded-full px-4 py-2 text-sm font-bold', tab === t.id ? 'bg-amber-400 text-amber-950' : 'bg-white/10 hover:bg-white/15')}
             >
-              {t.label}
+              <TB en={t.label} />
             </button>
           ))}
         </div>
@@ -74,13 +80,19 @@ export function Shop({ student }: { student: StudentProfile }) {
                 <div className="flex items-center gap-3">
                   <span className="text-5xl">{item.emoji}</span>
                   <div>
-                    <div className="font-display text-lg font-semibold">{item.name}</div>
-                    <div className="text-sm text-white/60">{item.description}</div>
+                    <div className="font-display text-lg font-semibold">
+                      <T en={item.name} />
+                    </div>
+                    <div className="text-sm text-white/60">
+                      <T en={item.description} />
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {have ? (
-                    <span className="text-sm font-bold text-emerald-400">✓ Owned</span>
+                    <span className="text-sm font-bold text-emerald-400">
+                      <T en="✓ Owned" />
+                    </span>
                   ) : (
                     <span className="text-sm font-bold tabular-nums">
                       🪙 {item.coins}
@@ -89,11 +101,11 @@ export function Shop({ student }: { student: StudentProfile }) {
                   )}
                   {equippable ? (
                     <Button variant={isEquipped(item) ? 'secondary' : 'primary'} onClick={() => equip(item)}>
-                      {isEquipped(item) ? 'Unequip' : 'Equip'}
+                      <TB en={isEquipped(item) ? 'Unequip' : 'Equip'} />
                     </Button>
                   ) : !have ? (
                     <Button variant="game" disabled={locked || !canAfford(wallet, item)} onClick={() => void buy(item)}>
-                      {locked ? `🔒 Level ${item.minLevel}` : 'Unlock'}
+                      {locked ? <TB en="🔒 Level {n}" vars={{ n: item.minLevel ?? 1 }} /> : <TB en="Unlock" />}
                     </Button>
                   ) : null}
                 </div>

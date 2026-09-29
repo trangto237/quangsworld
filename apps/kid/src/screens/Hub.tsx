@@ -6,6 +6,7 @@ import { Button, cx, useQuery } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { todayPlan } from '../lib/plan';
 import { useKid } from '../store';
+import { T, TB } from '../i18n';
 
 const KIND_ICON = { learn: '⚔️', review: '🔁', boss: '🐉' } as const;
 
@@ -27,11 +28,15 @@ export function Hub({ student }: { student: StudentProfile }) {
           <div className="rounded-[22px] bg-slate-950/85 p-5 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-amber-300">Today's quest · {plan.minutes} min</p>
-                <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">{allDone ? 'Quest complete! 🏆' : 'Your path for today'}</h1>
+                <p className="text-xs font-bold uppercase tracking-widest text-amber-300">
+                  <T en="Today's quest · {n} min" vars={{ n: plan.minutes }} />
+                </p>
+                <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
+                  <T en={allDone ? 'Quest complete! 🏆' : 'Your path for today'} />
+                </h1>
               </div>
               <div className="text-right text-sm text-white/70">
-                <span className="font-bold text-white tabular-nums">{minutesToday}</span> / {plan.minutes} min played today
+                <T en="{m} / {n} min played today" vars={{ m: minutesToday, n: plan.minutes }} />
                 <div className="mt-1 h-2 w-40 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full bg-amber-400" style={{ width: `${Math.min(100, (minutesToday / plan.minutes) * 100)}%` }} />
                 </div>
@@ -50,7 +55,7 @@ export function Hub({ student }: { student: StudentProfile }) {
                   >
                     <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-white/60">
                       <span>
-                        {i + 1}. {m.duration} min · {m.label}
+                        {i + 1}. <T en="{d} min" vars={{ d: m.duration }} /> · <T en={m.label} />
                       </span>
                       <span className="text-lg">{m.done ? '✅' : KIND_ICON[m.kind]}</span>
                     </span>
@@ -65,7 +70,7 @@ export function Hub({ student }: { student: StudentProfile }) {
             </ol>
             {next && (
               <Button variant="game" className="mt-5 w-full py-4 text-lg sm:w-auto sm:px-10" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
-                ▶ Play: {next.title}
+                <TB en="▶ Play: {title}" vars={{ title: next.title }} />
               </Button>
             )}
           </div>
@@ -74,14 +79,16 @@ export function Hub({ student }: { student: StudentProfile }) {
         {/* Worlds */}
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-2xl font-bold">Worlds</h2>
+            <h2 className="font-display text-2xl font-bold">
+              <T en="Worlds" />
+            </h2>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => go({ name: 'mistakes' })}>
-                📕 Mistake Book
+                <TB en="📕 Mistake Book" />
                 {openMistakes > 0 && <span className="rounded-full bg-rose-500 px-2 text-xs text-white">{openMistakes}</span>}
               </Button>
               <Button variant="secondary" onClick={() => go({ name: 'shop' })}>
-                🛒 Armoury
+                <TB en="🛒 Armoury" />
               </Button>
             </div>
           </div>
@@ -99,7 +106,9 @@ export function Hub({ student }: { student: StudentProfile }) {
                 >
                   {due > 0 && <span className="absolute right-2 top-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold">🔁 {due}</span>}
                   <div className="text-4xl transition group-hover:scale-110">{w.emoji}</div>
-                  <div className="mt-2 font-display text-lg font-semibold leading-tight">{w.name}</div>
+                  <div className="mt-2 font-display text-lg font-semibold leading-tight">
+                    <TB en={w.name} />
+                  </div>
                   <div className="mt-1 text-xs text-white/70">
                     ⭐ {got}/{cs.length * 3}
                   </div>

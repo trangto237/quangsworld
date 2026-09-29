@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { Mistake, StudentProfile } from '@atlas/db';
-import { getConcept, present, worldOfConcept } from '@atlas/knowledge';
+import { getConcept, present, translatePrompt, worldOfConcept } from '@atlas/knowledge';
+import { T, TB, tr, useLang } from '../i18n';
 import { Button, Modal, Progress, useQuery, useRepo } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { QuestionCard } from '../components/QuestionCard';
@@ -18,6 +19,7 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
   const fixedThisWeek = useQuery((r) => r.listMistakes(student.id, { since: Date.now() - 7 * 86_400_000 }).filter((m) => m.resolvedAt).length, [student.id]);
   const [practice, setPractice] = useState<Mistake[] | null>(null);
   const [viewing, setViewing] = useState<Mistake | null>(null);
+  const lang = useLang();
 
   const groups = useMemo(() => {
     const g = new Map<string, Mistake[]>();
@@ -33,21 +35,33 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
       <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="font-display text-3xl font-bold">📕 Mistake Book</h1>
-            <p className="text-white/70">Every challenge you missed in battle. Get it right here to fix it — and earn 🪙 {COINS_PER_FIX} each.</p>
+            <h1 className="font-display text-3xl font-bold">
+              <T en="📕 Mistake Book" />
+            </h1>
+            <p className="text-white/70">
+              <T en="Every challenge you missed in battle. Get it right here to fix it — and earn 🪙 {n} each." vars={{ n: COINS_PER_FIX }} />
+            </p>
           </div>
           {open.length > 0 && (
             <Button variant="game" className="px-6 py-3" onClick={() => setPractice([...open].sort((a, b) => b.times - a.times))}>
-              Fix them ({open.length}) →
+              <TB en="Fix them ({n}) →" vars={{ n: open.length }} />
             </Button>
           )}
         </div>
-        {fixedThisWeek > 0 && <p className="mt-3 text-sm text-emerald-300">✨ {fixedThisWeek} fixed this week</p>}
+        {fixedThisWeek > 0 && (
+          <p className="mt-3 text-sm text-emerald-300">
+            <T en="✨ {n} fixed this week" vars={{ n: fixedThisWeek }} />
+          </p>
+        )}
         {open.length === 0 ? (
           <div className="mt-10 text-center">
             <div className="text-6xl">🌟</div>
-            <p className="mt-3 font-display text-xl">Your Mistake Book is empty!</p>
-            <p className="text-white/60">Mistakes from battles will appear here.</p>
+            <p className="mt-3 font-display text-xl">
+              <T en="Your Mistake Book is empty!" />
+            </p>
+            <p className="text-white/60">
+              <T en="Mistakes from battles will appear here." />
+            </p>
           </div>
         ) : (
           <div className="mt-6 space-y-4">
@@ -64,7 +78,7 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
                       <div className="text-xs text-white/60">{c?.name}</div>
                     </div>
                     <Button variant="secondary" onClick={() => setPractice(ms)}>
-                      Fix these ({ms.length})
+                      <TB en="Fix these ({n})" vars={{ n: ms.length }} />
                     </Button>
                   </div>
                   <ul className="mt-3 space-y-1.5">
@@ -73,7 +87,11 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
                         <button onClick={() => setViewing(m)} className="flex w-full items-center gap-3 rounded-xl bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10">
                           <span className="flex-1 truncate">{m.question.audio ? '🔊 ' : ''}{m.question.prompt}</span>
                           {m.times > 1 && <span className="shrink-0 rounded bg-rose-500/30 px-1.5 text-xs">×{m.times}</span>}
-                          {!m.reviewedAt && <span className="shrink-0 text-xs text-amber-300">new</span>}
+                          {!m.reviewedAt && (
+                            <span className="shrink-0 text-xs text-amber-300">
+                              <T en="new" />
+                            </span>
+                          )}
                         </button>
                       </li>
                     ))}
@@ -84,11 +102,16 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
           </div>
         )}
       </main>
-      <Modal open={!!viewing} onClose={() => setViewing(null)} title="Mistake">
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title={tr(lang, 'Mistake')}>
         {viewing && (
           <div>
             {viewing.question.passage && <p className="mb-2 max-h-36 overflow-y-auto rounded-xl bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">{viewing.question.passage}</p>}
             <p className="mb-3 font-semibold">{viewing.question.prompt}</p>
+            {lang !== 'en' && translatePrompt(viewing.question.prompt, viewing.conceptId) && (
+              <p lang="vi" className="-mt-2 mb-3 text-sm text-rose-900 dark:text-rose-200">
+                🇻🇳 {translatePrompt(viewing.question.prompt, viewing.conceptId)}
+              </p>
+            )}
             <Explanation question={viewing.question} picked={viewing.picked} />
             <Button
               className="mt-4 w-full"
@@ -97,7 +120,7 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
                 setViewing(null);
               }}
             >
-              Got it
+              <TB en="Got it" />
             </Button>
           </div>
         )}
@@ -152,19 +175,21 @@ function Practice({ student, queue, onExit }: { student: StudentProfile; queue: 
               />
             </div>
             <button className="mt-4 w-full text-center text-sm text-white/60 hover:underline" onClick={() => void finish()}>
-              Stop for now
+              <T en="Stop for now" />
             </button>
           </>
         ) : (
           <div className="animate-pop rounded-3xl bg-slate-950/80 p-8 text-center ring-1 ring-white/10">
             <div className="text-6xl">{fixed === queue.length ? '🌟' : '💪'}</div>
             <h1 className="mt-3 font-display text-3xl font-bold">
-              Fixed {fixed} of {queue.length}!
+              <T en="Fixed {f} of {n}!" vars={{ f: fixed, n: queue.length }} />
             </h1>
-            <p className="mt-2 text-white/70">{fixed < queue.length ? 'The rest stay in your book for another try.' : 'Your book is lighter already.'}</p>
+            <p className="mt-2 text-white/70">
+              <T en={fixed < queue.length ? 'The rest stay in your book for another try.' : 'Your book is lighter already.'} />
+            </p>
             <p className="mt-4 font-display text-2xl font-bold">🪙 +{fixed * COINS_PER_FIX}</p>
             <Button variant="game" className="mt-6 w-full py-4 text-lg" onClick={() => void finish()}>
-              Done
+              <TB en="Done" />
             </Button>
           </div>
         )}

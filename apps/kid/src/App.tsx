@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery } from '@atlas/ui';
 import { useKid } from './store';
+import { LangContext, type LangMode } from './i18n';
 import { ProfilePicker } from './screens/ProfilePicker';
 import { Placement } from './screens/Placement';
 import { Hub } from './screens/Hub';
@@ -11,6 +12,16 @@ import { Shop } from './screens/Shop';
 import { MistakeBook } from './screens/MistakeBook';
 
 export function App() {
+  const studentId = useKid((s) => s.studentId);
+  const lang = useQuery((r) => (studentId ? r.getKv<LangMode>(`lang:${studentId}`) : undefined) ?? 'help', [studentId]);
+  return (
+    <LangContext.Provider value={lang}>
+      <Screens />
+    </LangContext.Provider>
+  );
+}
+
+function Screens() {
   const { studentId, screen, go, logout } = useKid();
   const student = useQuery((r) => (studentId ? r.getStudent(studentId) : undefined), [studentId]);
 

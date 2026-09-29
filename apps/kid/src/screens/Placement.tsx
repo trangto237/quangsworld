@@ -10,6 +10,7 @@ import { BattleArena } from '../components/BattleArena';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
+import { T, TB } from '../i18n';
 
 const REALMS: Record<string, { art: string; power: string; story: string }> = {
   'word-hunter': { art: '🏹', power: 'Word Power', story: 'Glitches have stolen the words of the forest. Win them back!' },
@@ -20,7 +21,7 @@ const REALMS: Record<string, { art: string; power: string; story: string }> = {
 };
 const REALM_COINS = 40;
 
-type Phase = { kind: 'welcome' } | { kind: 'map' } | { kind: 'realm' } | { kind: 'freed'; index: number } | { kind: 'hero'; scores: PlacementScores };
+type Phase = { kind: 'welcome' } | { kind: 'map' } | { kind: 'realm'; index: number } | { kind: 'freed'; index: number } | { kind: 'hero'; scores: PlacementScores };
 
 /**
  * The adaptive placement test as a game: "The Trial of Five Realms".
@@ -54,7 +55,9 @@ export function Placement({ student }: { student: StudentProfile }) {
   const enterRealm = () => {
     streak.current = 0;
     timer.current = new ActiveTimer();
-    setPhase({ kind: 'realm' });
+    // Lock the realm: the placement state moves to the next section on the last answer,
+    // but this battle must stay mounted to play its finale.
+    setPhase({ kind: 'realm', index: state.sectionIndex });
   };
 
   const leaveRealm = async (freedIndex: number | null) => {
@@ -76,10 +79,11 @@ export function Placement({ student }: { student: StudentProfile }) {
       <Shell>
         <div className="text-center">
           <div className="animate-float text-7xl">{student.avatar}</div>
-          <h1 className="mt-4 font-display text-3xl font-bold sm:text-4xl">The Trial of Five Realms</h1>
+          <h1 className="mt-4 font-display text-3xl font-bold sm:text-4xl">
+            <T en="The Trial of Five Realms" />
+          </h1>
           <p className="mx-auto mt-3 max-w-md text-white/80">
-            Glitches have taken over five realms. Defend each castle and answer the challenges to free the realm — every realm you free reveals one of your hidden
-            powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!
+            <T en="Glitches have taken over five realms. Defend each castle and answer the challenges to free the realm — every realm you free reveals one of your hidden powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!" block />
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3 text-4xl">
             {PLACEMENT_SECTIONS.map((s) => (
@@ -89,7 +93,7 @@ export function Placement({ student }: { student: StudentProfile }) {
             ))}
           </div>
           <Button variant="game" className="mt-8 px-8 py-4 text-xl" onClick={() => setPhase({ kind: 'map' })}>
-            Show me the realms →
+            <TB en="Show me the realms →" />
           </Button>
         </div>
       </Shell>
@@ -103,19 +107,27 @@ export function Placement({ student }: { student: StudentProfile }) {
       <Shell>
         <div className="w-full max-w-md animate-pop rounded-3xl bg-slate-950/80 p-8 text-center ring-1 ring-white/10">
           <div className="text-7xl">{REALMS[def.id].art}</div>
-          <h1 className="mt-3 font-display text-3xl font-bold">{def.title} is free!</h1>
-          <p className="mt-2 text-white/70">A power awakens…</p>
+          <h1 className="mt-3 font-display text-3xl font-bold">
+            <T en="{title} is free!" vars={{ title: def.title }} />
+          </h1>
+          <p className="mt-2 text-white/70">
+            <T en="A power awakens…" />
+          </p>
           <div className="mt-5 rounded-2xl bg-white/5 p-4">
             <div className="flex items-center justify-between font-display text-lg font-semibold">
-              <span>{REALMS[def.id].power}</span>
+              <span>
+                <T en={REALMS[def.id].power} />
+              </span>
               <span className="tabular-nums">{power}</span>
             </div>
             <Progress value={power} className="mt-2 bg-white/10" color="linear-gradient(90deg,#fbbf24,#f472b6)" label={REALMS[def.id].power} />
-            <p className="mt-2 text-xs text-white/60">Quests will make this power grow.</p>
+            <p className="mt-2 text-xs text-white/60">
+              <T en="Quests will make this power grow." />
+            </p>
           </div>
           <p className="mt-4 font-display text-2xl font-bold">🪙 +{REALM_COINS}</p>
           <Button variant="game" className="mt-6 w-full py-4 text-lg" onClick={() => setPhase({ kind: 'map' })}>
-            Back to the realms →
+            <TB en="Back to the realms →" />
           </Button>
         </div>
       </Shell>
@@ -123,7 +135,7 @@ export function Placement({ student }: { student: StudentProfile }) {
   }
 
   if (phase.kind === 'realm') {
-    const index = state.sectionIndex;
+    const index = phase.index;
     const def = PLACEMENT_SECTIONS[index];
     const answered = state.sections[index].answers.length;
     return (
@@ -131,12 +143,14 @@ export function Placement({ student }: { student: StudentProfile }) {
         key={def.id}
         title={`${REALMS[def.id].art} ${def.title}`}
         subtitle="Trial of Five Realms"
-        progress={{ value: answered, max: def.questionCount, label: 'Realm freed' }}
+        progress={{ value: Math.min(answered, def.questionCount), max: def.questionCount, label: 'Realm freed' }}
         // Enemies keep coming until the realm's challenges are done; then a final strike frees it.
         config={{ towers: ['pawn', 'rook'], enemies: 200, hasBoss: false, firstSpawn: 9000, spawnInterval: 12000, noDefeat: true, startEnergy: 100 }}
         hint="Answer challenges to earn ⚡ energy, then tap the board to build towers. The Oracle protects your castle here — it can't fall!"
         retreatText="Your progress in this realm is saved. You can continue later."
         onActivity={() => timer.current?.poke()}
+        // Keep the English estimate honest: no word lookups for English during the trial (instructions are still translated).
+        glossary={(q) => !q.conceptId.startsWith('en.')}
         nextQuestion={() => {
           const q = nextPlacementQuestion(stateRef.current);
           return q ? present(q) : null;
@@ -158,8 +172,12 @@ export function Placement({ student }: { student: StudentProfile }) {
   return (
     <Shell>
       <div className="w-full max-w-2xl">
-        <h1 className="text-center font-display text-3xl font-bold">The Five Realms</h1>
-        <p className="mt-1 text-center text-white/70">Free them one by one. You can rest between realms — your progress is saved.</p>
+        <h1 className="text-center font-display text-3xl font-bold">
+          <T en="The Five Realms" />
+        </h1>
+        <p className="mt-1 text-center text-white/70">
+          <T en="Free them one by one. You can rest between realms — your progress is saved." />
+        </p>
         <ol className="mt-8 space-y-3">
           {PLACEMENT_SECTIONS.map((def, i) => {
             const freed = i < state.sectionIndex;
@@ -175,22 +193,24 @@ export function Placement({ student }: { student: StudentProfile }) {
               >
                 <span className="text-4xl">{freed ? '✅' : REALMS[def.id].art}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-xl font-semibold">{def.title}</div>
+                  <div className="font-display text-xl font-semibold">
+                    <T en={def.title} />
+                  </div>
                   <div className="text-sm text-white/70">
                     {freed ? (
                       <>
-                        {REALMS[def.id].power}: <b className="tabular-nums">{Math.round(state.sections[i].ability)}</b>
+                        <T en={REALMS[def.id].power} />: <b className="tabular-nums">{Math.round(state.sections[i].ability)}</b>
                       </>
                     ) : current ? (
-                      REALMS[def.id].story
+                      <T en={REALMS[def.id].story} />
                     ) : (
-                      '🔒 Free the realm before it'
+                      <T en="🔒 Free the realm before it" />
                     )}
                   </div>
                 </div>
                 {current && (
                   <Button variant="game" className="shrink-0 px-5 py-3" onClick={enterRealm}>
-                    {started ? 'Continue' : 'Enter'} →
+                    <TB en={started ? 'Continue →' : 'Enter →'} />
                   </Button>
                 )}
               </li>
@@ -199,7 +219,7 @@ export function Placement({ student }: { student: StudentProfile }) {
         </ol>
         {state.sectionIndex > 0 && (
           <button onClick={logout} className="mx-auto mt-6 block text-sm text-white/60 hover:underline">
-            Rest for now (come back later)
+            <T en="Rest for now (come back later)" />
           </button>
         )}
       </div>
@@ -236,24 +256,33 @@ function HeroCard({ scores, onContinue, name }: { scores: PlacementScores; onCon
     <Shell>
       <div className="w-full max-w-lg animate-pop rounded-3xl bg-gradient-to-b from-amber-200 to-amber-400 p-1 shadow-2xl">
         <div className="rounded-[22px] bg-slate-950 p-6 text-white">
-          <p className="text-center text-sm font-bold uppercase tracking-widest text-amber-300">Hero card unlocked</p>
+          <p className="text-center text-sm font-bold uppercase tracking-widest text-amber-300">
+            <T en="Hero card unlocked" />
+          </p>
           <h1 className="mt-1 text-center font-display text-3xl font-bold">{name}</h1>
           <p className="mt-1 text-center text-white/70">
-            Signature power: {best.icon} <b>{best.label}</b>
+            <T en="Signature power:" /> {best.icon}{' '}
+            <b>
+              <T en={best.label} />
+            </b>
           </p>
           <div className="mt-6 space-y-3">
             {stats.map((s) => (
               <div key={s.label} className="flex items-center gap-3">
                 <span className="w-6 text-center">{s.icon}</span>
-                <span className="w-32 text-sm font-semibold">{s.label}</span>
+                <span className="w-32 text-sm font-semibold">
+                  <T en={s.label} />
+                </span>
                 <Progress value={s.v} className="bg-white/10" color={s.v >= 70 ? '#34d399' : s.v >= 45 ? '#fbbf24' : '#f472b6'} label={s.label} />
                 <span className="w-8 text-right text-sm tabular-nums text-white/80">{s.v}</span>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-sm text-white/70">Every quest you finish makes these powers grow.</p>
+          <p className="mt-6 text-center text-sm text-white/70">
+            <T en="Every quest you finish makes these powers grow." />
+          </p>
           <Button variant="game" className="mt-4 w-full py-4 text-lg" onClick={onContinue}>
-            Start my adventure →
+            <TB en="Start my adventure →" />
           </Button>
         </div>
       </div>

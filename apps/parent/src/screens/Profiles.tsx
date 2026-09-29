@@ -3,6 +3,35 @@ import type { StudentProfile } from '@atlas/db';
 import { Button, Card, Modal, useQuery, useRepo } from '@atlas/ui';
 import { StudentForm } from '../components/StudentForm';
 
+type LangMode = 'help' | 'vi' | 'en';
+const LANG_OPTIONS: { value: LangMode; label: string }[] = [
+  { value: 'help', label: 'English + Vietnamese help (hover/tap)' },
+  { value: 'vi', label: 'Mostly Vietnamese (English on hover)' },
+  { value: 'en', label: 'English only (immersion)' },
+];
+
+/** How much Vietnamese the kid app shows for this child. */
+function LanguageSelect({ studentId }: { studentId: string }) {
+  const repo = useRepo();
+  const value = useQuery((r) => r.getKv<LangMode>(`lang:${studentId}`) ?? 'help', [studentId]);
+  return (
+    <label className="mt-2 block text-xs">
+      <span className="font-semibold text-slate-600 dark:text-slate-300">Kid app language</span>
+      <select
+        value={value}
+        onChange={(e) => void repo.setKv(`lang:${studentId}`, e.target.value)}
+        className="mt-1 block w-full rounded-lg bg-slate-100 px-2 py-1.5 text-sm dark:bg-slate-800"
+      >
+        {LANG_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function Profiles() {
   const repo = useRepo();
   const students = useQuery((r) => r.listStudents());
@@ -25,6 +54,7 @@ export function Profiles() {
                   Age {s.age} · Grade {s.grade} {s.hasPin && '· 🔒 PIN'}
                 </div>
                 <div className="text-xs text-slate-500">{s.placementDone ? 'Placement complete' : 'Placement not taken yet'}</div>
+                <LanguageSelect studentId={s.id} />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

@@ -5,9 +5,11 @@ import { ThemeToggle, useQuery, useTheme } from '@atlas/ui';
 import { getEquipped } from '../lib/equipped';
 import { SHOP } from '@atlas/engine';
 import { useKid } from '../store';
+import { tr, useLang } from '../i18n';
 
 export function TopBar({ student, back }: { student: StudentProfile; back?: () => void }) {
   const logout = useKid((s) => s.logout);
+  const lang = useLang();
   const { mode, cycle } = useTheme();
   const wallet = useQuery((r) => r.getWallet(student.id), [student.id]);
   const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
@@ -37,11 +39,11 @@ export function TopBar({ student, back }: { student: StudentProfile; back?: () =
           </div>
         </div>
         <div className="ml-auto flex items-center gap-1.5 text-sm font-bold tabular-nums sm:gap-3">
-          <span className="rounded-full bg-white/10 px-2.5 py-1" title="Streak">🔥 {streak}</span>
-          <span className="rounded-full bg-white/10 px-2.5 py-1" title="Coins">🪙 {wallet.coins}</span>
-          <span className="rounded-full bg-white/10 px-2.5 py-1" title="Gems">💎 {wallet.gems}</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1" title={tr(lang, 'Streak')}>🔥 {streak}</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1" title={tr(lang, 'Coins')}>🪙 {wallet.coins}</span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1" title={tr(lang, 'Gems')}>💎 {wallet.gems}</span>
           <ThemeToggle mode={mode} onCycle={cycle} className="hidden text-white sm:block" />
-          <button onClick={logout} className="rounded-xl px-2 py-1 text-xs text-white/70 hover:bg-white/10" title="Switch player">
+          <button onClick={logout} className="rounded-xl px-2 py-1 text-xs text-white/70 hover:bg-white/10" title={tr(lang, 'Switch player')}>
             ⇄
           </button>
         </div>

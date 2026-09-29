@@ -25,3 +25,6 @@ const sanitizeAll = (g: Record<string, Generator>): Record<string, Generator> =>
 export const generators: Record<string, Generator> = { ...mathGenerators, ...sanitizeAll({ ...logicGenerators, ...englishGenerators }) };
 
 export type { Generator, Generated };
+
+export { translatePrompt, translateExplanation, LESSONS_VI } from './vi';
+export { lookup as glossaryLookup, GLOSSARY, type Gloss } from './english/glossary-vi';
