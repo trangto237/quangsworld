@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
 import { Button, cx } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
-import { GlossText } from './GlossText';
+import { GlossText, hasGloss } from './GlossText';
 import { speak, stopSpeaking } from '../lib/speech';
 import { Explanation } from './Explanation';
 
@@ -129,7 +129,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
           {instructionVi}
         </p>
       )}
-      {gloss && !answered && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}
+      {gloss && !answered && (hasGloss(q.prompt) || hasGloss(q.passage)) && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}
       <div className={cx('mt-4 grid gap-2', q.shown.length === 3 ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-2')}>
         {q.shown.map((opt, i) => {
           const state = !answered ? 'idle' : i === q.correct ? 'right' : i === picked ? 'wrong' : 'dim';

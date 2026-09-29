@@ -4,6 +4,11 @@ import { Tip } from '../i18n';
 
 const POS_VI: Record<string, string> = { n: 'danh từ', v: 'động từ', adj: 'tính từ', adv: 'trạng từ', prep: 'giới từ', conj: 'liên từ' };
 
+const WORD = /[A-Za-zÀ-ỹ][A-Za-zÀ-ỹ'’-]*/g;
+
+/** True when the text has at least one word the glossary can explain. */
+export const hasGloss = (text?: string) => !!text && (text.match(WORD) ?? []).some((w) => glossaryLookup(w));
+
 /**
  * English text where known words can be tapped (or hovered) for their Vietnamese meaning —
  * a small teaching note, e.g. "punctual (tính từ): đúng giờ".
