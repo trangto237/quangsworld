@@ -70,6 +70,7 @@ const VI: Record<string, string> = {
   '📖 Scroll of wisdom': '📖 Cuộn giấy thông thái',
   '⚡ Quick (3 min)': '⚡ Nhanh (3 phút)',
   '⚔️ Battle (6 min)': '⚔️ Chiến đấu (6 phút)',
+  '⚔️ Play (6 min)': '⚔️ Chơi (6 phút)',
   Review: 'Ôn tập',
   // Battle
   'Summoning the battlefield…': 'Đang triệu hồi chiến trường…',
@@ -149,8 +150,8 @@ const VI: Record<string, string> = {
   Done: 'Xong',
   // Placement
   'The Trial of Five Realms': 'Thử thách Năm Vương Quốc',
-  "Glitches have taken over five realms. Defend each castle and answer the challenges to free the realm — every realm you free reveals one of your hidden powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!":
-    'Bọn Glitch đã chiếm năm vương quốc. Hãy bảo vệ lâu đài và trả lời các thử thách để giải phóng từng vương quốc — mỗi vương quốc được giải phóng sẽ hé lộ một sức mạnh tiềm ẩn của em. Có thử thách dễ, có thử thách rất khó. Đó là cách Nhà tiên tri khám phá khả năng của em!',
+  "Glitches have taken over five realms, and each realm is a different game: a race, a castle siege, two boss duels and a chess hunt. Answer the challenges to free each realm — every realm you free reveals one of your hidden powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!":
+    'Bọn Glitch đã chiếm năm vương quốc, và mỗi vương quốc là một trò chơi khác nhau: một cuộc đua, một trận thủ thành, hai trận đấu trùm và một cuộc săn trên bàn cờ. Hãy trả lời các thử thách để giải phóng từng vương quốc — mỗi vương quốc được giải phóng sẽ hé lộ một sức mạnh tiềm ẩn của em. Có thử thách dễ, có thử thách rất khó. Đó là cách Nhà tiên tri khám phá khả năng của em!',
   'Show me the realms →': 'Xem các vương quốc →',
   'The Five Realms': 'Năm Vương Quốc',
   'Free them one by one. You can rest between realms — your progress is saved.': 'Giải phóng từng vương quốc một. Em có thể nghỉ giữa các vương quốc — tiến độ đã được lưu.',
@@ -170,11 +171,15 @@ const VI: Record<string, string> = {
   'Echo Cave': 'Hang Tiếng Vọng',
   'Reading Puzzle': 'Câu Đố Đọc Hiểu',
   'Math Logic': 'Toán Tư Duy',
-  'Glitches have stolen the words of the forest. Win them back!': 'Bọn Glitch đã đánh cắp các từ của khu rừng. Hãy giành lại!',
+  'Glitches have stolen the words of the forest. Race through the right gates to win them back!':
+    'Bọn Glitch đã đánh cắp các từ của khu rừng. Hãy chạy qua đúng cổng để giành lại!',
   'The forge has gone cold. Rebuild sentences to relight it.': 'Lò rèn đã nguội lạnh. Hãy ghép lại các câu để nhóm lửa.',
-  'Voices echo in the dark. Listen closely — you can replay each echo.': 'Có tiếng vọng trong bóng tối. Lắng nghe kỹ — em có thể nghe lại mỗi tiếng vọng.',
-  'Ancient tablets hold the secrets of the ruins.': 'Những phiến đá cổ giữ bí mật của tàn tích.',
-  'The citadel is locked by number puzzles. Crack them all!': 'Thành trì bị khoá bằng câu đố con số. Hãy giải hết!',
+  'A guardian lurks in the dark cave. Listen closely to defeat it — you can replay each echo.':
+    'Một người canh giữ ẩn nấp trong hang tối. Lắng nghe kỹ để đánh bại nó — em có thể nghe lại mỗi tiếng vọng.',
+  "The guardian of the ruins guards ancient tablets. Read carefully — there's no rush in a duel.":
+    'Người canh giữ tàn tích bảo vệ những phiến đá cổ. Đọc thật kỹ — đấu trùm không cần vội.',
+  'The Glitch king hides in the citadel behind number puzzles. Hunt him down with your knight!':
+    'Vua Glitch trốn trong thành trì sau những câu đố con số. Hãy dùng quân mã săn lùng hắn!',
   'Word Power': 'Sức mạnh Từ vựng',
   'Sentence Craft': 'Tay nghề Ngữ pháp',
   'Echo Sense': 'Giác quan Nghe',
@@ -219,6 +224,27 @@ const VI: Record<string, string> = {
   'Wizard Hat': 'Mũ Phù thuỷ',
   'Robot Visor': 'Kính Robot',
   '{name} unlocked!': 'Đã mở khoá {name}!',
+  // Game modes
+  'Castle Defense': 'Phòng Thủ Lâu Đài',
+  'Word Runner': 'Chạy Đua Từ Vựng',
+  "Knight's Quest": 'Hành Trình Kỵ Sĩ',
+  'Boss Duel': 'Đấu Trùm',
+  'Answers power your chess towers.': 'Câu trả lời tiếp sức cho các tháp cờ của em.',
+  'Steer into the right gate before it reaches you!': 'Lái vào đúng cổng trước khi cổng tới chỗ em!',
+  'Every right answer earns a knight move. Hunt the Glitch king.': 'Mỗi câu đúng được đi một nước mã. Săn vua Glitch!',
+  'Turn-based duel — take your time, every answer is an attack.': 'Đấu theo lượt — cứ từ từ, mỗi câu trả lời là một đòn tấn công.',
+  'Play as': 'Chơi kiểu',
+  'recommended': 'gợi ý',
+  'Finish line': 'Vạch đích',
+  '← → or 1–4 to steer · Space to dash through now': '← → hoặc 1–4 để lái · phím Cách để lao qua ngay',
+  'Right answers attack · 3 in a row = critical · 5 = checkmate': 'Trả lời đúng để tấn công · 3 câu liên tiếp = chí mạng · 5 câu = chiếu hết',
+  'Click a green square to move your knight.': 'Bấm vào ô xanh để di chuyển quân mã.',
+  'Answer correctly to earn a knight move.': 'Trả lời đúng để được đi một nước mã.',
+  '♟ Glitch captured!': '♟ Đã bắt được Glitch!',
+  '♚ The king is unshielded — capture him!': '♚ Vua đã mất khiên — bắt vua ngay!',
+  '♚ Checkmate!': '♚ Chiếu hết!',
+  '♚ Checkmate! A new Glitch army appears…': '♚ Chiếu hết! Một đội quân Glitch mới xuất hiện…',
+  'A Glitch strikes your knight!': 'Glitch tấn công quân mã của em!',
   // Top bar
   Streak: 'Chuỗi ngày học',
   Coins: 'Xu',

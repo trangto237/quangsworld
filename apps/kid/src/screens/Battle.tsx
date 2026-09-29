@@ -1,12 +1,12 @@
 import { useMemo, useRef } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { MissionSession, battleReward, historyFromAttempts, levelFromXp } from '@atlas/engine';
-import { battleConfigFor, type TowerKind } from '@atlas/game';
+import { battleConfigFor, modeFor, type TowerKind } from '@atlas/game';
 import { getQuestion, present } from '@atlas/knowledge';
 import type { Mission } from '@atlas/shared';
 import { DAY_MS, dayKey } from '@atlas/shared';
 import { useRepo } from '@atlas/ui';
-import { BattleArena } from '../components/BattleArena';
+import { GameArena } from '../components/modes/GameArena';
 import { ActiveTimer } from '../lib/activeTime';
 import { doneKey, getEquipped } from '../lib/equipped';
 import { useKid } from '../store';
@@ -71,13 +71,18 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
   };
 
   return (
-    <BattleArena
+    <GameArena
+      mode={mission.mode ?? modeFor(mission.concepts, mission.kind)}
       title={mission.title}
-      config={setup.config}
-      theme={setup.eq.theme}
-      skin={setup.eq.skin}
+      minutes={mission.duration}
+      avatar={student.avatar}
       bossName={mission.title}
-      hint="Answer challenges to earn ⚡ energy, then tap the board to build towers. Correct answers also reload their ammo!"
+      defense={{
+        config: setup.config,
+        theme: setup.eq.theme,
+        skin: setup.eq.skin,
+        hint: 'Answer challenges to earn ⚡ energy, then tap the board to build towers. Correct answers also reload their ammo!',
+      }}
       wrongNote="📕 Saved — you'll review it after the battle"
       retreatText="Your answers so far are saved and still count. You'll get a smaller reward."
       onActivity={() => timer.current.poke()}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { conceptMission, isDue, stars } from '@atlas/engine';
+import { MODES, modeFor, type GameMode } from '@atlas/game';
 import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
 import type { ConceptDef } from '@atlas/shared';
 import { Button, Modal, cx, useQuery } from '@atlas/ui';
@@ -15,6 +16,7 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const concepts = conceptsInWorld(world);
   const states = useQuery((r) => r.getStates(student.id), [student.id]);
   const [open, setOpen] = useState<ConceptDef | null>(null);
+  const [mode, setMode] = useState<GameMode | null>(null);
   const lang = useLang();
 
   return (
@@ -60,7 +62,14 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
           })}
         </ol>
       </main>
-      <Modal open={!!open} onClose={() => setOpen(null)} title={open?.missionName}>
+      <Modal
+        open={!!open}
+        onClose={() => {
+          setOpen(null);
+          setMode(null);
+        }}
+        title={open?.missionName}
+      >
         {open && (
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400">{open.name}</p>
@@ -77,12 +86,41 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
                 )}
               </div>
             )}
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => go({ name: 'battle', mission: conceptMission(open.id, 3), fromPlan: false })}>
+            <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <T en="Play as" />
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {(Object.keys(MODES) as GameMode[]).map((m) => {
+                const best = modeFor([open.id]);
+                const selected = (mode ?? best) === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={cx(
+                      'rounded-xl p-2 text-left text-sm ring-2 transition',
+                      selected ? 'bg-amber-50 ring-amber-400 dark:bg-amber-950/40' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800',
+                    )}
+                    aria-pressed={selected}
+                  >
+                    <span className="text-lg">{MODES[m].emoji}</span> <b>
+                      <T en={MODES[m].name} />
+                    </b>
+                    {m === best && (
+                      <span className="ml-1 rounded bg-emerald-100 px-1 text-[10px] font-bold uppercase text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                        <T en="recommended" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 3), mode: mode ?? undefined }, fromPlan: false })}>
                 <TB en="⚡ Quick (3 min)" />
               </Button>
-              <Button variant="game" onClick={() => go({ name: 'battle', mission: conceptMission(open.id, 6), fromPlan: false })}>
-                <TB en="⚔️ Battle (6 min)" />
+              <Button variant="game" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 6), mode: mode ?? undefined }, fromPlan: false })}>
+                <TB en="⚔️ Play (6 min)" />
               </Button>
             </div>
           </div>

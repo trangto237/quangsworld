@@ -6,18 +6,28 @@ import {
 import { PLACEMENT_SECTIONS, present } from '@atlas/knowledge';
 import type { PlacementScores } from '@atlas/shared';
 import { Button, Progress, cx, useRepo } from '@atlas/ui';
-import { BattleArena } from '../components/BattleArena';
+import { GameArena } from '../components/modes/GameArena';
+import type { GameMode } from '@atlas/game';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
 import { T, TB } from '../i18n';
 
+/** Each realm plays a different game, suited to its content. */
+const REALM_MODE: Record<string, GameMode> = {
+  'word-hunter': 'runner',
+  'sentence-forge': 'defense',
+  'echo-cave': 'duel',
+  'reading-puzzle': 'duel',
+  'math-logic': 'knight',
+};
+
 const REALMS: Record<string, { art: string; power: string; story: string }> = {
-  'word-hunter': { art: '🏹', power: 'Word Power', story: 'Glitches have stolen the words of the forest. Win them back!' },
+  'word-hunter': { art: '🏹', power: 'Word Power', story: 'Glitches have stolen the words of the forest. Race through the right gates to win them back!' },
   'sentence-forge': { art: '⚒️', power: 'Sentence Craft', story: 'The forge has gone cold. Rebuild sentences to relight it.' },
-  'echo-cave': { art: '🦇', power: 'Echo Sense', story: 'Voices echo in the dark. Listen closely — you can replay each echo.' },
-  'reading-puzzle': { art: '🧩', power: 'Tablet Reading', story: 'Ancient tablets hold the secrets of the ruins.' },
-  'math-logic': { art: '🏰', power: 'Number & Logic Might', story: 'The citadel is locked by number puzzles. Crack them all!' },
+  'echo-cave': { art: '🦇', power: 'Echo Sense', story: 'A guardian lurks in the dark cave. Listen closely to defeat it — you can replay each echo.' },
+  'reading-puzzle': { art: '🧩', power: 'Tablet Reading', story: "The guardian of the ruins guards ancient tablets. Read carefully — there's no rush in a duel." },
+  'math-logic': { art: '🏰', power: 'Number & Logic Might', story: 'The Glitch king hides in the citadel behind number puzzles. Hunt him down with your knight!' },
 };
 const REALM_COINS = 40;
 
@@ -83,7 +93,7 @@ export function Placement({ student }: { student: StudentProfile }) {
             <T en="The Trial of Five Realms" />
           </h1>
           <p className="mx-auto mt-3 max-w-md text-white/80">
-            <T en="Glitches have taken over five realms. Defend each castle and answer the challenges to free the realm — every realm you free reveals one of your hidden powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!" block />
+            <T en="Glitches have taken over five realms, and each realm is a different game: a race, a castle siege, two boss duels and a chess hunt. Answer the challenges to free each realm — every realm you free reveals one of your hidden powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!" block />
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3 text-4xl">
             {PLACEMENT_SECTIONS.map((s) => (
@@ -139,14 +149,21 @@ export function Placement({ student }: { student: StudentProfile }) {
     const def = PLACEMENT_SECTIONS[index];
     const answered = state.sections[index].answers.length;
     return (
-      <BattleArena
+      <GameArena
         key={def.id}
+        mode={REALM_MODE[def.id]}
+        trial
+        minutes={Math.ceil(def.questionCount / 4)}
+        avatar={student.avatar}
+        bossName={`Guardian of ${def.title}`}
         title={`${REALMS[def.id].art} ${def.title}`}
         subtitle="Trial of Five Realms"
         progress={{ value: Math.min(answered, def.questionCount), max: def.questionCount, label: 'Realm freed' }}
-        // Enemies keep coming until the realm's challenges are done; then a final strike frees it.
-        config={{ towers: ['pawn', 'rook'], enemies: 200, hasBoss: false, firstSpawn: 9000, spawnInterval: 12000, noDefeat: true, startEnergy: 100 }}
-        hint="Answer challenges to earn ⚡ energy, then tap the board to build towers. The Oracle protects your castle here — it can't fall!"
+        // Castle Defense: enemies keep coming until the realm's challenges are done; then a final strike frees it.
+        defense={{
+          config: { towers: ['pawn', 'rook'], enemies: 200, hasBoss: false, firstSpawn: 9000, spawnInterval: 12000, noDefeat: true, startEnergy: 100 },
+          hint: "Answer challenges to earn ⚡ energy, then tap the board to build towers. The Oracle protects your castle here — it can't fall!",
+        }}
         retreatText="Your progress in this realm is saved. You can continue later."
         onActivity={() => timer.current?.poke()}
         // Keep the English estimate honest: no word lookups for English during the trial (instructions are still translated).

@@ -1,5 +1,6 @@
 import type { StudentProfile } from '@atlas/db';
 import { isDue, stars } from '@atlas/engine';
+import { MODES, modeFor } from '@atlas/game';
 import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
 import { startOfDay } from '@atlas/shared';
 import { Button, cx, useQuery } from '@atlas/ui';
@@ -7,8 +8,6 @@ import { TopBar } from '../components/TopBar';
 import { todayPlan } from '../lib/plan';
 import { useKid } from '../store';
 import { T, TB } from '../i18n';
-
-const KIND_ICON = { learn: '⚔️', review: '🔁', boss: '🐉' } as const;
 
 export function Hub({ student }: { student: StudentProfile }) {
   const go = useKid((s) => s.go);
@@ -57,9 +56,14 @@ export function Hub({ student }: { student: StudentProfile }) {
                       <span>
                         {i + 1}. <T en="{d} min" vars={{ d: m.duration }} /> · <T en={m.label} />
                       </span>
-                      <span className="text-lg">{m.done ? '✅' : KIND_ICON[m.kind]}</span>
+                      <span className="text-lg" title={MODES[m.mode ?? modeFor(m.concepts, m.kind)].name}>
+                        {m.done ? '✅' : MODES[m.mode ?? modeFor(m.concepts, m.kind)].emoji}
+                      </span>
                     </span>
                     <span className="mt-2 font-display text-lg font-semibold">{m.title}</span>
+                    <span className="text-xs text-white/60">
+                      <T en={MODES[m.mode ?? modeFor(m.concepts, m.kind)].name} />
+                    </span>
                     <span className="mt-auto pt-2 text-xs text-white/60">
                       🪙 {m.reward.coins}
                       {m.reward.gems > 0 && <> · 💎 {m.reward.gems}</>}

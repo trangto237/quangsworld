@@ -1,3 +1,20 @@
 @import "tailwindcss";
 @import "@atlas/ui/styles.css";
 @source "../../../packages/ui/src";
+
+/* Word Runner */
+.runner-stripes {
+  background-image: repeating-linear-gradient(to bottom, transparent 0 28px, rgba(255, 255, 255, 0.55) 28px 44px);
+  background-size: 6px 72px;
+  background-repeat: repeat-y;
+  background-position: center 0;
+  animation: runner-road 0.6s linear infinite;
+}
+@keyframes runner-road {
+  to { background-position: center 72px; }
+}
+.runner-bob { animation: runner-bob 0.35s ease-in-out infinite alternate; }
+@keyframes runner-bob {
+  from { transform: translate(-50%, 0); }
+  to { transform: translate(-50%, -8px); }
+}
