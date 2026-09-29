@@ -8,6 +8,7 @@ import { WorldScreen } from './screens/World';
 import { Battle } from './screens/Battle';
 import { Results } from './screens/Results';
 import { Shop } from './screens/Shop';
+import { MistakeBook } from './screens/MistakeBook';
 
 export function App() {
   const { studentId, screen, go, logout } = useKid();
@@ -35,6 +36,8 @@ export function App() {
       return <Results student={student} result={screen.result} />;
     case 'shop':
       return <Shop student={student} />;
+    case 'mistakes':
+      return <MistakeBook student={student} />;
     default:
       return <Hub student={student} />;
   }

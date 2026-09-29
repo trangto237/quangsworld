@@ -103,8 +103,71 @@ add(Se, 5, 'Four friends sit in a row. Nga is not next to Tuan. Tuan is at one e
 
 export const logicQuestions = list;
 
+const pickR = <T>(r: () => number, a: readonly T[]): T => a[Math.floor(r() * a.length)];
+const shuffleR = <T>(r: () => number, a: readonly T[]) => a.map((x) => [r(), x] as const).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+
+/** [plural A, "a/an A", plural B, "a/an B", a name] */
+const CATEGORIES: [string, string, string, string, string][] = [
+  ['birds', 'a bird', 'animals', 'an animal', 'Tweety'],
+  ['roses', 'a rose', 'flowers', 'a flower', 'Rosa'],
+  ['squares', 'a square', 'rectangles', 'a rectangle', 'shape Q'],
+  ['dolphins', 'a dolphin', 'mammals', 'a mammal', 'Flipper'],
+  ['violins', 'a violin', 'instruments', 'an instrument', 'Stradi'],
+  ['robots in this lab', 'a robot in this lab', 'machines that can walk', 'a machine that can walk', 'R2'],
+];
+/** Pairs that genuinely exclude each other, so "No A are B" is a true premise. */
+const DISJOINT: [string, string, string, string, string][] = [
+  ['fish', 'a fish', 'birds', 'a bird', 'Nemo'],
+  ['cats', 'a cat', 'reptiles', 'a reptile', 'Tom'],
+  ['triangles', 'a triangle', 'circles', 'a circle', 'shape T'],
+  ['planets', 'a planet', 'stars', 'a star', 'Mars'],
+  ['bicycles', 'a bicycle', 'aeroplanes', 'an aeroplane', 'Blue Rider'],
+];
+const PEOPLE = ['An', 'Binh', 'Chi', 'Dung', 'Hoa', 'Khoa', 'Linh', 'Minh'];
+const DIRS = ['North', 'East', 'South', 'West'];
+
 /** Generated arithmetic/geometric sequences keep pattern practice fresh. */
 export const logicGenerators: Record<string, Generator> = {
+  'logic.deduction': (d, r) => {
+    const [A, a, B, b, name] = pickR(r, CATEGORIES);
+    if (d <= 2)
+      return {
+        prompt: `All ${A} are ${B}. ${name} is ${a}. Which MUST be true?`,
+        answer: `${name} is ${b}.`,
+        distractors: [`All ${B} are ${A}.`, `${name} is not ${b}.`, 'Nothing can be concluded.'],
+      };
+    if (d <= 3) {
+      const [A, a, B, b, name] = pickR(r, DISJOINT);
+      return {
+        prompt: `No ${A} are ${B}. ${name} is ${a}. Which MUST be true?`,
+        answer: `${name} is not ${b}.`,
+        distractors: [`${name} is ${b}.`, `Some ${B} are ${A}.`, 'Nothing can be concluded.'],
+      };
+    }
+    return {
+      prompt: `All ${A} are ${B}. ${name} is ${b}. Which MUST be true?`,
+      answer: `Nothing certain — ${name} may or may not be ${a}.`,
+      distractors: [`${name} is ${a}.`, `${name} is not ${a}.`, `All ${B} are ${A}.`],
+      explanation: '"All A are B" does not mean "all B are A".',
+    };
+  },
+  'logic.sequence': (d, r) => {
+    const n = d <= 2 ? 3 : d <= 4 ? 4 : 5;
+    const order = shuffleR(r, PEOPLE).slice(0, n); // tallest → shortest
+    const clues = shuffleR(r, order.slice(0, -1).map((p, i) => `${p} is taller than ${order[i + 1]}.`));
+    const ask = d >= 5 ? 'second tallest' : r() < 0.5 ? 'tallest' : 'shortest';
+    const answer = ask === 'tallest' ? order[0] : ask === 'shortest' ? order[n - 1] : order[1];
+    return { prompt: `${clues.join(' ')} Who is the ${ask}?`, answer, distractors: order.filter((p) => p !== answer).slice(0, 3), explanation: `Order: ${order.join(' > ')}` };
+  },
+  'logic.spatial': (d, r) => {
+    const start = Math.floor(r() * 4);
+    const steps = Math.min(5, d + 1);
+    const turns = Array.from({ length: steps }, () => pickR(r, ['right', 'left', 'around'] as const));
+    const delta = turns.reduce((s, t) => s + (t === 'right' ? 1 : t === 'left' ? 3 : 2), 0);
+    const end = (start + delta) % 4;
+    const said = turns.map((t) => (t === 'around' ? 'turn around' : `turn ${t}`)).join(', then ');
+    return { prompt: `You face ${DIRS[start]}. You ${said}. Which way are you facing now?`, answer: DIRS[end], distractors: DIRS.filter((_, i) => i !== end) };
+  },
   'logic.patterns': (d, r) => {
     const start = 1 + Math.floor(r() * 9);
     const step = 2 + Math.floor(r() * (d + 3));

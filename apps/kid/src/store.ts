@@ -9,7 +9,8 @@ export type Screen =
   | { name: 'world'; worldId: string }
   | { name: 'battle'; mission: Mission; fromPlan: boolean }
   | { name: 'results'; result: BattleResult }
-  | { name: 'shop' };
+  | { name: 'shop' }
+  | { name: 'mistakes' };
 
 export interface BattleResult {
   mission: Mission;
@@ -23,6 +24,8 @@ export interface BattleResult {
   levelAfter: number;
   masteryChanges: { conceptId: string; before: number; after: number }[];
   missed: string[];
+  /** Mistake Book entries from this battle, for the post-battle review. */
+  mistakeIds: string[];
 }
 
 interface KidState {

@@ -3,8 +3,9 @@ import type { ConceptSeed } from './helpers';
 import { englishConcepts } from './english/concepts';
 import { englishQuestions } from './english/questions';
 import { mathConcepts } from './math/concepts';
-import { generators as mathGenerators, type Generator, type Generated } from './math/generators';
+import { generators as mathGenerators, sanitize, type Generator, type Generated } from './math/generators';
 import { logicConcepts, logicQuestions, logicGenerators } from './logic';
+import { englishGenerators } from './english/generators';
 import { literatureConcepts, literatureQuestions } from './literature';
 
 const withSubject = (subject: SubjectId, seeds: ConceptSeed[]): ConceptDef[] => seeds.map((c) => ({ ...c, subject }));
@@ -18,6 +19,9 @@ export const concepts: ConceptDef[] = [
 
 export const questions: Question[] = [...englishQuestions, ...logicQuestions, ...literatureQuestions];
 
-export const generators: Record<string, Generator> = { ...mathGenerators, ...logicGenerators };
+const sanitizeAll = (g: Record<string, Generator>): Record<string, Generator> =>
+  Object.fromEntries(Object.entries(g).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]));
+
+export const generators: Record<string, Generator> = { ...mathGenerators, ...sanitizeAll({ ...logicGenerators, ...englishGenerators }) };
 
 export type { Generator, Generated };

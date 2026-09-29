@@ -1,6 +1,6 @@
 import type { PlacementScores, PlacementSection, Question } from '@atlas/shared';
 import { clamp } from '@atlas/shared';
-import { PLACEMENT_SECTIONS, getConcept, pickQuestion } from '@atlas/knowledge';
+import { PLACEMENT_SECTIONS, getConcept, getQuestion, pickQuestion, promptKey } from '@atlas/knowledge';
 import { pCorrect } from './irt';
 
 /**
@@ -59,6 +59,10 @@ export function nextPlacementQuestion(s: PlacementState, rand: () => number = Ma
   if (!def) return undefined;
   const sec = s.sections[s.sectionIndex];
   const seen = new Set(sec.answers.map((a) => a.questionId));
+  for (const a of sec.answers) {
+    const q = getQuestion(a.questionId);
+    if (q) seen.add(promptKey(q));
+  }
   const counts = new Map(def.concepts.map((c) => [c, 0]));
   sec.answers.forEach((a) => counts.set(a.conceptId, (counts.get(a.conceptId) ?? 0) + 1));
   const order = [...def.concepts].sort((a, b) => counts.get(a)! - counts.get(b)! || rand() - 0.5);

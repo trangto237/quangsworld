@@ -16,6 +16,8 @@ const SKINS: Record<Skin, { fill: number; stroke: number; glyph: string }> = {
   gold: { fill: 0xfacc15, stroke: 0xa16207, glyph: '#422006' },
 };
 
+const FONT = "'Baloo 2', Nunito, system-ui, sans-serif";
+
 const ENEMY_COLORS: Record<Enemy['kind'], number> = { grunt: 0x8b5cf6, runner: 0xf43f5e, tank: 0x64748b, boss: 0x7f1d1d };
 
 export interface SceneOptions {
@@ -166,6 +168,21 @@ export class BattleScene extends Phaser.Scene {
         this.towerViews.delete(e.tower.id);
         break;
       }
+      case 'resupply':
+        for (const t of this.opts.sim.towers) {
+          const { x, y } = cellCenter(t.row, t.col);
+          this.floatText(x, y + 20, '+' + e.shots + '➶', '#7dd3fc', 13);
+        }
+        break;
+      case 'empty': {
+        const { x, y } = cellCenter(e.tower.row, e.tower.col);
+        this.floatText(x, y - 20, 'Out of ammo!', '#fca5a5', 14);
+        break;
+      }
+      case 'finale':
+        this.cameras.main.flash(500, 253, 224, 71, false);
+        this.floatText(GRID.width / 2, GRID.height / 2, 'REALM FREED!', '#fde047', 40);
+        break;
       case 'boss':
         this.floatText(GRID.width / 2, GRID.height / 2, `⚠ ${this.opts.bossName} approaches!`, '#fca5a5', 30);
         break;
@@ -173,7 +190,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private floatText(x: number, y: number, text: string, color: string, size = 20) {
-    const t = this.add.text(x, y, text, { fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(50);
+    const t = this.add.text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(50);
     this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 1100, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
 
@@ -184,8 +201,12 @@ export class BattleScene extends Phaser.Scene {
     const base = this.add.circle(0, 4, 32, skin.fill).setStrokeStyle(t.level > 1 ? 5 : 3, t.level === 3 ? 0xf59e0b : skin.stroke);
     const glyph = this.add.text(0, 0, TOWERS[t.kind].glyph, { fontSize: '46px', color: skin.glyph }).setOrigin(0.5);
     const pips = this.add.text(0, 30, '★'.repeat(t.level - 1), { fontSize: '12px', color: '#f59e0b' }).setOrigin(0.5);
-    const bar = this.add.rectangle(-30, -38, 60, 5, 0x22c55e).setOrigin(0, 0.5).setName('hp');
-    c.add([base, glyph, pips, bar]);
+    const bar = this.add.rectangle(-30, -40, 60, 5, 0x22c55e).setOrigin(0, 0.5).setName('hp');
+    const ammoBg = this.add.rectangle(-30, 42, 60, 5, 0x000000, 0.35).setOrigin(0, 0.5);
+    const ammo = this.add.rectangle(-30, 42, 60, 5, 0x38bdf8).setOrigin(0, 0.5).setName('ammo');
+    const empty = this.add.text(22, -26, '!', { fontSize: '22px', color: '#f87171', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setName('empty').setVisible(false);
+    glyph.setName('glyph');
+    c.add([base, glyph, pips, bar, ammoBg, ammo, empty]);
     c.setScale(0.2);
     this.tweens.add({ targets: c, scale: 1, duration: 220, ease: 'Back.easeOut' });
     return c;
@@ -206,7 +227,7 @@ export class BattleScene extends Phaser.Scene {
     c.add([body, eyeL, eyeR, pupL, pupR, mouth, bar]);
     if (e.kind === 'boss') {
       c.add(this.add.text(0, -r - 6, '👑', { fontSize: '30px' }).setOrigin(0.5, 1));
-      c.add(this.add.text(0, r + 4, this.opts.bossName, { fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0));
+      c.add(this.add.text(0, r + 4, this.opts.bossName, { fontFamily: FONT, fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0));
     }
     if (e.kind === 'tank') c.add(this.add.text(0, -r - 4, '🛡', { fontSize: '18px' }).setOrigin(0.5, 1));
     // Wobble walk
@@ -224,6 +245,9 @@ export class BattleScene extends Phaser.Scene {
       }
       const bar = v.getByName('hp') as Phaser.GameObjects.Rectangle;
       bar.width = 60 * Math.max(0, t.hp / t.maxHp);
+      (v.getByName('ammo') as Phaser.GameObjects.Rectangle).width = 60 * Math.max(0, t.ammo / t.maxAmmo);
+      (v.getByName('empty') as Phaser.GameObjects.Text).setVisible(t.ammo === 0);
+      (v.getByName('glyph') as Phaser.GameObjects.Text).setAlpha(t.ammo === 0 ? 0.35 : 1);
     }
     const alive = new Set(sim.enemies.map((e) => e.id));
     for (const e of sim.enemies) {

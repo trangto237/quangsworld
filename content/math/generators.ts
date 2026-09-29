@@ -9,6 +9,9 @@ export interface Generated {
   answer: string;
   distractors: string[];
   explanation?: string;
+  /** Text read aloud (listening items). */
+  audio?: string;
+  passage?: string;
 }
 
 export type Generator = (difficulty: number, r: () => number) => Generated;

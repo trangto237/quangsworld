@@ -1,147 +1,207 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import {
-  answeredCount, createPlacement, currentSection, isPlacementDone, nextPlacementQuestion, recordPlacementAnswer, scorePlacement, skipSection,
-  totalQuestions, type PlacementState,
+  answeredCount, createPlacement, isPlacementDone, nextPlacementQuestion, recordPlacementAnswer, scorePlacement, type PlacementState,
 } from '@atlas/engine';
-import { PLACEMENT_SECTIONS, present, type PresentedQuestion } from '@atlas/knowledge';
+import { PLACEMENT_SECTIONS, present } from '@atlas/knowledge';
 import type { PlacementScores } from '@atlas/shared';
-import { Button, Progress, useRepo } from '@atlas/ui';
-import { QuestionCard } from '../components/QuestionCard';
+import { Button, Progress, cx, useRepo } from '@atlas/ui';
+import { BattleArena } from '../components/BattleArena';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
 
-const SECTION_ART: Record<string, string> = {
-  'word-hunter': '🏹',
-  'sentence-forge': '⚒️',
-  'echo-cave': '🦇',
-  'reading-puzzle': '🧩',
-  'math-logic': '🏰',
+const REALMS: Record<string, { art: string; power: string; story: string }> = {
+  'word-hunter': { art: '🏹', power: 'Word Power', story: 'Glitches have stolen the words of the forest. Win them back!' },
+  'sentence-forge': { art: '⚒️', power: 'Sentence Craft', story: 'The forge has gone cold. Rebuild sentences to relight it.' },
+  'echo-cave': { art: '🦇', power: 'Echo Sense', story: 'Voices echo in the dark. Listen closely — you can replay each echo.' },
+  'reading-puzzle': { art: '🧩', power: 'Tablet Reading', story: 'Ancient tablets hold the secrets of the ruins.' },
+  'math-logic': { art: '🏰', power: 'Number & Logic Might', story: 'The citadel is locked by number puzzles. Crack them all!' },
 };
+const REALM_COINS = 40;
+
+type Phase = { kind: 'welcome' } | { kind: 'map' } | { kind: 'realm' } | { kind: 'freed'; index: number } | { kind: 'hero'; scores: PlacementScores };
 
 /**
- * The adaptive placement test, framed as "The Trial of Five Realms".
- * No levels to choose, no scores during the test — just a quest. Progress autosaves after each answer.
+ * The adaptive placement test as a game: "The Trial of Five Realms".
+ * Each realm is a battle the castle can't lose; the adaptive engine picks the challenges behind the scenes
+ * (start at medium, harder after a correct answer, easier after two misses). No counters, no scores —
+ * each freed realm reveals one power. Progress autosaves after every answer; the kid can rest between realms.
  */
 export function Placement({ student }: { student: StudentProfile }) {
   const repo = useRepo();
-  const go = useKid((s) => s.go);
+  const { go, logout } = useKid();
   const [state, setState] = useState<PlacementState>(() => repo.getPlacementProgress(student.id) ?? createPlacement());
-  const [intro, setIntro] = useState<string | null>(() => (answeredCount(state) === 0 ? 'welcome' : null));
-  // Resuming mid-section skips that section's intro.
-  const [seenIntro, setSeenIntro] = useState(() => new Set(state.sections.filter((x) => x.answers.length > 0).map((x) => x.id as string)));
-  const [question, setQuestion] = useState<PresentedQuestion | null>(null);
-  const [scores, setScores] = useState<PlacementScores | null>(null);
+  const stateRef = useRef(state);
+  const [phase, setPhase] = useState<Phase>(() => (answeredCount(state) === 0 ? { kind: 'welcome' } : { kind: 'map' }));
+  const streak = useRef(0);
   const timer = useRef<ActiveTimer | null>(null);
-  const section = currentSection(state);
-  const sectionState = state.sections[state.sectionIndex];
 
-  useEffect(() => {
-    timer.current = new ActiveTimer();
-    return () => {
-      const ms = timer.current?.stop() ?? 0;
-      void repo.addSession({ studentId: student.id, kind: 'placement', startedAt: timer.current!.startedAt, endedAt: Date.now(), activeMs: ms, missionTitle: 'Trial of Five Realms' });
-    };
-  }, [repo, student.id]);
-
-  useEffect(() => {
-    if (intro || scores) return;
-    if (isPlacementDone(state)) {
-      const s = scorePlacement(state);
-      setScores(s);
-      void repo.completePlacement(student.id, s);
-      return;
-    }
-    if (sectionState && !seenIntro.has(sectionState.id)) {
-      setIntro(sectionState.id);
-      return;
-    }
-    const q = nextPlacementQuestion(state);
-    if (!q) setState(skipSection(state));
-    else setQuestion(present(q));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, intro, seenIntro]);
-
-  const onAnswer = async (correct: boolean, msSpent: number) => {
-    if (!question) return;
-    timer.current?.poke();
-    const answer = { questionId: question.id, conceptId: question.conceptId, difficulty: question.difficulty, correct, msSpent };
-    const next = recordPlacementAnswer(state, answer);
-    await repo.savePlacementProgress(student.id, next, answer);
-    setQuestion(null);
-    setState(next);
+  const update = (s: PlacementState) => {
+    stateRef.current = s;
+    setState(s);
   };
 
-  const done = answeredCount(state);
-  const total = totalQuestions();
+  // All realms freed → reveal the hero card.
+  useEffect(() => {
+    if (isPlacementDone(state) && phase.kind === 'map') {
+      const scores = scorePlacement(state);
+      void repo.completePlacement(student.id, scores);
+      setPhase({ kind: 'hero', scores });
+    }
+  }, [state, phase.kind, repo, student.id]);
 
-  if (scores) return <HeroCard scores={scores} onContinue={() => go({ name: 'hub' })} name={student.name} />;
+  const enterRealm = () => {
+    streak.current = 0;
+    timer.current = new ActiveTimer();
+    setPhase({ kind: 'realm' });
+  };
 
-  if (intro === 'welcome')
+  const leaveRealm = async (freedIndex: number | null) => {
+    const t = timer.current;
+    timer.current = null;
+    const activeMs = t?.stop() ?? 0;
+    await repo.completeMission(student.id, {
+      states: [],
+      session: { kind: 'placement', startedAt: t?.startedAt ?? Date.now(), endedAt: Date.now(), activeMs, missionTitle: 'Trial of Five Realms' },
+      reward: freedIndex == null ? { coins: 0, gems: 0, xp: 0 } : { coins: REALM_COINS, gems: 0, xp: 60 },
+    });
+    setPhase(freedIndex == null ? { kind: 'map' } : { kind: 'freed', index: freedIndex });
+  };
+
+  if (phase.kind === 'hero') return <HeroCard scores={phase.scores} onContinue={() => go({ name: 'hub' })} name={student.name} />;
+
+  if (phase.kind === 'welcome')
     return (
       <Shell>
         <div className="text-center">
           <div className="animate-float text-7xl">{student.avatar}</div>
           <h1 className="mt-4 font-display text-3xl font-bold sm:text-4xl">The Trial of Five Realms</h1>
           <p className="mx-auto mt-3 max-w-md text-white/80">
-            Before your adventure begins, the Oracle wants to discover your hidden powers. Five realms, about 25 minutes. Some challenges will feel easy, some
-            very hard — that's how the Oracle learns. Just do your best!
+            Glitches have taken over five realms. Defend each castle and answer the challenges to free the realm — every realm you free reveals one of your hidden
+            powers. Some challenges are easy, some are very tricky. That's how the Oracle discovers what you can do!
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3 text-3xl">
+          <div className="mt-6 flex flex-wrap justify-center gap-3 text-4xl">
             {PLACEMENT_SECTIONS.map((s) => (
               <span key={s.id} title={s.title}>
-                {SECTION_ART[s.id]}
+                {REALMS[s.id].art}
               </span>
             ))}
           </div>
-          <Button variant="game" className="mt-8 px-8 py-4 text-xl" onClick={() => setIntro(null)}>
-            Begin the trial
+          <Button variant="game" className="mt-8 px-8 py-4 text-xl" onClick={() => setPhase({ kind: 'map' })}>
+            Show me the realms →
           </Button>
         </div>
       </Shell>
     );
 
-  if (intro && section)
+  if (phase.kind === 'freed') {
+    const sec = state.sections[phase.index];
+    const def = PLACEMENT_SECTIONS[phase.index];
+    const power = Math.round(sec.ability);
     return (
       <Shell>
-        <div className="text-center">
-          <p className="text-sm font-bold uppercase tracking-widest text-amber-300">
-            Realm {state.sectionIndex + 1} of {PLACEMENT_SECTIONS.length}
-          </p>
-          <div className="mt-4 text-7xl">{SECTION_ART[section.id]}</div>
-          <h1 className="mt-3 font-display text-4xl font-bold">{section.title}</h1>
-          <p className="mt-2 text-white/80">{section.blurb}</p>
-          <p className="mt-1 text-sm text-white/60">{section.questionCount} challenges</p>
-          <Button
-            variant="game"
-            className="mt-8 px-8 py-4 text-xl"
-            onClick={() => {
-              setSeenIntro(new Set([...seenIntro, section.id]));
-              setIntro(null);
-            }}
-          >
-            Enter {section.title}
+        <div className="w-full max-w-md animate-pop rounded-3xl bg-slate-950/80 p-8 text-center ring-1 ring-white/10">
+          <div className="text-7xl">{REALMS[def.id].art}</div>
+          <h1 className="mt-3 font-display text-3xl font-bold">{def.title} is free!</h1>
+          <p className="mt-2 text-white/70">A power awakens…</p>
+          <div className="mt-5 rounded-2xl bg-white/5 p-4">
+            <div className="flex items-center justify-between font-display text-lg font-semibold">
+              <span>{REALMS[def.id].power}</span>
+              <span className="tabular-nums">{power}</span>
+            </div>
+            <Progress value={power} className="mt-2 bg-white/10" color="linear-gradient(90deg,#fbbf24,#f472b6)" label={REALMS[def.id].power} />
+            <p className="mt-2 text-xs text-white/60">Quests will make this power grow.</p>
+          </div>
+          <p className="mt-4 font-display text-2xl font-bold">🪙 +{REALM_COINS}</p>
+          <Button variant="game" className="mt-6 w-full py-4 text-lg" onClick={() => setPhase({ kind: 'map' })}>
+            Back to the realms →
           </Button>
         </div>
       </Shell>
     );
+  }
 
+  if (phase.kind === 'realm') {
+    const index = state.sectionIndex;
+    const def = PLACEMENT_SECTIONS[index];
+    const answered = state.sections[index].answers.length;
+    return (
+      <BattleArena
+        key={def.id}
+        title={`${REALMS[def.id].art} ${def.title}`}
+        subtitle="Trial of Five Realms"
+        progress={{ value: answered, max: def.questionCount, label: 'Realm freed' }}
+        // Enemies keep coming until the realm's challenges are done; then a final strike frees it.
+        config={{ towers: ['pawn', 'rook'], enemies: 200, hasBoss: false, firstSpawn: 9000, spawnInterval: 12000, noDefeat: true, startEnergy: 100 }}
+        hint="Answer challenges to earn ⚡ energy, then tap the board to build towers. The Oracle protects your castle here — it can't fall!"
+        retreatText="Your progress in this realm is saved. You can continue later."
+        onActivity={() => timer.current?.poke()}
+        nextQuestion={() => {
+          const q = nextPlacementQuestion(stateRef.current);
+          return q ? present(q) : null;
+        }}
+        onAnswered={(q, correct, ms) => {
+          const answer = { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct, msSpent: ms };
+          const next = recordPlacementAnswer(stateRef.current, answer);
+          update(next);
+          void repo.savePlacementProgress(student.id, next, answer);
+          streak.current = correct ? streak.current + 1 : 0;
+          return { streak: streak.current, done: next.sectionIndex !== index };
+        }}
+        onEnd={(_victory, retreated) => void leaveRealm(retreated ? null : index)}
+      />
+    );
+  }
+
+  // Realm map
   return (
     <Shell>
       <div className="w-full max-w-2xl">
-        <div className="mb-4 flex items-center gap-3 text-sm">
-          <span className="text-2xl">{section && SECTION_ART[section.id]}</span>
-          <span className="font-display text-lg font-semibold">{section?.title}</span>
-          <span className="ml-auto tabular-nums text-white/70">
-            {done}/{total}
-          </span>
-        </div>
-        <Progress value={done} max={total} color="linear-gradient(90deg,#fbbf24,#f472b6)" className="mb-6 bg-white/15" label="Trial progress" />
-        <div className="rounded-3xl bg-white p-5 text-slate-900 shadow-2xl sm:p-7 dark:bg-slate-900 dark:text-slate-100">
-          {question ? <QuestionCard question={question} onAnswer={onAnswer} neutral /> : <p className="text-center text-slate-500">…</p>}
-        </div>
-        <p className="mt-4 text-center text-xs text-white/50">Progress is saved automatically — you can stop and continue later.</p>
+        <h1 className="text-center font-display text-3xl font-bold">The Five Realms</h1>
+        <p className="mt-1 text-center text-white/70">Free them one by one. You can rest between realms — your progress is saved.</p>
+        <ol className="mt-8 space-y-3">
+          {PLACEMENT_SECTIONS.map((def, i) => {
+            const freed = i < state.sectionIndex;
+            const current = i === state.sectionIndex;
+            const started = current && state.sections[i].answers.length > 0;
+            return (
+              <li
+                key={def.id}
+                className={cx(
+                  'flex items-center gap-4 rounded-2xl p-4 ring-2',
+                  freed ? 'bg-emerald-500/10 ring-emerald-400/40' : current ? 'bg-white/10 ring-amber-400' : 'bg-white/5 ring-white/10 opacity-60',
+                )}
+              >
+                <span className="text-4xl">{freed ? '✅' : REALMS[def.id].art}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-xl font-semibold">{def.title}</div>
+                  <div className="text-sm text-white/70">
+                    {freed ? (
+                      <>
+                        {REALMS[def.id].power}: <b className="tabular-nums">{Math.round(state.sections[i].ability)}</b>
+                      </>
+                    ) : current ? (
+                      REALMS[def.id].story
+                    ) : (
+                      '🔒 Free the realm before it'
+                    )}
+                  </div>
+                </div>
+                {current && (
+                  <Button variant="game" className="shrink-0 px-5 py-3" onClick={enterRealm}>
+                    {started ? 'Continue' : 'Enter'} →
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        {state.sectionIndex > 0 && (
+          <button onClick={logout} className="mx-auto mt-6 block text-sm text-white/60 hover:underline">
+            Rest for now (come back later)
+          </button>
+        )}
       </div>
     </Shell>
   );

@@ -133,4 +133,31 @@ describe('Repo', () => {
     expect(new TextDecoder().decode(raw!.data)).not.toContain('private worksheet');
     expect(new TextDecoder().decode(await repo.db.getFile(id))).toContain('private worksheet');
   });
+
+  it('keeps a Mistake Book: dedupes repeats, resolves on a correct retry', async () => {
+    const { repo } = await fresh();
+    const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊' });
+    const q = { id: 'en.grammar.passive#2', conceptId: 'en.grammar.passive', difficulty: 2, type: 'mcq' as const, prompt: 'The Eiffel Tower ___ in 1889.', options: ['was built', 'built'], answer: 0, source: 't' };
+    await repo.recordMistake(id, q, 'built');
+    await repo.recordMistake(id, q, 'built');
+    let open = repo.listMistakes(id, { open: true });
+    expect(open).toHaveLength(1);
+    expect(open[0].times).toBe(2);
+    expect(open[0].question.prompt).toContain('Eiffel');
+    await repo.markMistakesReviewed([open[0].id]);
+    await repo.retryMistake(open[0].id, false, 'built');
+    expect(repo.listMistakes(id, { open: true })[0].times).toBe(3);
+    await repo.retryMistake(open[0].id, true, 'was built');
+    open = repo.listMistakes(id, { open: true });
+    expect(open).toHaveLength(0);
+    expect(repo.listMistakes(id)).toHaveLength(1);
+  });
+
+  it('migrates an existing version-1 database', async () => {
+    const raw = new SQL.Database();
+    raw.exec((await import('./migrations')).MIGRATIONS[0]);
+    raw.exec('PRAGMA user_version = 1');
+    (await import('./migrations')).migrate(raw);
+    expect(raw.exec("SELECT name FROM sqlite_master WHERE name = 'mistakes'")[0].values).toHaveLength(1);
+  });
 });

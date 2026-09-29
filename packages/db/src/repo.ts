@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull } from 'drizzle-orm';
 import type {
   Attempt, ConceptDef, ConceptState, Goal, GoalKind, PlacementScores, Question, Reward, Student, StudySession, Wallet,
 } from '@atlas/shared';
@@ -22,6 +22,20 @@ const toStudent = (r: StudentRow): Student & { hasPin: boolean } => ({
 });
 
 export type StudentProfile = ReturnType<typeof toStudent>;
+
+export interface Mistake {
+  id: string;
+  studentId: string;
+  questionId: string;
+  conceptId: string;
+  question: Question;
+  picked: string;
+  times: number;
+  createdAt: number;
+  lastWrongAt: number;
+  reviewedAt: number | null;
+  resolvedAt: number | null;
+}
 
 export interface NewStudent {
   name: string;
@@ -109,7 +123,7 @@ export class Repo {
 
   async removeStudent(id: string) {
     await this.db.write((o) => {
-      for (const table of [t.conceptStates, t.attempts, t.sessions, t.placementResults, t.goals, t.unlocks] as const) {
+      for (const table of [t.conceptStates, t.attempts, t.sessions, t.placementResults, t.goals, t.unlocks, t.mistakes] as const) {
         o.delete(table).where(eq(table.studentId, id)).run();
       }
       o.delete(t.wallets).where(eq(t.wallets.studentId, id)).run();
@@ -274,6 +288,54 @@ export class Repo {
       if (!canAfford(w, item)) throw new Error('Not enough coins or gems');
       o.update(t.wallets).set({ coins: w.coins - item.coins, gems: w.gems - item.gems }).where(eq(t.wallets.studentId, studentId)).run();
       o.insert(t.unlocks).values({ studentId, itemId, createdAt: Date.now() }).run();
+    });
+  }
+
+  // ── Mistake Book ──────────────────────────────────────────
+  /**
+   * Saves a wrong answer. The same question missed again (and not yet fixed) is updated,
+   * not duplicated, and counts how many times it was missed.
+   */
+  async recordMistake(studentId: string, question: Question, picked: string, now = Date.now()) {
+    await this.db.write((o) => {
+      const open = o
+        .select()
+        .from(t.mistakes)
+        .where(and(eq(t.mistakes.studentId, studentId), eq(t.mistakes.questionId, question.id), isNull(t.mistakes.resolvedAt)))
+        .get();
+      if (open) o.update(t.mistakes).set({ picked, times: open.times + 1, lastWrongAt: now }).where(eq(t.mistakes.id, open.id)).run();
+      else
+        o.insert(t.mistakes)
+          .values({ id: uid('mis_'), studentId, questionId: question.id, conceptId: question.conceptId, question, picked, times: 1, createdAt: now, lastWrongAt: now })
+          .run();
+    });
+  }
+
+  listMistakes(studentId: string, opts: { open?: boolean; since?: number } = {}): Mistake[] {
+    const rows = this.db.read((o) =>
+      o
+        .select()
+        .from(t.mistakes)
+        .where(and(eq(t.mistakes.studentId, studentId), gte(t.mistakes.lastWrongAt, opts.since ?? 0), opts.open ? isNull(t.mistakes.resolvedAt) : undefined))
+        .orderBy(desc(t.mistakes.lastWrongAt))
+        .all(),
+    );
+    return rows.map((r) => ({ ...r, question: r.question as Question }));
+  }
+
+  /** Marks mistakes as read in the post-battle review. */
+  async markMistakesReviewed(ids: string[], now = Date.now()) {
+    if (!ids.length) return;
+    await this.db.write((o) => ids.forEach((id) => o.update(t.mistakes).set({ reviewedAt: now }).where(eq(t.mistakes.id, id)).run()));
+  }
+
+  /** A retry from the Mistake Book: correct → fixed; wrong → stays, with the new answer. */
+  async retryMistake(id: string, correct: boolean, picked: string, now = Date.now()) {
+    await this.db.write((o) => {
+      const m = o.select().from(t.mistakes).where(eq(t.mistakes.id, id)).get();
+      if (!m) return;
+      if (correct) o.update(t.mistakes).set({ resolvedAt: now }).where(eq(t.mistakes.id, id)).run();
+      else o.update(t.mistakes).set({ picked, times: m.times + 1, lastWrongAt: now }).where(eq(t.mistakes.id, id)).run();
     });
   }
 

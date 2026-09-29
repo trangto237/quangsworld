@@ -7,7 +7,7 @@ import {
 } from './placement';
 import { applyAnswer, newConceptState, scheduleReview } from './mastery';
 import { planDay, scoreConcepts } from './planner';
-import { MissionSession } from './session';
+import { MissionSession, historyFromAttempts } from './session';
 import { computeInsights, ieltsBand, studyStreak } from './insights';
 import { battleReward, levelFromXp } from './rewards';
 
@@ -217,5 +217,40 @@ describe('rewards', () => {
     expect(win.coins).toBeGreaterThan(lose.coins);
     expect(lose.coins).toBeGreaterThan(0);
     expect(battleReward(m, { victory: false, accuracy: 0, answered: 0, bestStreak: 0 }).coins).toBe(0);
+  });
+});
+
+describe('no repeated questions', () => {
+  const mission = (concepts: string[]) => ({ id: 'm', concepts, duration: 8, kind: 'learn' as const, title: 't', reward: { coins: 0, gems: 0, xp: 0 } });
+  const promptOf = (q: { prompt: string; audio?: string; passage?: string }) => `${q.prompt}|${q.audio ?? ''}|${q.passage ?? ''}`;
+
+  it.each([
+    'en.vocab.everyday', 'en.vocab.synonyms', 'en.vocab.academic', 'en.vocab.collocations', 'en.vocab.word-forms',
+    'en.grammar.tenses', 'en.grammar.passive', 'en.grammar.relative', 'en.grammar.conditionals', 'en.grammar.comparatives',
+    'en.listening.numbers', 'math.algebra.linear', 'logic.sequence',
+  ])('%s: a long single-concept mission (30 questions) never repeats a question', (cid) => {
+    const sess = new MissionSession(mission([cid]), {}, rng(11));
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const q = sess.next()!;
+      expect(seen.has(promptOf(q)), `${cid} repeated: ${q.prompt}`).toBe(false);
+      seen.add(promptOf(q));
+      sess.answer(q, i % 3 !== 0, 1000);
+    }
+  });
+
+  it('Village Market after the placement test: questions seen in placement are avoided', () => {
+    // Everything authored for the concept was already seen in placement.
+    const warm = new MissionSession(mission(['en.vocab.everyday']), {}, rng(2));
+    const placementSeen: string[] = [];
+    const attempts: { questionId: string; createdAt: number }[] = [];
+    for (let i = 0; i < 10; i++) {
+      const q = warm.next()!;
+      attempts.push({ questionId: q.id, createdAt: Date.now() - DAY_MS });
+      placementSeen.push(promptOf(q));
+    }
+    const history = historyFromAttempts(attempts);
+    const sess = new MissionSession(mission(['en.vocab.everyday', 'en.vocab.synonyms']), {}, rng(5), history);
+    for (let i = 0; i < 40; i++) expect(placementSeen).not.toContain(promptOf(sess.next()!));
   });
 });

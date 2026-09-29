@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { openBrowserRepo } from '@atlas/db/browser';
 import { DataProvider, Splash, applyStoredTheme } from '@atlas/ui';
 import { App } from './App';
+import '@atlas/ui/fonts';
 import './index.css';
 
 applyStoredTheme();

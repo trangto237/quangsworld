@@ -20,6 +20,8 @@ export interface BattleController {
   /** Slow the battle while the kid reads a long passage (1 = normal). */
   setTimeScale(scale: number): void;
   pause(paused: boolean): void;
+  /** Win immediately with a final strike (trial realms end when their challenges are done). */
+  finale(): void;
   hud(): HudState;
   destroy(): void;
 }
@@ -90,6 +92,9 @@ export function createBattle(parent: HTMLElement, o: BattleOptions): BattleContr
     },
     pause(p) {
       scene.paused = p;
+    },
+    finale() {
+      sim.finale();
     },
     hud: () => sim.hud(),
     destroy() {

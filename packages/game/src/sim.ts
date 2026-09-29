@@ -1,8 +1,9 @@
 /**
  * Lane-battle simulation (PRD §4.3), independent of rendering so the rules are unit-testable.
  *
- * Correct answer → energy (+ streak bonus); energy builds and upgrades chess-piece towers.
+ * Correct answer → energy (+ streak bonus) and an ammo resupply for every tower.
  * Wrong answer   → lose energy and every enemy surges forward.
+ * Towers carry limited ammo, so a board can't be "finished": it only holds while the learner keeps answering.
  * Enemies ("Glitches") walk right→left; one reaching the castle costs a heart.
  */
 
@@ -21,15 +22,17 @@ export interface TowerSpec {
   /** Lanes hit relative to own row. */
   lanes: number[];
   slow?: number;
+  /** Shots carried at level 1. Refilled by correct answers and upgrades. */
+  ammo: number;
   blurb: string;
 }
 
 export const TOWERS: Record<TowerKind, TowerSpec> = {
-  pawn: { kind: 'pawn', name: 'Pawn Archer', glyph: '♟', cost: 50, hp: 80, damage: 20, rate: 1400, lanes: [0], blurb: 'Fires down its lane.' },
-  rook: { kind: 'rook', name: 'Rook Wall', glyph: '♜', cost: 75, hp: 400, damage: 12, rate: 2400, lanes: [0], blurb: 'Tough wall, slow shots.' },
-  knight: { kind: 'knight', name: 'Knight Lancer', glyph: '♞', cost: 100, hp: 90, damage: 18, rate: 1800, lanes: [-1, 0, 1], blurb: 'Hits three lanes.' },
-  bishop: { kind: 'bishop', name: 'Bishop Frost', glyph: '♝', cost: 125, hp: 80, damage: 14, rate: 1500, lanes: [0], slow: 0.5, blurb: 'Slows enemies.' },
-  queen: { kind: 'queen', name: 'Queen Storm', glyph: '♛', cost: 175, hp: 120, damage: 16, rate: 500, lanes: [0], blurb: 'Rapid fire.' },
+  pawn: { kind: 'pawn', name: 'Pawn Archer', glyph: '♟', cost: 50, hp: 80, damage: 20, rate: 1400, lanes: [0], ammo: 12, blurb: 'Fires down its lane.' },
+  rook: { kind: 'rook', name: 'Rook Wall', glyph: '♜', cost: 75, hp: 400, damage: 12, rate: 2400, lanes: [0], ammo: 8, blurb: 'Tough wall, slow shots.' },
+  knight: { kind: 'knight', name: 'Knight Lancer', glyph: '♞', cost: 100, hp: 90, damage: 18, rate: 1800, lanes: [-1, 0, 1], ammo: 10, blurb: 'Hits three lanes.' },
+  bishop: { kind: 'bishop', name: 'Bishop Frost', glyph: '♝', cost: 125, hp: 80, damage: 14, rate: 1500, lanes: [0], slow: 0.5, ammo: 12, blurb: 'Slows enemies.' },
+  queen: { kind: 'queen', name: 'Queen Storm', glyph: '♛', cost: 175, hp: 120, damage: 16, rate: 500, lanes: [0], ammo: 30, blurb: 'Rapid fire.' },
 };
 
 interface EnemySpec {
@@ -63,6 +66,8 @@ export interface Tower {
   maxHp: number;
   level: number;
   cooldown: number;
+  ammo: number;
+  maxAmmo: number;
 }
 
 export interface Enemy {
@@ -95,6 +100,9 @@ export type SimEvent =
   | { type: 'surge' }
   | { type: 'energy'; amount: number }
   | { type: 'strike' }
+  | { type: 'resupply'; shots: number }
+  | { type: 'empty'; tower: Tower }
+  | { type: 'finale' }
   | { type: 'boss'; enemy: Enemy }
   | { type: 'end'; victory: boolean };
 
@@ -111,6 +119,8 @@ export interface BattleConfig {
   firstSpawn?: number;
   startEnergy?: number;
   hearts?: number;
+  /** The castle can't fall (placement trial): hearts never drop below 1. */
+  noDefeat?: boolean;
 }
 
 export type BattleStatus = 'playing' | 'won' | 'lost';
@@ -133,6 +143,10 @@ export const WRONG_PENALTY = 10;
 export const SURGE_PX = 35;
 export const STRIKE_EVERY = 5;
 export const STRIKE_DAMAGE = 70;
+/** Shots added to every tower per correct answer. */
+export const RESUPPLY_SHOTS = 4;
+
+const maxAmmoFor = (kind: TowerKind, level: number) => Math.round(TOWERS[kind].ammo * (1 + 0.5 * (level - 1)));
 
 export class BattleSim {
   towers: Tower[] = [];
@@ -191,7 +205,7 @@ export class BattleSim {
     if (!this.canPlace(row, col, kind)) return undefined;
     const spec = TOWERS[kind];
     this.energy -= spec.cost;
-    const tower: Tower = { id: this.nextId++, kind, row, col, hp: spec.hp, maxHp: spec.hp, level: 1, cooldown: 300 };
+    const tower: Tower = { id: this.nextId++, kind, row, col, hp: spec.hp, maxHp: spec.hp, level: 1, cooldown: 300, ammo: spec.ammo, maxAmmo: spec.ammo };
     this.towers.push(tower);
     this.events.push({ type: 'place', tower });
     return tower;
@@ -201,7 +215,7 @@ export class BattleSim {
     return Math.round(TOWERS[t.kind].cost * 0.6 * t.level);
   }
 
-  /** Upgrade: more damage, more health, full repair. Max level 3. */
+  /** Upgrade: more damage, health and ammo; full repair and reload. Max level 3. */
   upgrade(towerId: number): boolean {
     const t = this.towers.find((x) => x.id === towerId);
     if (!t || t.level >= 3 || this.status !== 'playing') return false;
@@ -211,6 +225,8 @@ export class BattleSim {
     t.level++;
     t.maxHp = Math.round(TOWERS[t.kind].hp * (1 + 0.5 * (t.level - 1)));
     t.hp = t.maxHp;
+    t.maxAmmo = maxAmmoFor(t.kind, t.level);
+    t.ammo = t.maxAmmo;
     this.events.push({ type: 'upgrade', tower: t });
     return true;
   }
@@ -222,6 +238,10 @@ export class BattleSim {
       const amount = ENERGY_PER_CORRECT + Math.min(25, Math.max(0, streak - 1) * 5);
       this.energy += amount;
       this.events.push({ type: 'energy', amount });
+      if (this.towers.length) {
+        for (const t of this.towers) t.ammo = Math.min(t.maxAmmo, t.ammo + RESUPPLY_SHOTS);
+        this.events.push({ type: 'resupply', shots: RESUPPLY_SHOTS });
+      }
       if (streak > 0 && streak % STRIKE_EVERY === 0) this.strike();
     } else {
       this.energy = Math.max(0, this.energy - WRONG_PENALTY);
@@ -264,6 +284,28 @@ export class BattleSim {
     }
   }
 
+  /**
+   * Ends the battle in the defenders' favour (used when a trial realm's challenges are done):
+   * no more spawns, and a final strike clears the field.
+   */
+  finale() {
+    if (this.status !== 'playing') return;
+    this.events.push({ type: 'finale' });
+    this.spawned = this.cfg.enemies;
+    this.bossSpawned = true;
+    for (const e of [...this.enemies]) this.damage(e, e.hp);
+    this.status = 'won';
+    this.events.push({ type: 'end', victory: true });
+  }
+
+  /** Later waves arrive in groups so a single tower per lane is never enough. */
+  private groupSize() {
+    const progress = this.spawned / Math.max(1, this.cfg.enemies);
+    if (progress >= 0.7) return this.rand() < 0.5 ? 3 : 2;
+    if (progress >= 0.35) return this.rand() < 0.5 ? 2 : 1;
+    return 1;
+  }
+
   update(dtMs: number) {
     if (this.status !== 'playing') return;
     const dt = Math.min(dtMs, 100); // guard against tab-switch jumps
@@ -271,7 +313,9 @@ export class BattleSim {
 
     // Spawning
     if (this.spawned < this.cfg.enemies && this.time >= this.nextSpawnAt) {
-      this.spawn(this.pickKind());
+      const n = Math.min(this.groupSize(), this.cfg.enemies - this.spawned);
+      const rows = [0, 1, 2, 3, 4].sort(() => this.rand() - 0.5).slice(0, n);
+      for (const row of rows) this.spawn(this.pickKind(), row);
       const jitter = 0.75 + this.rand() * 0.5;
       this.nextSpawnAt = this.time + Math.max(4000, this.interval * jitter - this.spawned * 150);
     } else if (this.cfg.hasBoss && !this.bossSpawned && this.spawned >= this.cfg.enemies && (this.enemies.length <= 2 || this.time >= this.nextSpawnAt + 10_000)) {
@@ -286,8 +330,10 @@ export class BattleSim {
       const x = cellCenter(t.row, t.col).x;
       const lanes = spec.lanes.map((d) => t.row + d).filter((r) => r >= 0 && r < GRID.rows);
       const hasTarget = this.enemies.some((e) => lanes.includes(e.row) && e.x > x - 10 && e.x < SPAWN_X - 5);
-      if (!hasTarget) continue;
+      if (!hasTarget || t.ammo <= 0) continue;
       t.cooldown = spec.rate;
+      t.ammo--;
+      if (t.ammo === 0) this.events.push({ type: 'empty', tower: t });
       const damage = Math.round(spec.damage * (1 + 0.5 * (t.level - 1)));
       for (const row of lanes) {
         const bolt: Bolt = { id: this.nextId++, row, x: x + 20, damage, slow: spec.slow, kind: t.kind };
@@ -329,6 +375,7 @@ export class BattleSim {
       if (e.x <= GRID.baseX) {
         this.enemies = this.enemies.filter((x) => x !== e);
         this.hearts -= e.kind === 'boss' ? 2 : 1;
+        if (this.cfg.noDefeat) this.hearts = Math.max(1, this.hearts);
         this.defeated++; // it has left the field either way
         this.events.push({ type: 'baseHit', row: e.row });
       }

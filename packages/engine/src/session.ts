@@ -1,5 +1,5 @@
 import type { ConceptState, Mission, Question } from '@atlas/shared';
-import { pickQuestion } from '@atlas/knowledge';
+import { getQuestion, pickQuestion, promptKey } from '@atlas/knowledge';
 import { targetDifficulty } from './irt';
 import { applyAnswer, newConceptState, scheduleReview } from './mastery';
 
@@ -20,7 +20,16 @@ export class MissionSession {
   bestStreak = 0;
   private streak = 0;
 
-  constructor(mission: Mission, states: Record<string, ConceptState>, private rand: () => number = Math.random) {
+  /**
+   * @param history when each question (id or prompt) was last answered, so a mission
+   *   prefers questions the learner hasn't seen recently — including in the placement test.
+   */
+  constructor(
+    mission: Mission,
+    states: Record<string, ConceptState>,
+    private rand: () => number = Math.random,
+    private history: Map<string, number> = new Map(),
+  ) {
     this.mission = mission;
     this.states = { ...states };
     for (const c of mission.concepts) this.states[c] ??= newConceptState(c);
@@ -33,17 +42,25 @@ export class MissionSession {
     this.turn++;
     for (let i = 0; i <= cs.length; i++) {
       const d = targetDifficulty(this.states[conceptId].mastery);
-      const q = pickQuestion({ conceptId, difficulty: d, exclude: this.seen, rand: this.rand });
-      if (q) {
-        this.seen.add(q.id);
-        return q;
-      }
+      const q = pickQuestion({ conceptId, difficulty: d, exclude: this.seen, history: this.history, rand: this.rand });
+      if (q) return this.use(q);
       conceptId = cs[(cs.indexOf(conceptId) + 1) % cs.length];
     }
-    // Everything seen: allow repeats rather than stalling the battle.
+    // Everything in this session has been used: start a new cycle, oldest questions first.
+    for (const [k] of this.seenAt) this.history.set(k, this.seenAt.get(k)!);
     this.seen.clear();
-    const q = pickQuestion({ conceptId: cs[0], difficulty: targetDifficulty(this.states[cs[0]].mastery), rand: this.rand });
-    if (q) this.seen.add(q.id);
+    const q = pickQuestion({ conceptId: cs[0], difficulty: targetDifficulty(this.states[cs[0]].mastery), history: this.history, rand: this.rand });
+    return q && this.use(q);
+  }
+
+  private seenAt = new Map<string, number>();
+
+  private use(q: Question): Question {
+    const now = Date.now();
+    for (const k of [q.id, promptKey(q)]) {
+      this.seen.add(k);
+      this.seenAt.set(k, now);
+    }
     return q;
   }
 
@@ -80,4 +97,18 @@ export class MissionSession {
     for (const [cid, pc] of this.perConcept) out[cid] = scheduleReview(this.states[cid], pc.correct / pc.n, now);
     return out;
   }
+}
+
+/**
+ * When each question was last answered, keyed by id and by wording (generated questions get a
+ * new id each time, so the wording is what identifies a repeat).
+ */
+export function historyFromAttempts(attempts: { questionId: string; createdAt: number }[]): Map<string, number> {
+  const h = new Map<string, number>();
+  for (const a of attempts) {
+    h.set(a.questionId, Math.max(h.get(a.questionId) ?? 0, a.createdAt));
+    const q = getQuestion(a.questionId);
+    if (q) h.set(promptKey(q), Math.max(h.get(promptKey(q)) ?? 0, a.createdAt));
+  }
+  return h;
 }

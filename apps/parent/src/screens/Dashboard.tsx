@@ -20,6 +20,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
         attempts,
         insights: computeInsights({ states, attempts, sessions: r.listSessions(student.id, now - 60 * DAY_MS), now }),
         placement: r.latestPlacement(student.id),
+        mistakes: r.listMistakes(student.id, { since: now - 30 * DAY_MS }),
         wallet: r.getWallet(student.id),
         plan: planDay({ states, goals, now }),
       };
@@ -29,6 +30,8 @@ export function Dashboard({ student }: { student: StudentProfile }) {
   const { insights: ins, placement, wallet, plan } = data;
   const goal = dailyMinutes(data.goals);
   const recent = [...data.attempts].reverse().slice(0, 8);
+  const openMistakes = data.mistakes.filter((m) => !m.resolvedAt);
+  const fixedMistakes = data.mistakes.filter((m) => m.resolvedAt);
 
   if (!student.placementDone && !placement)
     return (
@@ -140,6 +143,46 @@ export function Dashboard({ student }: { student: StudentProfile }) {
 
       <Card title="Concept heatmap" action={<button className="text-xs font-semibold text-brand-600 dark:text-brand-400" onClick={() => setTab('knowledge')}>Open knowledge map</button>}>
         <MasteryHeatmap cells={ins.heatmap} onSelect={() => setTab('knowledge')} />
+      </Card>
+
+      <Card
+        title="Mistake Book"
+        action={
+          <span className="text-xs text-slate-500">
+            {openMistakes.length} open · {fixedMistakes.length} fixed (30 days)
+          </span>
+        }
+      >
+        {openMistakes.length ? (
+          <div className="max-h-96 overflow-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-white text-xs uppercase text-slate-500 dark:bg-slate-900">
+                <tr>
+                  <th className="py-2 pr-3">Question</th>
+                  <th className="pr-3">{student.name} answered</th>
+                  <th className="pr-3">Correct answer</th>
+                  <th className="text-right">Missed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {openMistakes.slice(0, 20).map((m) => (
+                  <tr key={m.id} className="border-t border-slate-100 align-top dark:border-slate-800">
+                    <td className="py-2 pr-3">
+                      <div>{m.question.audio ? `🔊 “${m.question.audio}” — ` : ''}{m.question.prompt}</div>
+                      <div className="text-xs text-slate-500">{getConcept(m.conceptId)?.name}</div>
+                    </td>
+                    <td className="py-2 pr-3 text-rose-700 dark:text-rose-400">{m.picked}</td>
+                    <td className="py-2 pr-3 font-semibold text-emerald-700 dark:text-emerald-400">{m.question.options[m.question.answer]}</td>
+                    <td className="py-2 text-right tabular-nums">×{m.times}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No open mistakes. Questions answered wrongly in battle appear here until {student.name} fixes them.</p>
+        )}
+        <p className="mt-3 text-xs text-slate-500">After each battle {student.name} reviews these with explanations; a mistake is fixed when answered correctly on a later retry in the Mistake Book.</p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -14,6 +14,7 @@ export function Hub({ student }: { student: StudentProfile }) {
   const plan = useQuery((r) => todayPlan(r, student.id), [student.id]);
   const states = useQuery((r) => r.getStates(student.id), [student.id]);
   const minutesToday = useQuery((r) => Math.round(r.listSessions(student.id, startOfDay(Date.now())).reduce((s, x) => s + x.activeMs, 0) / 60000), [student.id]);
+  const openMistakes = useQuery((r) => r.listMistakes(student.id, { open: true }).length, [student.id]);
   const next = plan.missions.find((m) => !m.done);
   const allDone = !next;
 
@@ -74,9 +75,15 @@ export function Hub({ student }: { student: StudentProfile }) {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-2xl font-bold">Worlds</h2>
-            <Button variant="secondary" onClick={() => go({ name: 'shop' })}>
-              🛒 Armoury
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => go({ name: 'mistakes' })}>
+                📕 Mistake Book
+                {openMistakes > 0 && <span className="rounded-full bg-rose-500 px-2 text-xs text-white">{openMistakes}</span>}
+              </Button>
+              <Button variant="secondary" onClick={() => go({ name: 'shop' })}>
+                🛒 Armoury
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {WORLDS.map((w) => {

@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { getConcept } from '@atlas/knowledge';
-import { Button } from '@atlas/ui';
+import { Button, useRepo } from '@atlas/ui';
+import { MistakeReview } from '../components/MistakeReview';
 import type { BattleResult } from '../store';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
@@ -9,9 +11,33 @@ const starOf = (m: number) => (m >= 80 ? 3 : m >= 60 ? 2 : m >= 40 ? 1 : 0);
 
 export function Results({ student, result: r }: { student: StudentProfile; result: BattleResult }) {
   const go = useKid((s) => s.go);
+  const repo = useRepo();
+  const mistakes = useMemo(() => {
+    const ids = new Set(r.mistakeIds);
+    return repo.listMistakes(student.id, { open: true }).filter((m) => ids.has(m.id));
+  }, [repo, student.id, r.mistakeIds]);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const acc = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
   const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : 'The castle fell…';
   const sub = r.victory ? `${student.name}, the realm is safe!` : r.retreated ? 'Rest up, hero. The Glitches will be back.' : "Every hero loses sometimes. You still grew stronger.";
+
+  if (reviewing)
+    return (
+      <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-gradient-to-b from-indigo-800 to-slate-950 p-4 text-white">
+        <Stars />
+        <div className="relative flex w-full justify-center">
+          <MistakeReview
+            mistakes={mistakes}
+            onDone={() => {
+              void repo.markMistakesReviewed(mistakes.map((m) => m.id));
+              setReviewing(false);
+              setReviewed(true);
+            }}
+          />
+        </div>
+      </div>
+    );
 
   return (
     <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-gradient-to-b from-indigo-800 to-slate-950 p-4 text-white">
@@ -65,21 +91,25 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
           </div>
         )}
 
-        {r.missed.length > 0 && (
-          <div className="mt-4 rounded-xl bg-indigo-500/15 p-3 text-sm">
-            <p className="font-bold">📖 Scrolls for next time</p>
-            {r.missed.slice(0, 2).map((cid) => (
-              <p key={cid} className="mt-1 text-white/80">
-                <b>{getConcept(cid)?.name}:</b> {getConcept(cid)?.lesson}
-              </p>
-            ))}
-            <p className="mt-2 text-xs text-white/60">These will return in a review quest.</p>
+        {mistakes.length > 0 && !reviewed ? (
+          <div className="mt-6 rounded-2xl bg-rose-500/15 p-4 ring-1 ring-rose-400/30">
+            <p className="font-display text-lg font-semibold">📕 {mistakes.length} to review</p>
+            <p className="mt-1 text-sm text-white/70">No time to read during battle — let's look at them together now. They're also saved in your Mistake Book.</p>
+            <Button variant="game" className="mt-3 w-full py-3" onClick={() => setReviewing(true)} autoFocus>
+              Review my mistakes →
+            </Button>
+            <button className="mt-2 w-full text-center text-xs text-white/60 hover:underline" onClick={() => go({ name: 'hub' })}>
+              Later (they'll wait in the Mistake Book)
+            </button>
           </div>
+        ) : (
+          <>
+            {reviewed && <p className="mt-6 text-center text-sm text-emerald-300">✓ Reviewed. Fix them for good in the Mistake Book to earn coins.</p>}
+            <Button variant="game" className="mt-6 w-full py-4 text-lg" onClick={() => go({ name: 'hub' })}>
+              Continue →
+            </Button>
+          </>
         )}
-
-        <Button variant="game" className="mt-6 w-full py-4 text-lg" onClick={() => go({ name: 'hub' })}>
-          Continue →
-        </Button>
       </div>
     </div>
   );

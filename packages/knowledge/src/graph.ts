@@ -167,11 +167,13 @@ function generate(conceptId: string, difficulty: number, seed: number): Question
     id: `gen:${conceptId}:${difficulty}:${seed}`,
     conceptId,
     difficulty,
-    type: 'fill',
+    type: g.audio ? 'listen' : g.passage ? 'read' : conceptId.startsWith('math.') ? 'fill' : 'mcq',
     prompt: g.prompt,
     options,
     answer: 0,
     explanation: g.explanation,
+    audio: g.audio,
+    passage: g.passage,
     source: 'Atlas generator',
   };
 }
@@ -188,29 +190,51 @@ export function getQuestion(id: string): Question | undefined {
 export interface PickOptions {
   conceptId: string;
   difficulty: number;
+  /** Already used in this session: question ids and `promptKey`s. Never repeated. */
   exclude?: Set<string>;
+  /** When each question id / `promptKey` was last seen (epoch ms), e.g. from the last two weeks. */
+  history?: Map<string, number>;
   rand?: () => number;
 }
 
+/** Identity of a question by its wording, so two generated items with the same text count as a repeat. */
+export const promptKey = (q: Pick<Question, 'prompt' | 'audio' | 'passage'>) => `p:${q.prompt}|${q.audio ?? ''}|${(q.passage ?? '').slice(0, 40)}`;
+
+const lastSeen = (q: Question, history?: Map<string, number>) => Math.max(history?.get(q.id) ?? 0, history?.get(promptKey(q)) ?? 0);
+
 /**
- * Picks the unseen question closest to the target difficulty. Concepts with a
- * generator mix authored and generated items and never run dry.
+ * Picks a question for a concept near the target difficulty, avoiding repeats:
+ * 1. never anything already used in this session (`exclude`),
+ * 2. prefer questions not seen recently (`history`) — generated ones are regenerated until fresh,
+ * 3. if everything has been seen, the one seen longest ago.
  */
-export function pickQuestion({ conceptId, difficulty, exclude = new Set(), rand = Math.random }: PickOptions): Question | undefined {
+export function pickQuestion({ conceptId, difficulty, exclude = new Set(), history, rand = Math.random }: PickOptions): Question | undefined {
   const target = Math.min(5, Math.max(1, Math.round(difficulty)));
-  const pool = staticQuestions(conceptId).filter((q) => !exclude.has(q.id));
+  const unused = staticQuestions(conceptId).filter((q) => !exclude.has(q.id) && !exclude.has(promptKey(q)));
+  const fresh = unused.filter((q) => lastSeen(q, history) === 0);
   const gen = hasGenerator(conceptId);
-  if (pool.length && (!gen || rand() < 0.4)) {
+  const closest = (pool: Question[]) => {
     const best = Math.min(...pool.map((q) => Math.abs(q.difficulty - target)));
-    const candidates = pool.filter((q) => Math.abs(q.difficulty - target) === best);
-    return candidates[Math.floor(rand() * candidates.length)];
-  }
+    const c = pool.filter((q) => Math.abs(q.difficulty - target) === best);
+    return c[Math.floor(rand() * c.length)];
+  };
+  if (fresh.length && (!gen || rand() < 0.35)) return closest(fresh);
   if (gen) {
-    for (let i = 0; i < 20; i++) {
-      const q = generate(conceptId, target, Math.floor(rand() * 1e9));
-      if (!exclude.has(q.id) && q.options.length >= 2) return q;
+    let fallback: Question | undefined;
+    for (let i = 0; i < 90; i++) {
+      // Widen the difficulty band step by step once the exact level is exhausted.
+      const spread = i < 20 ? 0 : i < 45 ? 1 : 4;
+      const d = Math.min(5, Math.max(1, target + Math.round((rand() * 2 - 1) * spread)));
+      const q = generate(conceptId, d, Math.floor(rand() * 1e9));
+      if (q.options.length < 2 || exclude.has(q.id) || exclude.has(promptKey(q))) continue;
+      if (lastSeen(q, history) === 0) return q;
+      fallback ??= q;
     }
+    if (fresh.length) return closest(fresh);
+    if (fallback) return fallback;
   }
+  if (fresh.length) return closest(fresh);
+  if (unused.length) return [...unused].sort((x, y) => lastSeen(x, history) - lastSeen(y, history))[0];
   return undefined;
 }
 

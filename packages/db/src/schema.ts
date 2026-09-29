@@ -126,3 +126,23 @@ export const kv = sqliteTable('kv', {
   key: text('key').primaryKey(),
   value: text('value', { mode: 'json' }).notNull(),
 });
+
+/** The Mistake Book: every question answered wrongly in a mission, until the learner gets it right on a retry. */
+export const mistakes = sqliteTable(
+  'mistakes',
+  {
+    id: text('id').primaryKey(),
+    studentId: text('student_id').notNull(),
+    questionId: text('question_id').notNull(),
+    conceptId: text('concept_id').notNull(),
+    /** Snapshot of the question (prompt, options, answer…) so it can be shown even if content changes. */
+    question: text('question', { mode: 'json' }).notNull(),
+    picked: text('picked').notNull(),
+    times: integer('times').notNull(),
+    createdAt: integer('created_at').notNull(),
+    lastWrongAt: integer('last_wrong_at').notNull(),
+    reviewedAt: integer('reviewed_at'),
+    resolvedAt: integer('resolved_at'),
+  },
+  (t) => [index('mistakes_student').on(t.studentId, t.resolvedAt)],
+);

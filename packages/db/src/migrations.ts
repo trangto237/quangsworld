@@ -27,6 +27,12 @@ export const MIGRATIONS: string[] = [
   CREATE TABLE custom_items (id TEXT PRIMARY KEY, kind TEXT NOT NULL, material_id TEXT NOT NULL, data TEXT NOT NULL);
   CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `,
+  `
+  CREATE TABLE mistakes (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, question_id TEXT NOT NULL, concept_id TEXT NOT NULL,
+    question TEXT NOT NULL, picked TEXT NOT NULL, times INTEGER NOT NULL, created_at INTEGER NOT NULL, last_wrong_at INTEGER NOT NULL,
+    reviewed_at INTEGER, resolved_at INTEGER);
+  CREATE INDEX mistakes_student ON mistakes (student_id, resolved_at);
+  `,
 ];
 
 export function migrate(db: Database) {

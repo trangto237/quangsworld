@@ -57,6 +57,13 @@ add(Dv, 4, '"Áo chàm đưa buổi phân li" — "áo chàm" chỉ người Vi�
 add(Dv, 4, 'Lặp lại một từ ngữ nhiều lần để nhấn mạnh là biện pháp…', ['Điệp ngữ', 'Liệt kê', 'Nói quá', 'Chơi chữ']);
 add(Dv, 5, '"Bác đã đi rồi sao Bác ơi" — cách nói "đi" thay cho "mất" là…', ['Nói giảm nói tránh', 'Nói quá', 'Ẩn dụ', 'Hoán dụ']);
 
+add(Dv, 2, '"Mặt trời xuống biển như hòn lửa" (Huy Cận) sử dụng biện pháp nào?', ['So sánh', 'Nhân hoá', 'Hoán dụ', 'Điệp ngữ']);
+add(Dv, 2, '"Trâu ơi ta bảo trâu này" (ca dao) — trò chuyện với con trâu như với người là…', ['Nhân hoá', 'So sánh', 'Nói quá', 'Liệt kê']);
+add(Dv, 3, '"Lỗ mũi mười tám gánh lông" (ca dao) phóng đại sự việc — đó là…', ['Nói quá', 'Nói giảm nói tránh', 'Ẩn dụ', 'So sánh']);
+add(Dv, 3, '"Tre giữ làng, giữ nước, giữ mái nhà tranh, giữ đồng lúa chín" — từ "giữ" lặp lại là…', ['Điệp ngữ', 'Hoán dụ', 'So sánh', 'Nhân hoá']);
+add(Dv, 4, '"Bàn tay ta làm nên tất cả" (Hoàng Trung Thông) — "bàn tay" chỉ người lao động. Đây là…', ['Hoán dụ', 'Ẩn dụ', 'Nói quá', 'Điệp ngữ']);
+add(Dv, 5, '"Người Cha mái tóc bạc / Đốt lửa cho anh nằm" (Minh Huệ) — "Người Cha" chỉ Bác Hồ. Đây là…', ['Ẩn dụ', 'Hoán dụ', 'So sánh', 'Nói quá']);
+
 const Ar = 'lit.argument';
 add(Ar, 2, 'Trong văn nghị luận, ý kiến chính người viết muốn chứng minh gọi là…', ['Luận điểm', 'Bằng chứng', 'Lí lẽ', 'Kết bài']);
 add(Ar, 3, '"Theo khảo sát năm 2023, 70% học sinh dùng điện thoại quá 3 giờ/ngày" là…', ['Bằng chứng', 'Luận điểm', 'Lí lẽ', 'Câu cảm thán']);
