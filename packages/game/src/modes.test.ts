@@ -44,8 +44,10 @@ describe('Boss Duel', () => {
 
   it('trial duels cannot be lost and bring a new boss', () => {
     const d = new DuelSim({ bossHp: 20, noDefeat: true, endless: true });
-    for (let i = 0; i < 10; i++) d.answer(false, 0);
-    expect(d.heroHp).toBe(1);
+    const events = Array.from({ length: 10 }, () => d.answer(false, 0)).flat();
+    // Health ran out, so the Oracle restored it: the trial can't be lost.
+    expect(events.some((e) => e.type === 'revived')).toBe(true);
+    expect(d.heroHp).toBeGreaterThan(0);
     expect(d.status).toBe('playing');
     const ev = d.answer(true, 1, 5);
     expect(ev.some((e) => e.type === 'bossDown')).toBe(true);

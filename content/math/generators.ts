@@ -3,6 +3,7 @@
  * requested difficulty (1–5) from a seeded PRNG, so math missions never run out
  * of material and a question id can be regenerated exactly from its seed.
  */
+import type { Figure } from '@atlas/shared';
 
 export interface Generated {
   prompt: string;
@@ -11,6 +12,8 @@ export interface Generated {
   explanation?: string;
   /** Text read aloud (listening items). */
   audio?: string;
+  /** A diagram drawn with the question (geometry). */
+  figure?: Figure;
   passage?: string;
 }
 
@@ -254,37 +257,74 @@ const raw: Record<string, Generator> = {
   'math.geometry.angles': (d, r) => {
     if (d <= 2) {
       const a = int(r, 30, 80), b = int(r, 30, 80);
-      return { prompt: `Two angles of a triangle are ${a}° and ${b}°. Find the third angle (in degrees).`, ...numeric(180 - a - b, [360 - a - b, a + b, 90 - a], r) };
+      return {
+        prompt: `Two angles of a triangle are ${a}° and ${b}°. Find the third angle (in degrees).`,
+        ...numeric(180 - a - b, [360 - a - b, a + b, 90 - a], r),
+        figure: { kind: 'triangle', angles: [a, b, 180 - a - b], ask: 2 },
+      };
     }
     if (d === 3) {
       const a = int(r, 20, 160);
-      return { prompt: `Angles on a straight line: one is ${a}°. Find the other (in degrees).`, ...numeric(180 - a, [360 - a, 90 - a, a], r) };
+      return {
+        prompt: `Angles on a straight line: one is ${a}°. Find the other (in degrees).`,
+        ...numeric(180 - a, [360 - a, 90 - a, a], r),
+        figure: { kind: 'line-angles', angle: a, ask: 1 },
+      };
     }
     const n = int(r, 5, 12);
-    if (d === 4) return { prompt: `What is the sum of interior angles of a ${n}-sided polygon (in degrees)?`, ...numeric((n - 2) * 180, [n * 180, (n - 1) * 180, 360], r) };
-    return { prompt: `Each interior angle of a regular ${n}-gon is how many degrees? (round to 1 d.p. if needed)`, ...numeric(Math.round(((n - 2) * 1800) / n) / 10, [360 / n, 180 - (n - 2), (n * 180) / (n - 2)], r, (v) => String(Math.round(v * 10) / 10)) };
+    if (d === 4)
+      return {
+        prompt: `What is the sum of interior angles of a ${n}-sided polygon (in degrees)?`,
+        ...numeric((n - 2) * 180, [n * 180, (n - 1) * 180, 360], r),
+        figure: { kind: 'polygon', sides: n },
+      };
+    return {
+      prompt: `Each interior angle of a regular ${n}-gon is how many degrees? (round to 1 d.p. if needed)`,
+      ...numeric(Math.round(((n - 2) * 1800) / n) / 10, [360 / n, 180 - (n - 2), (n * 180) / (n - 2)], r, (v) => String(Math.round(v * 10) / 10)),
+      figure: { kind: 'polygon', sides: n, askAngle: true },
+    };
   },
 
   'math.geometry.area': (d, r) => {
     const a = int(r, 3, 15), b = int(r, 3, 15), h = int(r, 2, 12) * 2;
-    if (d <= 1) return { prompt: `A rectangle is ${a} cm by ${b} cm. Find its area (cm²).`, ...numeric(a * b, [2 * (a + b), a + b, a * b * 2], r) };
-    if (d === 2) return { prompt: `A rectangle is ${a} cm by ${b} cm. Find its perimeter (cm).`, ...numeric(2 * (a + b), [a * b, a + b, 4 * a], r) };
-    if (d <= 4) return { prompt: `A triangle has base ${a} cm and height ${h} cm. Find its area (cm²).`, ...numeric((a * h) / 2, [a * h, a + h, (a * h) / 4], r) };
-    return { prompt: `A trapezium has parallel sides ${a} cm and ${b} cm, and height ${h} cm. Find its area (cm²).`, ...numeric(((a + b) * h) / 2, [(a + b) * h, a * b * h, (a * h) / 2], r) };
+    if (d <= 1) return { prompt: `A rectangle is ${a} cm by ${b} cm. Find its area (cm²).`, ...numeric(a * b, [2 * (a + b), a + b, a * b * 2], r), figure: { kind: 'rect', w: a, h: b, unit: 'cm' } };
+    if (d === 2) return { prompt: `A rectangle is ${a} cm by ${b} cm. Find its perimeter (cm).`, ...numeric(2 * (a + b), [a * b, a + b, 4 * a], r), figure: { kind: 'rect', w: a, h: b, unit: 'cm' } };
+    if (d <= 4)
+      return {
+        prompt: `A triangle has base ${a} cm and height ${h} cm. Find its area (cm²).`,
+        ...numeric((a * h) / 2, [a * h, a + h, (a * h) / 4], r),
+        figure: { kind: 'tri-area', base: a, height: h, unit: 'cm' },
+      };
+    return {
+      prompt: `A trapezium has parallel sides ${a} cm and ${b} cm, and height ${h} cm. Find its area (cm²).`,
+      ...numeric(((a + b) * h) / 2, [(a + b) * h, a * b * h, (a * h) / 2], r),
+      figure: { kind: 'trapezium', a: Math.min(a, b), b: Math.max(a, b), h, unit: 'cm' },
+    };
   },
 
   'math.geometry.pythagoras': (d, r) => {
     const triples = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25], [20, 21, 29]];
     const [a, b, c] = pick(r, d <= 3 ? triples.slice(0, 4) : triples);
-    if (d <= 3) return { prompt: `A right triangle has legs ${a} and ${b}. How long is the hypotenuse?`, ...numeric(c, [a + b, a * b / 2, c + 1], r) };
-    return { prompt: `A right triangle has hypotenuse ${c} and one leg ${a}. How long is the other leg?`, ...numeric(b, [c - a, c + a, b + 2], r), explanation: `b² = ${c}² − ${a}²` };
+    if (d <= 3)
+      return {
+        prompt: `A right triangle has legs ${a} and ${b}. How long is the hypotenuse?`,
+        ...numeric(c, [a + b, (a * b) / 2, c + 1], r),
+        figure: { kind: 'right-triangle', a, b, c, ask: 'c' },
+      };
+    return {
+      prompt: `A right triangle has hypotenuse ${c} and one leg ${a}. How long is the other leg?`,
+      ...numeric(b, [c - a, c + a, b + 2], r),
+      explanation: `b² = ${c}² − ${a}²`,
+      figure: { kind: 'right-triangle', a, b, c, ask: 'b' },
+    };
   },
 
   'math.geometry.circles': (d, r) => {
     const rad = int(r, 1, 10);
     const f = (n: number) => String(Math.round(n * 100) / 100);
-    if (d <= 3) return { prompt: `Circumference of a circle with radius ${rad} (use π = 3.14)?`, ...numeric(2 * 3.14 * rad, [3.14 * rad, 3.14 * rad * rad, 2 * 3.14 * rad + 1], r, f) };
-    return { prompt: `Area of a circle with radius ${rad} (use π = 3.14)?`, ...numeric(3.14 * rad * rad, [2 * 3.14 * rad, 3.14 * rad, 3.14 * rad * rad * 2], r, f) };
+    const figure: Figure = { kind: 'circle', r: rad };
+    if (d <= 3) return { prompt: `Circumference of a circle with radius ${rad} (use π = 3.14)?`, ...numeric(2 * 3.14 * rad, [3.14 * rad, 3.14 * rad * rad, 2 * 3.14 * rad + 1], r, f), figure };
+    return { prompt: `Area of a circle with radius ${rad} (use π = 3.14)?`, ...numeric(3.14 * rad * rad, [2 * 3.14 * rad, 3.14 * rad, 3.14 * rad * rad * 2], r, f), figure };
   },
 
   'math.stats.average': (d, r) => {

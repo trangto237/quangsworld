@@ -51,6 +51,7 @@ export function KnightArena(p: ModeProps) {
         setHurt(true);
         setTimeout(() => setHurt(false), 400);
       }
+      if (e.type === 'revived') setTimeout(() => say('✨ The Oracle restores your hearts!'), 900);
       if (e.type === 'end') setTimeout(() => end(e.victory, false), 1200);
     }
     force((n) => n + 1);

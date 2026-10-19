@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RunnerSim, runnerConfigFor } from '@atlas/game';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
-import { Marked, cx } from '@atlas/ui';
+import { Marked, cx, FigureView } from '@atlas/ui';
 import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
 import { QuestionCard, SignBox } from '../QuestionCard';
 import { isFreeAnswer } from '@atlas/shared';
@@ -19,6 +19,7 @@ const LONG = 22;
  */
 export function RunnerArena(p: ModeProps) {
   const lang = useLang();
+  const [revived, setRevived] = useState(false);
   const sim = useMemo(() => new RunnerSim({ ...runnerConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial, pace: p.trial ? 1.35 : 1 }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [lane, setLane] = useState(0);
@@ -90,7 +91,12 @@ export function RunnerArena(p: ModeProps) {
     p.onActivity?.();
     const r = p.onAnswered(question, correct, free ? free.ms : Math.round(performance.now() - startedAt.current), free ? free.text : question.shown[picked]);
     setStreak(r.streak);
+    const before = sim.revived;
     sim.pass(correct);
+    if (sim.revived > before) {
+      setRevived(true);
+      setTimeout(() => setRevived(false), 1800);
+    }
     if (r.done) sim.finale();
     force((n) => n + 1);
     setTimeout(() => {
@@ -155,6 +161,7 @@ export function RunnerArena(p: ModeProps) {
         {question && !isFreeAnswer(question) && (
           <div className="rounded-2xl bg-white/95 p-4 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-slate-100">
             {question.sign && <SignBox text={question.sign} />}
+            {question.figure && <FigureView figure={question.figure} />}
             {question.passage && (
               <p className="mb-2 max-h-28 overflow-y-auto rounded-lg bg-amber-50 p-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
                 <GlossText text={question.passage} enabled={gloss} />
@@ -256,6 +263,11 @@ export function RunnerArena(p: ModeProps) {
         {outcome && (
           <div className={cx('absolute left-1/2 top-[30%] -translate-x-1/2 animate-pop font-display text-4xl font-bold drop-shadow', outcome.correct ? 'text-emerald-300' : 'text-rose-400')}>
             {outcome.correct ? '+💎' : '💥'}
+          </div>
+        )}
+        {revived && (
+          <div className="absolute left-1/2 top-[42%] -translate-x-1/2 animate-pop whitespace-nowrap rounded-xl bg-amber-400/90 px-3 py-1.5 font-display text-base font-bold text-slate-900 shadow">
+            <T en="✨ The Oracle restores your hearts!" />
           </div>
         )}
         {outcome && !outcome.correct && p.wrongNote && (

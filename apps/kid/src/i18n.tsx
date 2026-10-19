@@ -165,6 +165,8 @@ const VI: Record<string, string> = {
   'Free them one by one. You can rest between realms — your progress is saved.': 'Giải phóng từng vương quốc một. Em có thể nghỉ giữa các vương quốc — tiến độ đã được lưu.',
   '🔒 Free the realm before it': '🔒 Hãy giải phóng vương quốc trước đó',
   'challenges done': 'thử thách đã xong',
+  '✨ The Oracle restores your health!': '✨ Nhà Tiên Tri hồi phục máu cho bạn!',
+  '✨ The Oracle restores your hearts!': '✨ Nhà Tiên Tri hồi phục tim cho bạn!',
   'Enter →': 'Vào →',
   'Rest for now (come back later)': 'Nghỉ một lát (quay lại sau)',
   '{title} is free!': '{title} đã được giải phóng!',
@@ -185,8 +187,8 @@ const VI: Record<string, string> = {
   'The forge has gone cold. Rebuild sentences to relight it.': 'Lò rèn đã nguội lạnh. Hãy ghép lại các câu để nhóm lửa.',
   'A guardian lurks in the dark cave. Listen closely to defeat it — you can replay each echo.':
     'Một người canh giữ ẩn nấp trong hang tối. Lắng nghe kỹ để đánh bại nó — em có thể nghe lại mỗi tiếng vọng.',
-  "The guardian of the ruins guards ancient tablets. Read carefully — there's no rush in a duel.":
-    'Người canh giữ tàn tích bảo vệ những phiến đá cổ. Đọc thật kỹ — đấu trùm không cần vội.',
+  'A mystery hides in the ancient ruins. Read the tablets carefully, collect clues and name the culprit — there is no rush.':
+    'Một bí ẩn ẩn giấu trong tàn tích cổ. Đọc kỹ các phiến đá, thu thập manh mối và chỉ ra thủ phạm — không cần vội.',
   'The Glitch king hides in the citadel behind number puzzles. Hunt him down with your knight!':
     'Vua Glitch trốn trong thành trì sau những câu đố con số. Hãy dùng quân mã săn lùng hắn!',
   'Word Power': 'Sức mạnh Từ vựng',

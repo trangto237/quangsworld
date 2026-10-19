@@ -5,7 +5,7 @@ import { hashString } from '@atlas/shared';
 import { cx } from '@atlas/ui';
 import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
-import { T } from '../../i18n';
+import { T, tr, useLang } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
 import { ComebackCardButton } from './ComebackCard';
 import type { ModeProps } from './types';
@@ -20,6 +20,7 @@ type Fx = { id: number; text: string; kind: 'hit' | 'crit' | 'ult' | 'hurt' | 'd
  */
 export function DuelArena(p: ModeProps) {
   const sim = useMemo(() => new DuelSim({ ...duelConfigFor(p.minutes), noDefeat: p.trial, paced: p.trial }), [p.minutes, p.trial]);
+  const lang = useLang();
   const boss = BOSSES[hashString(p.bossName ?? p.title) % BOSSES.length];
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [, force] = useState(0);
@@ -67,6 +68,7 @@ export function DuelArena(p: ModeProps) {
       }
       if (e.type === 'blocked') setFx((f) => [...f, { id, text: '🛡️ Blocked!', kind: 'card' }]);
       if (e.type === 'healed') setFx((f) => [...f, { id, text: `+${e.amount} ❤`, kind: 'card' }]);
+      if (e.type === 'revived') setFx((f) => [...f, { id, text: tr(lang, '✨ The Oracle restores your health!'), kind: 'card' }]);
       if (e.type === 'card') setFx((f) => [...f, { id, text: '🃏 Comeback card!', kind: 'card' }]);
       if (e.type === 'bossDown') {
         setFx((f) => [...f, { id, text: 'Boss defeated!', kind: 'down' }]);

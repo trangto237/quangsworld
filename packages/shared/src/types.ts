@@ -52,6 +52,20 @@ export interface ConceptState {
  */
 export type QuestionType = 'mcq' | 'listen' | 'read' | 'fill' | 'input' | 'order';
 
+/**
+ * Geometry diagrams, drawn roughly to scale. Numbers are real sizes; `ask` marks the unknown ("?").
+ * Plain data so questions stay serialisable.
+ */
+export type Figure =
+  | { kind: 'triangle'; angles: [number, number, number]; ask?: 0 | 1 | 2 }
+  | { kind: 'line-angles'; angle: number; ask: 0 | 1 }
+  | { kind: 'polygon'; sides: number; askAngle?: boolean }
+  | { kind: 'rect'; w: number; h: number; unit?: string }
+  | { kind: 'tri-area'; base: number; height: number; unit?: string }
+  | { kind: 'trapezium'; a: number; b: number; h: number; unit?: string }
+  | { kind: 'right-triangle'; a: number; b: number; c: number; ask: 'a' | 'b' | 'c' }
+  | { kind: 'circle'; r: number; unit?: string };
+
 export interface Question {
   id: string;
   conceptId: string;
@@ -75,6 +89,8 @@ export interface Question {
   script?: { who: string; text: string }[];
   /** Questions sharing one passage or recording (cloze, reading, IELTS). */
   setId?: string;
+  /** A diagram drawn with the question (geometry). */
+  figure?: Figure;
   /** Typed answers: other accepted spellings besides options[answer] ("14", "fourteen"). */
   accept?: string[];
   source: string;

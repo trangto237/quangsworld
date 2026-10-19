@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
-import { Button, Marked, cx } from '@atlas/ui';
+import { Button, Marked, cx, FigureView } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
 import { GlossText, hasGloss } from './GlossText';
 import { playQuestionAudio, stopSpeaking } from '../lib/speech';
@@ -140,6 +140,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
         </button>
       )}
       {q.sign && <SignBox text={q.sign} />}
+      {q.figure && <FigureView figure={q.figure} />}
       <div className="flex items-start gap-2">
         <p className={cx('flex-1 whitespace-pre-line font-display font-semibold leading-snug', compact ? 'text-lg' : 'text-xl sm:text-2xl')}>
           <GlossText text={q.prompt} enabled={gloss} />

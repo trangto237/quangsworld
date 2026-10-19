@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
-import { cx } from '@atlas/ui';
+import { cx, FigureView } from '@atlas/ui';
 import { playQuestionAudio } from '../../lib/speech';
 import { SignBox } from '../QuestionCard';
 import { GlossText } from '../GlossText';
@@ -25,6 +25,7 @@ export function PromptPanel({ q, glossary = true, className, children }: { q: Pr
   return (
     <div className={cx('rounded-2xl bg-white/95 p-4 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-slate-100', className)}>
       {q.sign && <SignBox text={q.sign} />}
+      {q.figure && <FigureView figure={q.figure} />}
       {q.passage && (
         <p className="mb-2 max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-amber-50 p-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
           <GlossText text={q.passage} enabled={gloss} />

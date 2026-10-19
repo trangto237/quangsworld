@@ -21,7 +21,7 @@ const REALM_MODE: Record<string, GameMode> = {
   'word-hunter': 'runner',
   'sentence-forge': 'defense',
   'echo-cave': 'duel',
-  'reading-puzzle': 'duel',
+  'reading-puzzle': 'detective',
   'math-logic': 'knight',
 };
 
@@ -29,7 +29,7 @@ const REALMS: Record<string, { art: string; power: string; story: string }> = {
   'word-hunter': { art: '🏹', power: 'Word Power', story: 'Glitches have stolen the words of the forest. Race through the right gates to win them back!' },
   'sentence-forge': { art: '⚒️', power: 'Sentence Craft', story: 'The forge has gone cold. Rebuild sentences to relight it.' },
   'echo-cave': { art: '🦇', power: 'Echo Sense', story: 'A guardian lurks in the dark cave. Listen closely to defeat it — you can replay each echo.' },
-  'reading-puzzle': { art: '🧩', power: 'Tablet Reading', story: "The guardian of the ruins guards ancient tablets. Read carefully — there's no rush in a duel." },
+  'reading-puzzle': { art: '🧩', power: 'Tablet Reading', story: 'A mystery hides in the ancient ruins. Read the tablets carefully, collect clues and name the culprit — there is no rush.' },
   'math-logic': { art: '🏰', power: 'Number & Logic Might', story: 'The Glitch king hides in the citadel behind number puzzles. Hunt him down with your knight!' },
 };
 const REALM_COINS = 40;

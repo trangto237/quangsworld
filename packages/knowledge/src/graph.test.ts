@@ -142,3 +142,14 @@ describe('CSV flashcards', () => {
     }
   });
 });
+
+describe('geometry figures', () => {
+  it('every generated geometry question comes with a diagram', () => {
+    for (const conceptId of ['math.geometry.angles', 'math.geometry.area', 'math.geometry.pythagoras', 'math.geometry.circles'])
+      for (let d = 1; d <= 5; d++)
+        for (let i = 0; i < 5; i++) {
+          const q = pickQuestion({ conceptId, difficulty: d, rand: Math.random });
+          expect(q?.figure, `${conceptId} d${d}`).toBeTruthy();
+        }
+  });
+});

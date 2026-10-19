@@ -7,7 +7,7 @@ import {
 import { present, type PresentedQuestion } from '@atlas/knowledge';
 import type { ConceptState, Question } from '@atlas/shared';
 import { DAY_MS } from '@atlas/shared';
-import { Button, Marked, Modal, Progress, cx, useRepo } from '@atlas/ui';
+import { Button, Marked, Modal, Progress, cx, useRepo, FigureView } from '@atlas/ui';
 import { Explanation } from '../components/Explanation';
 import { SignBox } from '../components/QuestionCard';
 import { speakScript, stopSpeaking } from '../lib/speech';
@@ -337,6 +337,7 @@ function PaperQuestion({
         <span className="mt-0.5 shrink-0 font-bold tabular-nums">Question {n}.</span>
         <div className="min-w-0 flex-1">
           {q.sign && <SignBox text={q.sign} />}
+          {q.figure && <FigureView figure={q.figure} />}
           {!inSet && q.passage && <p className="mb-2 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/60">{q.passage}</p>}
           <p className="whitespace-pre-line">
             <Marked text={q.prompt.replace(/^Choose the sentence (closest in meaning to|that best combines): /, '')} />
@@ -408,6 +409,7 @@ function ExamResultView({ grade, progress, examName, onDone }: { grade: ExamGrad
                   {ok ? '✅' : '❌'} Question {i + 1}
                 </p>
                 {q.sign && <SignBox text={q.sign} />}
+                {q.figure && <FigureView figure={q.figure} />}
                 {q.passage && (
                   <details className="my-2 text-sm">
                     <summary className="cursor-pointer text-slate-500">

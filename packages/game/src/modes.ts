@@ -78,6 +78,8 @@ export type DuelEvent =
   | { type: 'card'; card: ComebackCard }
   | { type: 'healed'; amount: number }
   | { type: 'bossDown'; wave: number }
+  /** Placement trial: health ran out, so the Oracle restores it (the trial can't be lost). */
+  | { type: 'revived' }
   | { type: 'end'; victory: boolean };
 
 export interface DuelConfig {
@@ -184,9 +186,12 @@ export class DuelSim {
       out.push({ type: 'blocked' });
     } else {
       const damage = this.enraged ? BOSS_ENRAGED_HIT : BOSS_HIT;
-      this.heroHp = Math.max(this.cfg.noDefeat ? 1 : 0, this.heroHp - damage);
+      this.heroHp = Math.max(0, this.heroHp - damage);
       out.push({ type: 'hurt', damage });
-      if (this.heroHp === 0) {
+      if (this.heroHp === 0 && this.cfg.noDefeat) {
+        this.heroHp = this.heroMax;
+        out.push({ type: 'revived' });
+      } else if (this.heroHp === 0) {
         this.status = 'lost';
         out.push({ type: 'end', victory: false });
       }
@@ -225,6 +230,8 @@ export class RunnerSim {
   passed = 0;
   hearts: number;
   readonly maxHearts: number;
+  /** Placement trial: times the hearts were refilled. */
+  revived = 0;
   combo = 0;
   score = 0;
   status: 'playing' | 'won' | 'lost' = 'playing';
@@ -247,8 +254,12 @@ export class RunnerSim {
       this.score += 10 * Math.min(5, this.combo);
     } else {
       this.combo = 0;
-      this.hearts = Math.max(this.cfg.noDefeat ? 1 : 0, this.hearts - 1);
-      if (this.hearts === 0) {
+      this.hearts = Math.max(0, this.hearts - 1);
+      if (this.hearts === 0 && this.cfg.noDefeat) {
+        // Placement trial: can't be lost, so the hearts come back (the screen says so).
+        this.hearts = this.maxHearts;
+        this.revived++;
+      } else if (this.hearts === 0) {
         this.status = 'lost';
         return 'fall';
       }
@@ -293,6 +304,7 @@ export type KnightEvent =
   | { type: 'kingFalls'; wave: number }
   | { type: 'advance'; piece: KnightPiece }
   | { type: 'attacked'; piece: KnightPiece }
+  | { type: 'revived' }
   | { type: 'end'; victory: boolean };
 
 const JUMPS = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
@@ -396,10 +408,13 @@ export class KnightSim {
     const step = { r: mover.r + Math.sign(this.knight.r - mover.r), c: mover.c + Math.sign(this.knight.c - mover.c) };
     if (step.r === this.knight.r && step.c === this.knight.c) {
       // Already adjacent: it strikes, then retreats to a far square.
-      this.hearts = Math.max(this.cfg.noDefeat ? 1 : 0, this.hearts - 1);
+      this.hearts = Math.max(0, this.hearts - 1);
       out.push({ type: 'attacked', piece: mover });
       Object.assign(mover, this.randomSquare(3));
-      if (this.hearts === 0) {
+      if (this.hearts === 0 && this.cfg.noDefeat) {
+        this.hearts = this.maxHearts;
+        out.push({ type: 'revived' });
+      } else if (this.hearts === 0) {
         this.status = 'lost';
         out.push({ type: 'end', victory: false });
       }

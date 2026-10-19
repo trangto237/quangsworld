@@ -189,6 +189,7 @@ function generate(conceptId: string, difficulty: number, seed: number): Question
     explanation: g.explanation,
     audio: g.audio,
     passage: g.passage,
+    figure: g.figure,
     source: 'Atlas generator',
   };
 }
