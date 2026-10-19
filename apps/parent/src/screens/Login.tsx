@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Field, inputClass, useRepo } from '@atlas/ui';
+import { Button, Card, Field, InstallButton, inputClass, useRepo } from '@atlas/ui';
+import { INSTALL_LABELS } from '../components/install';
 import { useParent } from '../store';
 import { useCloud } from '../components/Cloud';
 
@@ -56,6 +57,9 @@ export function Login({ name }: { name: string }) {
             ← Back to players
           </a>
         </p>
+        <div className="mt-4 flex justify-center">
+          <InstallButton labels={INSTALL_LABELS} className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700" />
+        </div>
       </div>
     </div>
   );

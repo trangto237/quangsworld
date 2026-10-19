@@ -65,6 +65,9 @@ export function ProfilePicker() {
             <a href="/parent/" className="mt-5 inline-block text-sm text-white/60 underline-offset-4 hover:underline">
               <T en="No code? Set up on this device instead" />
             </a>
+            <div className="mt-4">
+              <KidInstall />
+            </div>
           </div>
         ) : !family || students.length === 0 ? (
           <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
@@ -77,6 +80,9 @@ export function ProfilePicker() {
             <a href="/parent/" className="mt-5 inline-block rounded-xl bg-amber-400 px-5 py-3 font-display font-bold text-amber-950 shadow-[0_4px_0_#b45309]">
               <TB en="Open parent setup →" />
             </a>
+            <div className="mt-4">
+              <KidInstall />
+            </div>
           </div>
         ) : (
           <>
@@ -101,31 +107,7 @@ export function ProfilePicker() {
               </a>
             </div>
             <div className="mt-10 flex flex-wrap justify-center gap-6">
-              <InstallButton
-                className="text-sm font-semibold text-amber-300 underline-offset-4 hover:underline"
-                labels={{
-                  install: (
-                    <>
-                      📲 <T en="Install the app" />
-                    </>
-                  ),
-                  iosTitle: tr('help', 'Put Atlas on your home screen'),
-                  iosSteps: (
-                    <ol className="list-decimal space-y-2 pl-5">
-                      <li>
-                        <T en="In Safari, tap the Share button (the square with an arrow) at the bottom of the screen." />
-                      </li>
-                      <li>
-                        <T en="Scroll down and tap “Add to Home Screen”, then “Add”." />
-                      </li>
-                      <li>
-                        <T en="Open Atlas from its new icon — it works like an app, even offline." />
-                      </li>
-                    </ol>
-                  ),
-                  done: <T en="Got it" />,
-                }}
-              />
+              <KidInstall />
               {connected && (
                 <button
                   onClick={() =>
@@ -190,5 +172,36 @@ export function Stars() {
         />
       ))}
     </div>
+  );
+}
+
+/** "📲 Install the app" for the kid screens (Vietnamese help on iPhone). */
+function KidInstall() {
+  return (
+    <InstallButton
+      className="text-sm font-semibold text-amber-300 underline-offset-4 hover:underline"
+      labels={{
+        install: (
+          <>
+            📲 <T en="Install the app" />
+          </>
+        ),
+        iosTitle: tr('help', 'Put Atlas on your home screen'),
+        iosSteps: (
+          <ol className="list-decimal space-y-2 pl-5">
+            <li>
+              <T en="In Safari, tap the Share button (the square with an arrow) at the bottom of the screen." />
+            </li>
+            <li>
+              <T en="Scroll down and tap “Add to Home Screen”, then “Add”." />
+            </li>
+            <li>
+              <T en="Open Atlas from its new icon — it works like an app, even offline." />
+            </li>
+          </ol>
+        ),
+        done: <T en="Got it" />,
+      }}
+    />
   );
 }

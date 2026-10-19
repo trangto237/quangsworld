@@ -39,12 +39,31 @@ export interface InstallLabels {
   install: ReactNode;
   iosTitle: string;
   iosSteps: ReactNode;
+  /** Other browsers when they don't offer a direct install (menu steps). */
+  otherSteps?: ReactNode;
   done: ReactNode;
 }
 
+const OTHER_STEPS = (
+  <ul className="list-disc space-y-2 pl-5">
+    <li>
+      <b>Chrome or Edge (computer):</b> click the install icon at the right end of the address bar, or the ⋮ / … menu → <i>Install Atlas</i> (Edge: <i>Apps → Install this site as an app</i>).
+    </li>
+    <li>
+      <b>Android:</b> Chrome ⋮ menu → <i>Install app</i> or <i>Add to Home screen</i>.
+    </li>
+    <li>
+      <b>Safari on a Mac:</b> <i>File → Add to Dock</i>.
+    </li>
+    <li>
+      <b>iPhone / iPad:</b> in Safari, Share (square with an arrow) → <i>Add to Home Screen</i>.
+    </li>
+  </ul>
+);
+
 /**
- * "📲 Install app": the browser's install dialog where there is one (Android, Chrome, Edge), Safari's
- * steps on iPhone/iPad. Hidden when already installed or when the browser can't install apps.
+ * "📲 Install app": the browser's install dialog where there is one (Android, Chrome, Edge), otherwise
+ * the steps for this browser (Safari on iPhone/iPad, menus elsewhere). Hidden once installed.
  */
 export function InstallButton({ labels, className }: { labels: InstallLabels; className?: string }) {
   const available = useSyncExternalStore(subscribe, () => !!deferred, () => false);
@@ -60,7 +79,9 @@ export function InstallButton({ labels, className }: { labels: InstallLabels; cl
       window.removeEventListener('appinstalled', on);
     };
   }, []);
-  if (installed || (!available && !isIos())) return null;
+  void available; // re-render when the browser's install offer arrives
+  // Always offered until installed: a direct install where the browser allows it, otherwise the steps.
+  if (installed) return null;
   return (
     <>
       <button
@@ -78,8 +99,8 @@ export function InstallButton({ labels, className }: { labels: InstallLabels; cl
       >
         {labels.install}
       </button>
-      <Modal open={iosHelp} onClose={() => setIosHelp(false)} title={labels.iosTitle}>
-        <div className="space-y-3 text-sm">{labels.iosSteps}</div>
+      <Modal open={iosHelp} onClose={() => setIosHelp(false)} title={isIos() ? labels.iosTitle : 'Install Atlas'}>
+        <div className="space-y-3 text-sm">{isIos() ? labels.iosSteps : (labels.otherSteps ?? OTHER_STEPS)}</div>
         <button type="button" onClick={() => setIosHelp(false)} className="mt-4 w-full rounded-xl bg-brand-600 py-2 font-semibold text-white">
           {labels.done}
         </button>
