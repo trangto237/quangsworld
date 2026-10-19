@@ -53,7 +53,7 @@ export function Login({ name }: { name: string }) {
         </Card>
         <p className="mt-4 text-center text-sm">
           <a href="/" className="text-slate-500 hover:underline">
-            ← Back to the kid app
+            ← Back to players
           </a>
         </p>
       </div>

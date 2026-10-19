@@ -91,11 +91,16 @@ export function ProfilePicker() {
                   {s.hasPin && <span className="text-xs text-white/60">🔒 PIN</span>}
                 </button>
               ))}
+              {/* The parent uses the same app: their pages open with the parent password. */}
+              <a href="/parent/" className="group flex w-32 flex-col items-center gap-2 rounded-2xl p-3 transition hover:bg-white/10">
+                <span className="grid size-24 place-items-center rounded-3xl bg-slate-900/40 text-5xl ring-4 ring-white/10 transition group-hover:scale-105 group-hover:ring-sky-300">👤</span>
+                <span className="font-display text-lg font-semibold">{family.parentName || tr('help', 'Parent')}</span>
+                <span className="text-xs text-white/60">
+                  🔒 <T en="Parent" />
+                </span>
+              </a>
             </div>
             <div className="mt-10 flex flex-wrap justify-center gap-6">
-              <a href="/parent/" className="text-sm text-white/60 underline-offset-4 hover:underline">
-                <T en="Parent dashboard" />
-              </a>
               <InstallButton
                 className="text-sm font-semibold text-amber-300 underline-offset-4 hover:underline"
                 labels={{

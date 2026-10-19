@@ -311,6 +311,7 @@ const VI: Record<string, string> = {
   // Family code
   'Sign in': 'Đăng nhập',
   'Sign out': 'Đăng xuất',
+  Parent: 'Phụ huynh',
   'Install the app': 'Cài ứng dụng',
   '📲 Install the app': '📲 Cài ứng dụng',
   'Put Atlas on your home screen': 'Đưa Atlas ra màn hình chính',
