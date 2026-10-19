@@ -180,7 +180,7 @@ export class CloudSync {
   async signUp(email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
     const client = await this.ensureClient();
     const { data, error } = await client.auth.signUp({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(authFriendly(error.message));
     if (!data.session?.user) return 'confirm-email';
     await this.attach(data.session.user);
     return 'signed-in';
@@ -189,7 +189,7 @@ export class CloudSync {
   async signIn(email: string, password: string) {
     const client = await this.ensureClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(authFriendly(error.message));
     await this.attach(data.user);
   }
 
@@ -453,6 +453,22 @@ export async function confirmSignOut(cloud: CloudSync, text: { ask: string; unsy
 
 const PENDING_CODE = 'atlas-pending-family-code';
 const formatCode = (c: string) => (c.length === 10 ? `${c.slice(0, 5)}-${c.slice(5)}` : c);
+/** Supabase sign-in/sign-up errors in plain words, with what to do. */
+const authFriendly = (m: string) =>
+  /invalid login credentials/i.test(m)
+    ? 'Wrong email or password — or this account doesn’t exist yet. A password made before cloud sync was only for one device: create the account with “Create a parent account”.'
+    : /email not confirmed/i.test(m)
+      ? 'This email isn’t confirmed yet. Open the confirmation email from Supabase and tap the link, then sign in. (Or turn off “Confirm email” in Supabase → Authentication → Sign In / Providers → Email.)'
+      : /already registered|already been registered|user already exists/i.test(m)
+        ? 'An account with this email already exists — use “Sign in” instead.'
+        : /password should be|weak password/i.test(m)
+          ? 'That password is too short or too simple. Use at least 6 characters.'
+          : /rate limit|too many/i.test(m)
+            ? 'Too many tries for now. Wait a few minutes and try again.'
+            : /signups? not allowed|signup is disabled/i.test(m)
+              ? 'New accounts are turned off in Supabase. Turn on “Allow new users to sign up” in Authentication → Sign In / Providers.'
+              : friendly(m);
+
 const friendly = (m: string) =>
   /atlas_(family_codes|members|join_family|new_family_code)|schema cache|does not exist/i.test(m)
     ? 'Your Supabase project needs the latest setup script: run supabase/setup.sql again in the SQL editor.'
