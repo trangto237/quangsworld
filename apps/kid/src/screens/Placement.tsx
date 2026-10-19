@@ -1,5 +1,6 @@
 import { confirmSignOut } from '@atlas/db/cloud';
 import { useKidCloud } from '../components/JoinFamily';
+import { reportError, watch } from '../lib/errors';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import {
@@ -77,12 +78,20 @@ export function Placement({ student }: { student: StudentProfile }) {
     const t = timer.current;
     timer.current = null;
     const activeMs = t?.stop() ?? 0;
-    await repo.completeMission(student.id, {
-      states: [],
-      session: { kind: 'placement', startedAt: t?.startedAt ?? Date.now(), endedAt: Date.now(), activeMs, missionTitle: 'Trial of Five Realms' },
-      reward: freedIndex == null ? { coins: 0, gems: 0, xp: 0 } : { coins: REALM_COINS, gems: 0, xp: 60 },
-    });
+    // Show the next screen first: a slow or failed save must never leave the player stuck in the game.
     setPhase(freedIndex == null ? { kind: 'map' } : { kind: 'freed', index: freedIndex });
+    try {
+      await watch(
+        repo.completeMission(student.id, {
+          states: [],
+          session: { kind: 'placement', startedAt: t?.startedAt ?? Date.now(), endedAt: Date.now(), activeMs, missionTitle: 'Trial of Five Realms' },
+          reward: freedIndex == null ? { coins: 0, gems: 0, xp: 0 } : { coins: REALM_COINS, gems: 0, xp: 60 },
+        }),
+        'saving the realm',
+      );
+    } catch (e) {
+      reportError(e, 'saving the realm');
+    }
   };
 
   if (phase.kind === 'hero') return <HeroCard scores={phase.scores} onContinue={() => go({ name: 'hub' })} name={student.name} />;
@@ -179,7 +188,7 @@ export function Placement({ student }: { student: StudentProfile }) {
           const answer = { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct, msSpent: ms };
           const next = recordPlacementAnswer(stateRef.current, answer);
           update(next);
-          void repo.savePlacementProgress(student.id, next, answer);
+          watch(repo.savePlacementProgress(student.id, next, answer), 'saving the trial').catch((e) => reportError(e, 'saving the trial'));
           streak.current = correct ? streak.current + 1 : 0;
           return { streak: streak.current, done: next.sectionIndex !== index };
         }}

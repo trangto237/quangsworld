@@ -1,3 +1,4 @@
+import { reportError, watch } from '../lib/errors';
 import { useMemo, useRef } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { MissionSession, battleReward, historyFromAttempts, levelFromXp } from '@atlas/engine';
@@ -34,22 +35,32 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
     };
   }, [repo, student.id, mission]);
 
-  const finish = async (victory: boolean, retreated: boolean) => {
+  const finish = (victory: boolean, retreated: boolean) => {
     const { session, states } = setup;
     const activeMs = timer.current.stop();
     const now = Date.now();
     const finalStates = session.finish(now);
     const reward = battleReward(mission, { victory, accuracy: session.accuracy, answered: session.answered, bestStreak: session.bestStreak });
     const wallet = repo.getWallet(student.id);
-    await repo.completeMission(student.id, {
-      states: Object.values(finalStates),
-      session: { kind: 'mission', startedAt: timer.current.startedAt, endedAt: now, activeMs, missionTitle: mission.title },
-      reward,
-    });
-    if (fromPlan && (victory || session.answered >= 8)) {
-      const key = doneKey(student.id, dayKey(now));
-      await repo.setKv(key, [...new Set([...(repo.getKv<string[]>(key) ?? []), mission.id])]);
-    }
+    // Save in the background and show the results right away: a slow save never keeps the player waiting.
+    void (async () => {
+      try {
+        await watch(
+          repo.completeMission(student.id, {
+            states: Object.values(finalStates),
+            session: { kind: 'mission', startedAt: timer.current.startedAt, endedAt: now, activeMs, missionTitle: mission.title },
+            reward,
+          }),
+          'saving the game',
+        );
+        if (fromPlan && (victory || session.answered >= 8)) {
+          const key = doneKey(student.id, dayKey(now));
+          await repo.setKv(key, [...new Set([...(repo.getKv<string[]>(key) ?? []), mission.id])]);
+        }
+      } catch (e) {
+        reportError(e, 'saving the game');
+      }
+    })();
     const mistakes = repo.listMistakes(student.id, { since: timer.current.startedAt });
     go({
       name: 'results',
@@ -99,7 +110,7 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
         if (!correct) void repo.recordMistake(student.id, getQuestion(q.id) ?? q, picked);
         return { streak: setup.session.currentStreak };
       }}
-      onEnd={(victory, retreated) => void finish(victory, retreated)}
+      onEnd={(victory, retreated) => finish(victory, retreated)}
     />
   );
 }

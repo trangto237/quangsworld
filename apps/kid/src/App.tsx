@@ -10,6 +10,10 @@ import { Battle } from './screens/Battle';
 import { Results } from './screens/Results';
 import { Shop } from './screens/Shop';
 import { MistakeBook } from './screens/MistakeBook';
+import { ErrorToast } from './components/ErrorToast';
+import { installGlobalErrorHandlers } from './lib/errors';
+
+installGlobalErrorHandlers();
 import { ExamHall } from './screens/ExamHall';
 import { Exam } from './screens/Exam';
 import { CoachCorner } from './screens/CoachCorner';
@@ -20,6 +24,7 @@ export function App() {
   return (
     <LangContext.Provider value={lang}>
       <Screens />
+      <ErrorToast />
     </LangContext.Provider>
   );
 }

@@ -311,6 +311,10 @@ const VI: Record<string, string> = {
   // Family code
   'Sign in': 'Đăng nhập',
   'Sign out': 'Đăng xuất',
+  'Something went wrong': 'Đã xảy ra lỗi',
+  'The last answers may not have been saved. Reload to continue.': 'Vài câu trả lời gần nhất có thể chưa được lưu. Tải lại để chơi tiếp.',
+  Reload: 'Tải lại',
+  Dismiss: 'Đóng',
   Parent: 'Phụ huynh',
   'Install the app': 'Cài ứng dụng',
   '📲 Install the app': '📲 Cài ứng dụng',
