@@ -19,7 +19,7 @@ type Fx = { id: number; text: string; kind: 'hit' | 'crit' | 'ult' | 'hurt' | 'd
  * A correct answer is an attack (harder questions and streaks hit harder); a wrong one lets the boss strike.
  */
 export function DuelArena(p: ModeProps) {
-  const sim = useMemo(() => new DuelSim({ ...duelConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
+  const sim = useMemo(() => new DuelSim({ ...duelConfigFor(p.minutes), noDefeat: p.trial, paced: p.trial }), [p.minutes, p.trial]);
   const boss = BOSSES[hashString(p.bossName ?? p.title) % BOSSES.length];
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [, force] = useState(0);
@@ -38,7 +38,16 @@ export function DuelArena(p: ModeProps) {
     props.current.onEnd(victory, retreated);
   };
 
+  /** Share of the realm's challenges left after `extra` more answers (trial only). */
+  const left = (extra: number) => {
+    const g = props.current.progress;
+    return g && g.max > 0 ? Math.max(0, (g.max - g.value - extra) / g.max) : undefined;
+  };
+
   useEffect(() => {
+    // Continuing a realm: the boss is already as hurt as the realm is done.
+    const l = left(0);
+    if (l !== undefined) sim.pace(l);
     setQuestion(props.current.nextQuestion());
     return () => {
       stopSpeaking();
@@ -60,7 +69,7 @@ export function DuelArena(p: ModeProps) {
       if (e.type === 'healed') setFx((f) => [...f, { id, text: `+${e.amount} ❤`, kind: 'card' }]);
       if (e.type === 'card') setFx((f) => [...f, { id, text: '🃏 Comeback card!', kind: 'card' }]);
       if (e.type === 'bossDown') {
-        setFx((f) => [...f, { id, text: e.wave > 0 && p.trial ? 'Boss defeated! Another appears…' : 'Boss defeated!', kind: 'down' }]);
+        setFx((f) => [...f, { id, text: 'Boss defeated!', kind: 'down' }]);
         setAnim('bossDown');
       }
       setTimeout(() => setFx((f) => f.filter((x) => x.id !== id)), 1400);
@@ -75,7 +84,7 @@ export function DuelArena(p: ModeProps) {
     p.onActivity?.();
     const r = p.onAnswered(question, correct, ms, picked);
     setStreak(r.streak);
-    show(sim.answer(correct, r.streak, question.difficulty));
+    show(sim.answer(correct, r.streak, question.difficulty, left(1)));
     if (r.done) {
       show(sim.finale());
       setQuestion(null);

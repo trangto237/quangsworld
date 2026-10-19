@@ -163,3 +163,25 @@ describe("Knight's Quest", () => {
     expect(answers).toBeLessThan(80);
   });
 });
+
+describe('DuelSim paced (placement trial)', () => {
+  it('the boss never falls before the last challenge, and falls on the finale', () => {
+    const total = 15;
+    const sim = new DuelSim({ bossHp: 100, noDefeat: true, paced: true });
+    for (let i = 1; i < total; i++) {
+      sim.answer(true, i, 5, (total - i) / total);
+      expect(sim.bossHp).toBeGreaterThan(0);
+      expect(sim.bossHp).toBeLessThanOrEqual(Math.round((100 * (total - i)) / total));
+      expect(sim.status).toBe('playing');
+    }
+    const end = sim.finale();
+    expect(end.map((e) => e.type)).toEqual(['bossDown', 'end']);
+    expect(sim.bossHp).toBe(0);
+  });
+
+  it('continuing a realm starts the boss already hurt', () => {
+    const sim = new DuelSim({ bossHp: 100, paced: true });
+    sim.pace(0.4);
+    expect(sim.bossHp).toBe(40);
+  });
+});

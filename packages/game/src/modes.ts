@@ -87,6 +87,11 @@ export interface DuelConfig {
   noDefeat?: boolean;
   /** Placement trial: a new boss appears when one falls, until the challenges are done. */
   endless?: boolean;
+  /**
+   * Placement trial: the boss's health follows the realm's progress instead. It never falls before the
+   * last challenge (finale), and never shows more health than the share of challenges left.
+   */
+  paced?: boolean;
 }
 
 export const BOSS_HIT = 20;
@@ -132,11 +137,31 @@ export class DuelSim {
     return this.bossHp <= this.bossMax * 0.3;
   }
 
-  /** A correct answer is an attack (harder questions and streaks hit harder); a wrong one lets the boss strike. */
-  answer(correct: boolean, streak: number, difficulty = 3): DuelEvent[] {
+  /** Paced boss: health matches the share of challenges left (e.g. when continuing a realm). */
+  pace(left: number) {
+    if (!this.cfg.paced || this.status !== 'playing') return;
+    this.bossHp = Math.min(this.bossHp, Math.max(1, Math.round(this.bossMax * left)));
+  }
+
+  /**
+   * A correct answer is an attack (harder questions and streaks hit harder); a wrong one lets the boss strike.
+   * `left`: share of the realm's challenges left after this one (paced boss only).
+   */
+  answer(correct: boolean, streak: number, difficulty = 3, left?: number): DuelEvent[] {
     if (this.status !== 'playing') return [];
     const out: DuelEvent[] = [];
-    if (correct) {
+    if (correct && this.cfg.paced) {
+      // Hits land, but the boss holds on (at least 1 HP per challenge left) until the finale.
+      const ultimate = streak > 0 && streak % 5 === 0;
+      const crit = !ultimate && streak >= 3;
+      const nominal = Math.round((10 + difficulty * 2) * (ultimate ? 3 : crit ? 1.5 : 1) * (this.doubleNext ? 2 : 1));
+      this.doubleNext = false;
+      const floor = Math.max(1, Math.round(this.bossMax * (left ?? 1)));
+      const next = Math.min(this.bossHp, Math.max(floor, this.bossHp - nominal));
+      const damage = this.bossHp - next;
+      this.bossHp = next;
+      if (damage > 0) out.push({ type: 'attack', damage, crit, ultimate });
+    } else if (correct) {
       const ultimate = streak > 0 && streak % 5 === 0;
       const crit = !ultimate && streak >= 3;
       const damage = Math.round((10 + difficulty * 2) * (ultimate ? 3 : crit ? 1.5 : 1) * (this.doubleNext ? 2 : 1));
