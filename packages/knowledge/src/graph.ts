@@ -1,6 +1,6 @@
 import { concepts as builtinConcepts, questions as builtinQuestions, generators } from '@atlas/content';
 import type { ConceptDef, PlacementSection, Question, SubjectId } from '@atlas/shared';
-import { hashString, rng, shuffle } from '@atlas/shared';
+import { hashString, orderTokens, rng, shuffle } from '@atlas/shared';
 
 export interface SubjectMeta {
   id: SubjectId;
@@ -259,6 +259,14 @@ export interface PresentedQuestion extends Question {
 /** Shuffle options (except T/F/NG which keep canonical order). */
 export function present(q: Question, seed = hashString(q.id + Date.now())): PresentedQuestion {
   if (q.type === 'input') return { ...q, shown: [], correct: -1 };
+  if (q.type === 'order') {
+    // Word tiles, shuffled so they never already read as the answer.
+    const { tokens } = orderTokens(q.options[q.answer]);
+    const r = rng(seed);
+    let shown = shuffle(tokens, r);
+    for (let i = 0; i < 5 && tokens.length > 1 && shown.join(' ') === tokens.join(' '); i++) shown = shuffle(tokens, r);
+    return { ...q, shown, correct: -1 };
+  }
   const correctText = q.options[q.answer];
   const canonical = q.options.length === 3 && q.options.includes('Not Given');
   const shown = canonical ? ['True', 'False', 'Not Given'] : shuffle(q.options, rng(seed));

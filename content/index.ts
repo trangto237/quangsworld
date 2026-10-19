@@ -9,6 +9,7 @@ import { englishGenerators } from './english/generators';
 import { pronunciationConcepts, pronunciationGenerators } from './english/pronunciation';
 import { examSkillConcepts, examSkillQuestions } from './english/exam-skills';
 import { passageConcepts, passageQuestions } from './english/passages';
+import { wordOrderConcepts, wordOrderQuestions } from './english/word-order';
 import { literatureConcepts, literatureQuestions } from './literature';
 
 const withSubject = (subject: SubjectId, seeds: ConceptSeed[]): ConceptDef[] => seeds.map((c) => ({ ...c, subject }));
@@ -18,12 +19,13 @@ export const concepts: ConceptDef[] = [
   ...withSubject('english', pronunciationConcepts),
   ...withSubject('english', examSkillConcepts),
   ...withSubject('english', passageConcepts),
+  ...withSubject('english', wordOrderConcepts),
   ...withSubject('math', mathConcepts),
   ...withSubject('logic', logicConcepts),
   ...withSubject('literature', literatureConcepts),
 ];
 
-export const questions: Question[] = [...englishQuestions, ...examSkillQuestions, ...passageQuestions, ...logicQuestions, ...literatureQuestions];
+export const questions: Question[] = [...englishQuestions, ...examSkillQuestions, ...passageQuestions, ...wordOrderQuestions, ...logicQuestions, ...literatureQuestions];
 
 const sanitizeAll = (g: Record<string, Generator>): Record<string, Generator> =>
   Object.fromEntries(Object.entries(g).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]));

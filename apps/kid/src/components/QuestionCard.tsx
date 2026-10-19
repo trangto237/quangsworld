@@ -4,7 +4,7 @@ import { Button, Marked, cx } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
 import { GlossText, hasGloss } from './GlossText';
 import { playQuestionAudio, stopSpeaking } from '../lib/speech';
-import { isTypedAnswerCorrect } from '@atlas/shared';
+import { isTypedAnswerCorrect, orderTokens } from '@atlas/shared';
 import { Explanation } from './Explanation';
 import { CoachHint } from './Coach';
 
@@ -36,7 +36,10 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
   const [picked, setPicked] = useState<number | null>(null);
   const [typed, setTyped] = useState('');
   const [typedResult, setTypedResult] = useState<boolean | null>(null);
-  const isInput = q.type === 'input';
+  const isOrder = q.type === 'order';
+  const isInput = q.type === 'input' || isOrder;
+  /** Order questions: indices into q.shown, in the order the tiles were placed. */
+  const [built, setBuilt] = useState<number[]>([]);
   const hasAudio = !!(q.audio || q.script?.length);
   const instructionVi = lang === 'en' ? null : translatePrompt(q.prompt, q.conceptId);
   const [showVi, setShowVi] = useState(lang === 'vi');
@@ -49,6 +52,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
   useEffect(() => {
     setPicked(null);
     setTyped('');
+    setBuilt([]);
     setTypedResult(null);
     done.current = false;
     result.current = null;
@@ -79,12 +83,12 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
     setTimeout(finish, correct ? 550 : 1300);
   };
 
-  const submitTyped = () => {
-    if (done.current || !typed.trim()) return;
+  const submitTyped = (text = typed) => {
+    if (done.current || !text.trim()) return;
     done.current = true;
-    const correct = isTypedAnswerCorrect(q, typed);
+    const correct = isTypedAnswerCorrect(q, text);
     setTypedResult(correct);
-    result.current = { correct, ms: Math.round(performance.now() - shownAt.current), text: typed.trim() };
+    result.current = { correct, ms: Math.round(performance.now() - shownAt.current), text: text.trim() };
     if (mode === 'practice' && !correct) return;
     setTimeout(finish, correct ? 550 : 1800);
   };
@@ -93,7 +97,9 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const i = KEYS.indexOf(e.key);
-      if (i >= 0 && i < q.shown.length) choose(i);
+      if (i >= 0 && i < q.shown.length && !isInput) choose(i);
+      if (e.key === 'Enter' && isOrder && !done.current && built.length === q.shown.length) submitTyped(builtText());
+      if (e.key === 'Backspace' && isOrder && !done.current) setBuilt((b) => b.slice(0, -1));
       if ((e.key === 'r' || e.key === 'R') && hasAudio) playQuestionAudio(q);
       if (e.key === 'Enter' && mode === 'practice' && result.current && !result.current.correct) finish();
     };
@@ -101,6 +107,11 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
     return () => removeEventListener('keydown', onKey);
   });
 
+  const builtText = () => {
+    const words = built.map((i) => q.shown[i]);
+    if (words.length) words[0] = words[0][0].toUpperCase() + words[0].slice(1);
+    return words.join(' ') + (isOrder ? orderTokens(q.options[q.answer]).end : '');
+  };
   const answered = picked !== null || typedResult !== null;
   const wrong = isInput ? typedResult === false : answered && picked !== q.correct;
 
@@ -154,7 +165,43 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
         </div>
       )}
       {gloss && !answered && (hasGloss(q.prompt) || hasGloss(q.passage)) && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}
-      {isInput && (
+      {isOrder && (
+        <div className="mt-4 space-y-3">
+          <div
+            className={cx(
+              'flex min-h-14 flex-wrap items-center gap-2 rounded-xl border-2 border-dashed p-2',
+              typedResult === null && 'border-slate-300 dark:border-slate-600',
+              typedResult === true && 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40',
+              typedResult === false && 'border-rose-500 bg-rose-50 dark:bg-rose-950/40',
+            )}
+            aria-label="Your sentence"
+          >
+            {built.length === 0 && <span className="px-2 text-sm text-slate-400">{lang === 'vi' ? 'Chạm vào các từ theo đúng thứ tự…' : 'Tap the words in the right order…'}</span>}
+            {built.map((i, k) => (
+              <button key={k} disabled={answered} onClick={() => setBuilt(built.filter((_, j) => j !== k))} className="rounded-lg bg-brand-600 px-3 py-1.5 font-semibold text-white shadow-sm">
+                {k === 0 ? q.shown[i][0].toUpperCase() + q.shown[i].slice(1) : q.shown[i]}
+              </button>
+            ))}
+            {built.length > 0 && <span className="font-bold">{orderTokens(q.options[q.answer]).end}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {q.shown.map((w, i) => (
+              <button
+                key={i}
+                disabled={answered || built.includes(i)}
+                onClick={() => setBuilt([...built, i])}
+                className={cx('rounded-lg px-3 py-1.5 font-semibold ring-2 transition', built.includes(i) ? 'opacity-25 ring-slate-200 dark:ring-slate-700' : 'bg-white ring-slate-300 hover:ring-brand-400 dark:bg-slate-800 dark:ring-slate-600')}
+              >
+                {w}
+              </button>
+            ))}
+          </div>
+          <Button className="w-full" disabled={answered || built.length !== q.shown.length} onClick={() => submitTyped(builtText())}>
+            <TB en="Check" />
+          </Button>
+        </div>
+      )}
+      {isInput && !isOrder && (
         <form
           className="mt-4 flex gap-2"
           onSubmit={(e) => {
@@ -187,7 +234,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
         <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">✓ {q.options[q.answer]}</p>
       )}
       <div className={cx('mt-4 grid gap-2', q.shown.length === 3 ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-2')}>
-        {q.shown.map((opt, i) => {
+        {!isOrder && q.shown.map((opt, i) => {
           const state = !answered ? 'idle' : i === q.correct ? 'right' : i === picked ? 'wrong' : 'dim';
           return (
             <button
@@ -217,7 +264,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
       )}
       {wrong && mode === 'practice' && (
         <div className="mt-4">
-          <Explanation question={q} picked={isInput ? typed : q.shown[picked!]} />
+          <Explanation question={q} picked={isOrder ? builtText() : isInput ? typed : q.shown[picked!]} />
           <Button className="mt-3 w-full" onClick={finish}>
             <TB en="Next" /> <span className="text-xs opacity-70">(Enter)</span>
           </Button>

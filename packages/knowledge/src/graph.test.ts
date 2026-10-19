@@ -1,3 +1,4 @@
+import { isTypedAnswerCorrect, orderTokens } from '@atlas/shared';
 import { describe, expect, it } from 'vitest';
 import { generators, questions } from '@atlas/content';
 import { PLACEMENT_SECTIONS, WORLDS, allConcepts, getConcept, getQuestion, knowledgeTree, pickQuestion, present } from './graph';
@@ -17,7 +18,7 @@ describe('knowledge graph integrity', () => {
       expect(ids.has(q.id), q.id).toBe(false);
       ids.add(q.id);
       expect(getConcept(q.conceptId), q.id).toBeDefined();
-      expect(q.options.length, q.id).toBeGreaterThanOrEqual(q.type === 'input' ? 1 : 3);
+      expect(q.options.length, q.id).toBeGreaterThanOrEqual(q.type === 'input' || q.type === 'order' ? 1 : 3);
       expect(new Set(q.options).size, `${q.id} duplicate options`).toBe(q.options.length);
       expect(q.answer).toBeGreaterThanOrEqual(0);
       expect(q.answer).toBeLessThan(q.options.length);
@@ -125,5 +126,19 @@ describe('CSV flashcards', () => {
 
   it('rejects tiny decks', () => {
     expect(() => flashcardsToConcept('a,b\nc,d', 'x')).toThrow();
+  });
+
+  it('order questions: tiles are shuffled, and putting them back in order is correct', () => {
+    const order = questions.filter((q) => q.type === 'order');
+    expect(order.length).toBeGreaterThan(30);
+    for (const q of order) {
+      const p = present(q, 42);
+      const { tokens, end } = orderTokens(q.options[0]);
+      expect([...p.shown].sort()).toEqual([...tokens].sort());
+      if (tokens.length > 2) expect(p.shown.join(' '), q.id).not.toBe(tokens.join(' '));
+      const rebuilt = tokens.join(' ').replace(/^./, (c) => c.toUpperCase()) + end;
+      expect(isTypedAnswerCorrect(q, rebuilt), q.id).toBe(true);
+      expect(isTypedAnswerCorrect(q, [...tokens].reverse().join(' ')), q.id).toBe(false);
+    }
   });
 });

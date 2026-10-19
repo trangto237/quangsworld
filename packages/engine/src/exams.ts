@@ -158,7 +158,7 @@ export const paperQuestions = (p: ExamPaper) => p.sections.flatMap((s) => s.ques
 
 /** An answer is the chosen option text, or the typed text for completion questions. */
 export const isCorrectAnswer = (q: Question, answer: string | undefined) =>
-  answer !== undefined && answer !== '' && (q.type === 'input' ? isTypedAnswerCorrect(q, answer) : answer === q.options[q.answer]);
+  answer !== undefined && answer !== '' && (q.type === 'input' || q.type === 'order' ? isTypedAnswerCorrect(q, answer) : answer === q.options[q.answer]);
 
 /** Approximate IELTS raw-score (out of 40) → band conversions, as commonly published. */
 const LISTENING_BANDS: [number, number][] = [[39, 9], [37, 8.5], [35, 8], [32, 7.5], [30, 7], [26, 6.5], [23, 6], [18, 5.5], [16, 5], [13, 4.5], [10, 4], [8, 3.5], [6, 3], [4, 2.5], [0, 2]];

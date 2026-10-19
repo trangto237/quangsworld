@@ -46,8 +46,11 @@ export interface ConceptState {
   lastWrongAt: number; // epoch ms, 0 = never
 }
 
-/** `input`: typed answer (IELTS completion questions) checked against `accept`. */
-export type QuestionType = 'mcq' | 'listen' | 'read' | 'fill' | 'input';
+/**
+ * `input`: typed answer (IELTS completion questions) checked against `accept`.
+ * `order`: put the words in order (Sentence Sprint); options[answer] is the sentence, `accept` other valid orders.
+ */
+export type QuestionType = 'mcq' | 'listen' | 'read' | 'fill' | 'input' | 'order';
 
 export interface Question {
   id: string;
@@ -82,6 +85,20 @@ export const normalizeAnswer = (s: string) =>
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+/**
+ * Word tiles for an `order` question: the sentence's words without the final punctuation, the first word in
+ * lower case (a capital would give it away) unless it is "I" or a name with non-English letters.
+ */
+export function orderTokens(sentence: string): { tokens: string[]; end: string } {
+  const m = sentence.trim().match(/^(.*?)([.?!]*)$/s)!;
+  const tokens = m[1].split(/\s+/).filter(Boolean);
+  if (tokens.length && tokens[0] !== 'I' && !/[^\x00-\x7F]/.test(tokens[0]) && !/^[A-Z]{2,}/.test(tokens[0])) tokens[0] = tokens[0][0].toLowerCase() + tokens[0].slice(1);
+  return { tokens, end: m[2] };
+}
+
+/** True for answers that are typed or built rather than picked (input, order). */
+export const isFreeAnswer = (q: Pick<Question, 'type'>) => q.type === 'input' || q.type === 'order';
 
 export const isTypedAnswerCorrect = (q: Pick<Question, 'options' | 'answer' | 'accept'>, typed: string) =>
   [q.options[q.answer], ...(q.accept ?? [])].some((a) => normalizeAnswer(a) === normalizeAnswer(typed));
