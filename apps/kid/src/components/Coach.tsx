@@ -174,17 +174,50 @@ export function CoachWalkthrough({ question, picked }: { question: Question; pic
   );
 }
 
+/** Stars for a practice round: right answers count, each hint used costs half a point. */
+export function starsFor(correct: number, total: number, hints: number) {
+  const f = total ? (correct - hints * 0.5) / total : 0;
+  return f >= 0.95 ? 3 : f >= 0.7 ? 2 : f >= 0.4 ? 1 : 0;
+}
+
+export function StarsResult({ correct, total, hints, onAgain }: { correct: number; total: number; hints: number; onAgain: () => void }) {
+  const stars = starsFor(correct, total, hints);
+  return (
+    <div className="rounded-xl bg-white p-4 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+      <div className="text-4xl tracking-widest" aria-label={`${stars} of 3 stars`}>
+        {[0, 1, 2].map((k) => (
+          <span key={k} className={k < stars ? '' : 'opacity-20 grayscale'}>
+            ⭐
+          </span>
+        ))}
+      </div>
+      <p className="mt-1 font-bold">
+        {correct}/{total} {stars === 3 ? <T en="Perfect!" /> : stars === 2 ? <T en="Good — keep going!" /> : <T en="Let's practise a bit more." />}
+      </p>
+      <p className="text-sm text-slate-500">
+        {hints === 0 ? <T en="No hints used — full marks for remembering!" /> : <T en="Hints used: {n}. Try the next round without hints for more stars." vars={{ n: hints }} />}
+      </p>
+      <Button variant="secondary" className="mt-3" onClick={onAgain}>
+        <TB en="🔁 Again" />
+      </Button>
+    </div>
+  );
+}
+
 /** A short practice round on one rule. Re-rolls with `regenerate`. */
 export function Drill({ items, regenerate, title }: { items: DrillItem[]; regenerate?: () => DrillItem[]; title?: Bi }) {
   const [list, setList] = useState(items);
   const [i, setI] = useState(0);
   const [answer, setAnswer] = useState<string | number | null>(null);
   const [score, setScore] = useState(0);
+  const [hints, setHints] = useState(0);
+  const [hintOpen, setHintOpen] = useState(false);
   useEffect(() => {
     setList(items);
     setI(0);
     setAnswer(null);
     setScore(0);
+    setHints(0);
   }, [items]);
   const item = list[i];
   useEffect(() => {
@@ -196,26 +229,18 @@ export function Drill({ items, regenerate, title }: { items: DrillItem[]; regene
 
   if (!item)
     return (
-      <div className="rounded-xl bg-white p-4 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
-        <div className="text-3xl">{score === list.length ? '🏆' : score >= list.length / 2 ? '👍' : '💪'}</div>
-        <p className="mt-1 font-bold">
-          {score}/{list.length}{' '}
-          {score === list.length ? <T en="Perfect!" /> : score >= list.length / 2 ? <T en="Good — keep going!" /> : <T en="Let's practise a bit more." />}
-        </p>
-        <div className="mt-3 flex justify-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setList(regenerate ? regenerate() : [...list].sort(() => Math.random() - 0.5));
-              setI(0);
-              setAnswer(null);
-              setScore(0);
-            }}
-          >
-            <TB en="🔁 Again" />
-          </Button>
-        </div>
-      </div>
+      <StarsResult
+        correct={score}
+        total={list.length}
+        hints={hints}
+        onAgain={() => {
+          setList(regenerate ? regenerate() : [...list].sort(() => Math.random() - 0.5));
+          setI(0);
+          setAnswer(null);
+          setScore(0);
+          setHints(0);
+        }}
+      />
     );
 
   const isRight = item.kind === 'stress' ? answer !== null && isStressed(sylls(item.display)[answer as number]) : answer === item.answer;
@@ -233,8 +258,30 @@ export function Drill({ items, regenerate, title }: { items: DrillItem[]; regene
         <span>{title ? <BiText b={title} /> : <T en="Practice" />}</span>
         <span>
           {i + 1}/{list.length} · ✓ {score}
+          {hints > 0 && ` · 🦉 ${hints}`}
         </span>
       </div>
+      {item.hint && answer === null && (
+        <div className="mb-3">
+          {hintOpen ? (
+            <div className="flex items-start gap-2 rounded-lg bg-indigo-50 p-2 text-sm dark:bg-indigo-950/50">
+              <span>🦉</span>
+              <BiText b={item.hint} block />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setHintOpen(true);
+                setHints((h) => h + 1);
+              }}
+              className="text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
+            >
+              🦉 <T en="Hint" /> <span className="text-xs font-normal opacity-70">(−½ ⭐)</span>
+            </button>
+          )}
+        </div>
+      )}
       {item.kind === 'stress' ? (
         <>
           <p className="mb-3 text-sm">
@@ -285,6 +332,7 @@ export function Drill({ items, regenerate, title }: { items: DrillItem[]; regene
               onClick={() => {
                 setI(i + 1);
                 setAnswer(null);
+                setHintOpen(false);
               }}
             >
               <TB en="Next →" />
@@ -313,25 +361,21 @@ export function SimilarQuestions({ conceptId, difficulty, exclude, count = 3 }: 
   }, [conceptId, difficulty, exclude, count, round]);
   const [i, setI] = useState(0);
   const [score, setScore] = useState(0);
+  const [hints, setHints] = useState(0);
   const presented = useMemo(() => (questions[i] ? present(questions[i]) : null), [questions, i]);
   if (!presented)
     return (
-      <div className="rounded-xl bg-white p-4 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
-        <p className="font-bold">
-          {score}/{questions.length} ✓
-        </p>
-        <Button
-          variant="secondary"
-          className="mt-2"
-          onClick={() => {
-            setRound(round + 1);
-            setI(0);
-            setScore(0);
-          }}
-        >
-          <TB en="🔁 Again" />
-        </Button>
-      </div>
+      <StarsResult
+        correct={score}
+        total={questions.length}
+        hints={hints}
+        onAgain={() => {
+          setRound(round + 1);
+          setI(0);
+          setScore(0);
+          setHints(0);
+        }}
+      />
     );
   return (
     <div>
@@ -343,6 +387,7 @@ export function SimilarQuestions({ conceptId, difficulty, exclude, count = 3 }: 
         question={presented}
         mode="practice"
         compact
+        onHint={() => setHints((h) => h + 1)}
         onAnswer={(correct) => {
           if (correct) setScore((s) => s + 1);
           setI(i + 1);
@@ -353,7 +398,7 @@ export function SimilarQuestions({ conceptId, difficulty, exclude, count = 3 }: 
 }
 
 /** Before answering (practice mode): a nudge that doesn't give the answer away. */
-export function CoachHint({ question }: { question: Question }) {
+export function CoachHint({ question, onOpen }: { question: Question; onOpen?: () => void }) {
   const [open, setOpen] = useState(false);
   const hint = useMemo(() => coach(question).hint, [question]);
   return open ? (
@@ -362,7 +407,10 @@ export function CoachHint({ question }: { question: Question }) {
       <BiText b={hint} block />
     </div>
   ) : (
-    <button type="button" onClick={() => setOpen(true)} className="text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
+    <button type="button" onClick={() => {
+      setOpen(true);
+      onOpen?.();
+    }} className="text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
       🦉 <T en="Hint" />
     </button>
   );

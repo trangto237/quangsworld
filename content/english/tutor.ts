@@ -29,9 +29,9 @@ export interface CoachStep {
 
 export type DrillItem =
   /** Tap the stressed syllable. */
-  | { kind: 'stress'; display: string; why: Bi }
+  | { kind: 'stress'; display: string; why: Bi; hint?: Bi }
   /** Pick one answer; `audio` is played instead of showing the word when set. */
-  | { kind: 'choice'; prompt: Bi; word?: string; audio?: string; options: string[]; answer: string; why: Bi };
+  | { kind: 'choice'; prompt: Bi; word?: string; audio?: string; options: string[]; answer: string; why: Bi; hint?: Bi };
 
 export interface CoachPlan {
   steps: CoachStep[];
@@ -257,7 +257,16 @@ export function stressDrill(ruleId: string | null, r: () => number = Math.random
   const pool = (ruleId ? wordsForRule(ruleId) : STRESS.map(analyseStress)).filter((a) => !exclude.includes(a.word.word));
   return shuffle(pool, r)
     .slice(0, n)
-    .map((a) => ({ kind: 'stress', display: a.word.display, why: stressNote(a) }));
+    .map((a) => ({
+      kind: 'stress',
+      display: a.word.display,
+      why: stressNote(a),
+      hint: a.exception
+        ? bi('This one breaks the usual rule — tap 🥁 and trust your ears.', 'Từ này không theo quy tắc thường gặp — chạm 🥁 và tin vào tai mình.')
+        : a.root
+          ? bi(`Think of the root word: ${a.root.toLowerCase()}.`, `Nghĩ đến từ gốc: ${a.root.toLowerCase()}.`)
+          : a.rule.title,
+    }));
 }
 
 function coachStress(q: Question, r: () => number): CoachPlan {
@@ -406,6 +415,11 @@ export function endingDrill(kind: 'ed' | 's' | 'both', r: () => number = Math.ra
       options: x.ed ? ['/t/', '/d/', '/ɪd/'] : ['/s/', '/z/', '/ɪz/'],
       answer: x.s,
       why: x.ed ? edWhy(x.w, x.s) : sWhy(x.w, x.s),
+      hint: (() => {
+        const [base, last] = lastSound(x.w, x.ed ? 'ed' : 's');
+        const v = last === VOWEL_END ? bi('a vowel sound', 'một nguyên âm') : bi(last, last);
+        return bi(`Take off the ending: "${base}" ends in ${v.en}. Touch your throat — buzz or no buzz?`, `Bỏ đuôi đi: "${base}" tận cùng bằng ${v.vi}. Đặt tay lên cổ — có rung hay không?`);
+      })(),
     });
   return items;
 }
@@ -493,6 +507,7 @@ export function soundDrill(letters: string | null, r: () => number = Math.random
       options: Object.keys(x.g.sounds).map(soundName),
       answer: soundName(x.k),
       why: bi(`${unmark(x.w)}: "${x.g.letters}" = ${soundName(x.k)}. ${SOUND_TIPS[x.g.letters]?.en ?? ''}`, `${unmark(x.w)}: "${x.g.letters}" = ${soundName(x.k)}. ${SOUND_TIPS[x.g.letters]?.vi ?? ''}`),
+      hint: SOUND_TIPS[x.g.letters],
     }));
 }
 
@@ -543,7 +558,7 @@ export function pairsDrill(r: () => number = Math.random, n = 5): DrillItem[] {
     .slice(0, n)
     .map(([a, b, why]) => {
       const target = r() < 0.5 ? a : b;
-      return { kind: 'choice', prompt: bi('Listen. Which word do you hear?', 'Nghe. Em nghe thấy từ nào?'), audio: target, options: [a, b], answer: target, why: bi(`${a} / ${b}: ${why}. ${mouthTip(why).en}`, `${a} / ${b}: ${why}. ${mouthTip(why).vi}`) };
+      return { kind: 'choice', prompt: bi('Listen. Which word do you hear?', 'Nghe. Em nghe thấy từ nào?'), audio: target, options: [a, b], answer: target, why: bi(`${a} / ${b}: ${why}. ${mouthTip(why).en}`, `${a} / ${b}: ${why}. ${mouthTip(why).vi}`), hint: bi(`Listen for: ${why}.`, `Hãy nghe: ${why}.`) };
     });
 }
 
@@ -674,7 +689,7 @@ const formOf = (s: string) => FORMS.find(([re]) => re.test(s.trim()))?.[1];
 function generic(q: Question, r: () => number): CoachPlan {
   void r;
   const right = q.options[q.answer];
-  const strategy = STRATEGIES[q.conceptId] ?? GENERIC_STRATEGY;
+  const strategy = STRATEGIES[q.conceptId] ?? (q.conceptId.startsWith('en.ielts.lex') ? STRATEGIES['en.vocab.collocations'] : GENERIC_STRATEGY);
   const text = `${q.prompt} ${q.passage && q.passage.length < 200 ? q.passage : ''}`;
   const clues = CLUES.map((c) => ({ c, m: text.match(c.re) })).filter((x) => x.m && x.m[0]);
   const grammar = q.conceptId.startsWith('en.grammar') || q.conceptId.startsWith('en.vocab.word-forms');

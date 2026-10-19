@@ -26,12 +26,14 @@ interface Props {
    * away (vocabulary items) or skew an assessment (English in the placement trial).
    */
   glossary?: boolean;
+  /** Practice mode: called when the learner opens Coach Owl's hint (fewer hints → more stars). */
+  onHint?: () => void;
 }
 
 const KEYS = ['1', '2', '3', '4'];
 
 /** One question, rendered as a game action. Keyboard: 1–4 to answer, R to replay audio, Enter for Next. */
-export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, wrongNote, glossary = true }: Props) {
+export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, wrongNote, glossary = true, onHint }: Props) {
   const lang = useLang();
   const [picked, setPicked] = useState<number | null>(null);
   const [typed, setTyped] = useState('');
@@ -161,7 +163,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
       )}
       {mode === 'practice' && !answered && q.conceptId.startsWith('en.') && (
         <div className="mt-2">
-          <CoachHint key={q.id} question={q} />
+          <CoachHint key={q.id} question={q} onOpen={onHint} />
         </div>
       )}
       {gloss && !answered && (hasGloss(q.prompt) || hasGloss(q.passage)) && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}

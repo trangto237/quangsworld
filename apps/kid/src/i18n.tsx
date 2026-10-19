@@ -309,6 +309,9 @@ const VI: Record<string, string> = {
   'Connecting…': 'Đang kết nối…',
   'Connect →': 'Kết nối →',
   "Downloading your family's adventure…": 'Đang tải cuộc phiêu lưu của gia đình…',
+  // Coach stars
+  'No hints used — full marks for remembering!': 'Không dùng gợi ý — điểm tối đa vì em nhớ bài!',
+  'Hints used: {n}. Try the next round without hints for more stars.': 'Đã dùng {n} gợi ý — lượt sau thử không dùng gợi ý để được nhiều sao hơn nhé.',
   // Coach
   'Coach Owl': 'Thầy Cú',
   "Coach Owl's corner": 'Góc học cùng Thầy Cú',

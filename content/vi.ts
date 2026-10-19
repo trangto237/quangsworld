@@ -1,3 +1,4 @@
+import { ieltsTopicLessonsVi } from './english/ielts-topics';
 /**
  * Vietnamese help for question instructions, explanations and lessons.
  * Only the *instruction* is translated for English items (the English being tested stays English);
@@ -21,6 +22,7 @@ const RULES: Rule[] = [
   [/^Choose the OPPOSITE of "(.+)"\.$/, 'Chọn từ TRÁI NGHĨA với "$1".'],
   [/^Complete with the right form of "(.+)": (.+)$/, 'Điền dạng đúng của từ "$1" vào chỗ trống: $2'],
   [/^Complete: (.+)$/, 'Điền từ đúng vào chỗ trống: $1'],
+  [/^Which phrase means "(.+)"\?$/, 'Cụm từ nào có nghĩa là "$1"?'],
   [/^Put the words in the right order\.$/, 'Sắp xếp các từ theo đúng thứ tự để tạo thành câu.'],
   [/^Choose the word whose underlined part is pronounced differently from the others\.$/, 'Chọn từ có phần gạch chân được PHÁT ÂM KHÁC với các từ còn lại.'],
   [/^Choose the word whose main stress is placed differently from the others\.$/, 'Chọn từ có TRỌNG ÂM CHÍNH rơi vào vị trí khác với các từ còn lại.'],
@@ -162,6 +164,7 @@ export function translateExplanation(text: string | undefined): string | null {
 
 /** Lessons in Vietnamese (shown with the English lesson as a teaching note). */
 export const LESSONS_VI: Record<string, string> = {
+  ...ieltsTopicLessonsVi,
   'en.grammar.word-order':
     'Trật tự câu tiếng Anh: Chủ ngữ + Động từ + Tân ngữ + Nơi chốn + Thời gian ("I met Lan at school yesterday"). Trạng từ tần suất đứng trước động từ thường nhưng sau "be" ("She often walks", "He is always late"). Câu hỏi: (Từ để hỏi) + trợ động từ + chủ ngữ + động từ ("Where do you live?"). Tính từ chỉ quan điểm đứng trước kích cỡ, tuổi, màu sắc ("a lovely small old house").',
   'en.vocab.everyday': 'Học từ theo nhóm chủ đề (đồ ăn, du lịch, trường học). Đặt câu với mỗi từ về chính cuộc sống của em.',
