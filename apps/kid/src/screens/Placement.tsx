@@ -230,6 +230,13 @@ export function Placement({ student }: { student: StudentProfile }) {
                       <>
                         <T en={REALMS[def.id].power} />: <b className="tabular-nums">{Math.round(state.sections[i].ability)}</b>
                       </>
+                    ) : started ? (
+                      <>
+                        <b className="tabular-nums">
+                          {Math.min(state.sections[i].answers.length, def.questionCount)} / {def.questionCount}
+                        </b>{' '}
+                        <T en="challenges done" />
+                      </>
                     ) : current ? (
                       <T en={REALMS[def.id].story} />
                     ) : (
@@ -306,6 +313,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <Stars />
       <TrialCorner />
       <div className="relative flex w-full justify-center">{children}</div>
+      <div className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-white/30">v {__APP_VERSION__}</div>
     </div>
   );
 }

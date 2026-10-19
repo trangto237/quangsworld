@@ -38,6 +38,11 @@ export function GameShell({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap font-bold tabular-nums sm:gap-4">
           {progress && (
+            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-xs text-white/80 sm:hidden" title={progress.label}>
+              🏁 {Math.min(progress.value, progress.max)}/{progress.max}
+            </span>
+          )}
+          {progress && (
             <span className="hidden items-center gap-2 text-xs text-white/70 sm:flex">
               <T en={progress.label} />
               <span className="h-2 w-24 overflow-hidden rounded-full bg-white/15">

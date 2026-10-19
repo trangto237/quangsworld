@@ -164,6 +164,7 @@ const VI: Record<string, string> = {
   'The Five Realms': 'Năm Vương Quốc',
   'Free them one by one. You can rest between realms — your progress is saved.': 'Giải phóng từng vương quốc một. Em có thể nghỉ giữa các vương quốc — tiến độ đã được lưu.',
   '🔒 Free the realm before it': '🔒 Hãy giải phóng vương quốc trước đó',
+  'challenges done': 'thử thách đã xong',
   'Enter →': 'Vào →',
   'Rest for now (come back later)': 'Nghỉ một lát (quay lại sau)',
   '{title} is free!': '{title} đã được giải phóng!',
