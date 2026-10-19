@@ -73,6 +73,27 @@ describe('SyncEngine', () => {
     expect(b.sync.pendingCount()).toBe(0);
   });
 
+  it('signing out removes the data from this device only, and signing in brings it back', async () => {
+    const remote = new FakeRemote();
+    const a = await device(remote);
+    await a.repo.createFamily('Mum', 'pw1234');
+    const id = await a.repo.addStudent(kid);
+    await a.sync.link();
+    const rowsBefore = remote.rows.size;
+
+    await a.sync.forgetLocal();
+    expect(a.repo.getFamily()).toBeUndefined();
+    expect(a.repo.listStudents()).toHaveLength(0);
+    expect(a.sync.isLinked()).toBe(false);
+    expect(a.sync.pendingCount()).toBe(0);
+    // Nothing was deleted in the cloud.
+    expect([...remote.rows.values()].filter((r) => !r.deleted)).toHaveLength(rowsBefore);
+
+    expect(await a.sync.link()).toBe('linked');
+    expect(a.repo.getStudent(id)?.name).toBe('Quang');
+    expect(a.sync.pendingCount()).toBe(0);
+  });
+
   it('syncs later changes and deletions both ways', async () => {
     const remote = new FakeRemote();
     const a = await device(remote);

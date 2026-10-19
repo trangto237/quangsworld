@@ -199,6 +199,27 @@ export class CloudSync {
     this.detach();
   }
 
+  /**
+   * Sign out and remove the family's data from this device (safe on shared or school computers).
+   * Uploads anything not yet synced first; refuses if that fails, unless `force`.
+   */
+  async signOutAndForget({ force = false } = {}) {
+    const client = await this.ensureClient();
+    if (this.engine?.isLinked()) {
+      try {
+        await this.engine.syncOnce();
+      } catch {
+        /* checked below */
+      }
+      if (!force && this.engine.pendingCount() > 0)
+        throw new Error('Some progress on this device isn’t uploaded yet. Connect to the internet and try again.');
+      await this.engine.forgetLocal();
+    }
+    localStorage.removeItem(PENDING_CODE);
+    await client.auth.signOut();
+    this.detach();
+  }
+
   /** Links this device to the signed-in family account (see LinkMode). */
   async link(mode: LinkMode = 'auto') {
     await this.ensureClient();
@@ -411,6 +432,22 @@ export class CloudSync {
       if (channel) void this.client?.removeChannel(channel);
     };
     now();
+  }
+}
+
+/**
+ * The sign-out button's flow, shared by both apps: confirm, upload, remove this device's copy. If some
+ * progress can't be uploaded (offline), explain and offer to sign out anyway. Returns true when signed out.
+ */
+export async function confirmSignOut(cloud: CloudSync, text: { ask: string; unsynced: string }): Promise<boolean> {
+  if (!confirm(text.ask)) return false;
+  try {
+    await cloud.signOutAndForget();
+    return true;
+  } catch (e) {
+    if (!confirm(`${(e as Error).message}\n\n${text.unsynced}`)) return false;
+    await cloud.signOutAndForget({ force: true });
+    return true;
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react';
-import { getCloud, type CloudStatus } from '@atlas/db/cloud';
+import { confirmSignOut, getCloud, type CloudStatus } from '@atlas/db/cloud';
 import { Button, Field, Modal, cx, inputClass, useRepo } from '@atlas/ui';
 
 /** The cloud-sync controller and its live status. */
@@ -343,7 +343,18 @@ export function CloudCardBody() {
           <Button variant="secondary" disabled={busy} onClick={() => act(() => cloud.unlink())}>
             Stop syncing this device
           </Button>
-          <Button variant="secondary" disabled={busy} onClick={() => act(() => cloud.signOut())}>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() =>
+              act(() =>
+                confirmSignOut(cloud, {
+                  ask: 'Sign out of Atlas on this device?\n\nYour family’s data stays safe in the cloud and is removed from this device. Sign in again any time to get it back.',
+                  unsynced: 'Sign out anyway? Progress made on this device since the last sync will be lost.',
+                }),
+              )
+            }
+          >
             Sign out
           </Button>
         </div>

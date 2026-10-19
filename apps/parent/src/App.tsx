@@ -10,7 +10,8 @@ import { Materials } from './screens/Materials';
 import { Profiles } from './screens/Profiles';
 import { Settings } from './screens/Settings';
 import { LiveDot } from './components/LiveDot';
-import { CloudBadge } from './components/Cloud';
+import { CloudBadge, useCloud } from './components/Cloud';
+import { confirmSignOut } from '@atlas/db/cloud';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -26,6 +27,8 @@ export function App() {
   const students = useQuery((r) => r.listStudents());
   const { authed, tab, setTab, studentId, setStudent, signOut } = useParent();
   const { mode, cycle } = useTheme();
+  const { cloud, status: cloudStatus } = useCloud();
+  const signedInOnline = !!cloudStatus.email || !!cloudStatus.viaCode;
 
   useEffect(() => {
     if (students.length && !students.some((s) => s.id === studentId)) setStudent(students[0].id);
@@ -66,9 +69,23 @@ export function App() {
             <a href="/" className="hidden rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 sm:block dark:hover:bg-slate-800">
               Kid app ↗
             </a>
-            <button onClick={signOut} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button onClick={signOut} title="Lock the dashboard (stay signed in on this device)" className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
               Lock
             </button>
+            {signedInOnline && (
+              <button
+                onClick={async () => {
+                  const out = await confirmSignOut(cloud, {
+                    ask: 'Sign out of Atlas on this device?\n\nYour family’s data stays safe in the cloud and is removed from this device. Sign in again any time to get it back.',
+                    unsynced: 'Sign out anyway? Progress made on this device since the last sync will be lost.',
+                  });
+                  if (out) signOut();
+                }}
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Sign out
+              </button>
+            )}
           </div>
         </div>
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-3 pb-2" aria-label="Sections">

@@ -151,6 +151,22 @@ export class SyncEngine {
     }, 'sync');
   }
 
+  /**
+   * Signing out on a shared device: removes the family's data from this device (it stays in the cloud)
+   * and stops syncing. Signing in again downloads it.
+   */
+  async forgetLocal() {
+    await this.db.write(() => {
+      const raw = this.db.raw;
+      setState(raw, 'track', '0');
+      for (const t of Object.keys(SYNC_TABLES)) raw.run(`DELETE FROM ${t}`);
+      raw.run('DELETE FROM _changes');
+      setState(raw, 'account', null);
+      setState(raw, 'cursor', null);
+      setState(raw, 'last_synced', null);
+    }, 'remote');
+  }
+
   /** Uploads local changes, then downloads the cloud's. Concurrent calls share one run. */
   syncOnce(): Promise<SyncReport> {
     if (!this.running)

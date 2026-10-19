@@ -4,6 +4,7 @@ import type { StudentProfile } from '@atlas/db';
 import { useKid } from '../store';
 import { T, TB, tr } from '../i18n';
 import { JoinFamily, useKidCloud } from '../components/JoinFamily';
+import { confirmSignOut } from '@atlas/db/cloud';
 
 export function ProfilePicker() {
   const repo = useRepo();
@@ -13,7 +14,8 @@ export function ProfilePicker() {
   const [pinFor, setPinFor] = useState<StudentProfile | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
-  const { status: cloud, canJoin } = useKidCloud();
+  const { status: cloud, canJoin, cloud: cloudSync } = useKidCloud();
+  const connected = !!cloud.email || !!cloud.viaCode;
   const [joinOpen, setJoinOpen] = useState(false);
   const [joining, setJoining] = useState(false);
 
@@ -94,6 +96,20 @@ export function ProfilePicker() {
               <a href="/parent/" className="text-sm text-white/60 underline-offset-4 hover:underline">
                 <T en="Parent dashboard" />
               </a>
+              {connected && (
+                <button
+                  onClick={() =>
+                    void confirmSignOut(cloudSync, {
+                      ask: `${tr('help', 'Sign out of this device?')}\n\n${tr('vi', 'Your progress is saved in the cloud. Sign in again any time to continue.')}\n(${tr('en', 'Your progress is saved in the cloud. Sign in again any time to continue.')})`,
+                      unsynced: tr('vi', 'Sign out anyway? Progress since the last sync on this device will be lost.'),
+                    })
+                  }
+                  className="text-sm text-white/60 underline-offset-4 hover:underline"
+                >
+                  🚪 <T en="Sign out" />
+                  {cloud.email ? ` (${cloud.email})` : ''}
+                </button>
+              )}
               {canJoin && (
                 <button onClick={() => setJoinOpen(true)} className="text-sm text-white/60 underline-offset-4 hover:underline">
                   ☁️ <T en="Connect to my family" />
