@@ -53,6 +53,110 @@ export const PART_LABEL: Record<DraftPart, { en: string; emoji: string }> = {
   questions: { en: 'Practice questions', emoji: '✏️' },
 };
 
+// ── Whole book → units ──────────────────────────────────────────
+
+export interface BookSection {
+  /** Unit number (1-based). */
+  unit: number;
+  text: string;
+  /** Page numbers (1-based) when the text came page by page (PDF or scan). */
+  pages?: number[];
+}
+
+/** Separates pages in text read from a PDF or a scan, so a book can be split page by page. */
+export const PAGE_BREAK = '\n\f\n';
+
+const UNIT_HEAD = /^[ \t]*(?:\d{1,3}[ \t]+)?UNIT[ \t]*(\d{1,2})\b/gim;
+const OTHER_HEAD = /^[ \t]*(REVIEW[ \t]+\d|GLOSSARY|WORD ?LIST|TAPESCRIPTS?|AUDIO ?SCRIPTS?|ANSWER ?KEY|CONTENTS|BOOK MAP|IRREGULAR VERBS)\b/gim;
+const UNIT_START = /^[ \t]*GETTING STARTED\b/im;
+
+const letters = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+
+/**
+ * Splits a whole textbook into its units.
+ *
+ * Text that came page by page (PAGE_BREAK between pages) is split page by page, using every clue a
+ * page offers, because OCR often misses the big decorative "UNIT 2" title on a unit's first page:
+ * a "UNIT n" line (also the small page headers, e.g. "18 Unit 2 City life"), a line that is a unit's
+ * title ("CITY LIFE"), or "GETTING STARTED" (each Global Success unit opens with it → next unit).
+ * A contents page (several units named on one page) is skipped; Review, glossary and answer-key
+ * pages are left out — but a per-unit glossary ("Unit 3" under GLOSSARY) joins its unit.
+ *
+ * Plain text without page breaks is split by "UNIT n" headings: consecutive headings with the same
+ * number form a run, and runs too short to hold content (contents lines) are dropped.
+ */
+export function splitByUnit(text: string, maxUnit = 12, minChars = 400, titles: string[] = GLOBAL_SUCCESS_9.map((u) => u.title.split(' · ')[1])): BookSection[] {
+  if (text.includes('\f')) return splitPages(text.split(/\n?\f\n?/), maxUnit, titles);
+  const marks: { pos: number; unit: number | null }[] = [];
+  for (const m of text.matchAll(UNIT_HEAD)) {
+    const n = Number(m[1]);
+    if (n >= 1 && n <= maxUnit) marks.push({ pos: m.index!, unit: n });
+  }
+  for (const m of text.matchAll(OTHER_HEAD)) marks.push({ pos: m.index!, unit: null });
+  marks.sort((a, b) => a.pos - b.pos);
+  const runs: { unit: number | null; start: number; end: number }[] = [];
+  for (const m of marks) {
+    const last = runs.at(-1);
+    if (last && last.unit === m.unit) continue;
+    if (last) last.end = m.pos;
+    runs.push({ unit: m.unit, start: m.pos, end: text.length });
+  }
+  const byUnit = new Map<number, string[]>();
+  for (const r of runs) {
+    if (r.unit === null) continue;
+    const chunk = text.slice(r.start, r.end).trim();
+    if (chunk.length < minChars) continue;
+    byUnit.set(r.unit, [...(byUnit.get(r.unit) ?? []), chunk]);
+  }
+  return [...byUnit.entries()].sort((a, b) => a[0] - b[0]).map(([unit, parts]) => ({ unit, text: parts.join('\n\n') }));
+}
+
+function splitPages(pages: string[], maxUnit: number, titles: string[]): BookSection[] {
+  const titleKeys = titles.map(letters);
+  /** Units named on a page, in order of appearance, and whether it starts another kind of section. */
+  const clues = pages.map((page) => {
+    const units: number[] = [];
+    for (const line of page.split('\n')) {
+      const m = line.match(/^[ \t]*(?:\d{1,3}[ \t]+)?UNIT[ \t]*(\d{1,2})\b/i);
+      if (m && Number(m[1]) >= 1 && Number(m[1]) <= maxUnit) units.push(Number(m[1]));
+      else {
+        const key = letters(line);
+        const t = key.length >= 5 && line.trim().length <= 60 ? titleKeys.findIndex((k, idx) => key === k || key === `unit${idx + 1}${k}`) : -1;
+        if (t >= 0) units.push(t + 1);
+      }
+    }
+    const other = /^[ \t]*(REVIEW[ \t]+\d|GLOSSARY|WORD ?LIST|TAPESCRIPTS?|AUDIO ?SCRIPTS?|ANSWER ?KEY|BOOK MAP|IRREGULAR VERBS)\b/im.test(page);
+    const contents = /^[ \t]*(CONTENTS|BOOK MAP)\b/im.test(page) || new Set(units).size >= 3;
+    return { units, other, contents, starts: UNIT_START.test(page) };
+  });
+  const byUnit = new Map<number, { text: string[]; pages: number[] }>();
+  let current: number | null = null;
+  let lastUnit = 0;
+  let inBackMatter = false;
+  clues.forEach((c, i) => {
+    if (c.contents) return;
+    if (c.other) {
+      current = null;
+      inBackMatter = /^[ \t]*(GLOSSARY|WORD ?LIST)\b/im.test(pages[i]);
+    }
+    if (c.units.length) {
+      const named = c.units[0];
+      // In the main part of the book units only go forward; a per-unit glossary at the back may go back.
+      if (inBackMatter || named >= lastUnit) current = named;
+    } else if (c.starts && !inBackMatter) current = Math.min(maxUnit, lastUnit + 1);
+    if (current === null) return;
+    if (!inBackMatter) lastUnit = Math.max(lastUnit, current);
+    const entry = byUnit.get(current) ?? { text: [], pages: [] };
+    entry.text.push(pages[i].trim());
+    entry.pages.push(i + 1);
+    byUnit.set(current, entry);
+  });
+  return [...byUnit.entries()]
+    .filter(([, e]) => e.text.join('').length > 0)
+    .sort((a, b) => a[0] - b[0])
+    .map(([unit, e]) => ({ unit, text: e.text.join('\n\n'), pages: e.pages }));
+}
+
 // ── Detection ───────────────────────────────────────────────────
 
 export type ImportFormat = 'quick' | 'vocab' | 'text';

@@ -15,10 +15,14 @@
     "@atlas/knowledge": "workspace:*",
     "@atlas/shared": "workspace:*",
     "@atlas/ui": "workspace:*",
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/vie": "1.0.0",
     "fflate": "0.8.3",
     "pdfjs-dist": "6.3.289",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "7.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isTypedAnswerCorrect, orderTokens } from '@atlas/shared';
 import {
   GLOBAL_SUCCESS_9, autoImport, clozeQuestions, customUnit, detectFormat, orderQuestions, parseQuickImport, parseVocabLine, parseVocabList, splitSentences,
-  validateDraft, validateDrafts, vocabQuestions,
+  PAGE_BREAK, splitByUnit, validateDraft, validateDrafts, vocabQuestions,
 } from './importers';
 
 const QUICK = `
@@ -155,5 +155,75 @@ describe('textbook importers', () => {
     expect(drafts[1].accept).toEqual(['water fall']);
     expect(dropped.map((d) => d.index)).toEqual([1, 2, 3, 5, 6, 7]);
     expect(validateDraft({ type: 'input', prompt: 'x', options: ['one two three four five six'], answer: 0 }).ok).toBe(false);
+  });
+});
+
+describe('splitByUnit', () => {
+  const para = (topic: string) => Array.from({ length: 8 }, (_, i) => `People in the ${topic} often talk about thing number ${i} with their friends and family.`).join(' ');
+  const book = [
+    'CONTENTS',
+    'Unit 1 Local community 8',
+    'Unit 2 City life 18',
+    'Unit 3 Healthy living for teens 28',
+    'Review 1 38',
+    '',
+    'UNIT 1 LOCAL COMMUNITY',
+    'GETTING STARTED',
+    para('community'),
+    'Unit 1 Local community',
+    para('village'),
+    'UNIT 2 CITY LIFE',
+    para('city'),
+    'Unit 2 City life',
+    para('metro'),
+    'UNIT 3 HEALTHY LIVING FOR TEENS',
+    para('gym'),
+    'REVIEW 1',
+    'Choose the best answer. ' + para('review'),
+    'GLOSSARY',
+    'Unit 1',
+    'community (n): cộng đồng',
+    'craft (n): nghề thủ công',
+    'Unit 2',
+    'metro (n): tàu điện ngầm',
+  ].join('\n');
+
+  it('finds each unit once, skipping the contents and review sections', () => {
+    const units = splitByUnit(book);
+    expect(units.map((u) => u.unit)).toEqual([1, 2, 3]);
+    expect(units[0].text).toContain('village');
+    expect(units[0].text).not.toContain('metro');
+    expect(units[1].text).toContain('metro');
+    expect(units[2].text).toContain('gym');
+    expect(units[2].text).not.toContain('review');
+    for (const u of units) expect(u.text).not.toMatch(/Healthy living for teens 28/);
+  });
+
+  it('returns nothing for a single page without unit headings', () => {
+    expect(splitByUnit(para('school'))).toEqual([]);
+  });
+});
+
+describe('splitByUnit, page by page (PDF or scan)', () => {
+  // What OCR returned for a test scan: the big "UNIT 2" title on its first page was missed.
+  const pages = [
+    'CONTENTS\n\nUnit 1 Local community 8\nUnit 2 City life 18\nReview 1 28',
+    'UNIT 1 LOCAL COMMUNITY\nGETTING STARTED\n\nMi and Nam live in a small community near the old market.',
+    '8 Unit 1 Local community\n\nVOCABULARY\n\ncommunity (n): cộng đồng\nartisan (n): thợ thủ công',
+    'GETTING STARTED\n\nLife in a big city is exciting but it can also be stressful.',
+    '18 Unit 2 City life\n\nREADING\n\nThe new metro line has made public transport much more convenient.',
+    'REVIEW 1\n\nChoose the best answer to complete each sentence.',
+    'CITY LIFE\n\nThe second part of the city unit, found by its title only.',
+    'GLOSSARY\n\nUnit 1\ncraft (n): nghề thủ công',
+  ];
+  it('uses page headers, unit titles and "Getting started" to find each unit', () => {
+    const units = splitByUnit(pages.join(PAGE_BREAK));
+    expect(units.map((u) => [u.unit, u.pages])).toEqual([
+      [1, [2, 3, 8]],
+      [2, [4, 5, 7]],
+    ]);
+    expect(units[1].text).toContain('Life in a big city');
+    expect(units[0].text).toContain('nghề thủ công');
+    expect(units.map((u) => u.text).join(' ')).not.toContain('Choose the best answer');
   });
 });

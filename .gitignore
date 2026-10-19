@@ -6,3 +6,4 @@ coverage
 .vite
 .claude/worktrees/
 .wrangler/
+apps/parent/public/ocr/

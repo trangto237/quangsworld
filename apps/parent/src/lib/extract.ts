@@ -1,3 +1,5 @@
+import './polyfills';
+import { PAGE_BREAK } from '@atlas/knowledge';
 /**
  * Reading text out of uploaded textbook pages, in the browser. The PDF and DOCX readers are
  * downloaded only when such a file is opened, so the dashboard's first load stays small.
@@ -61,8 +63,9 @@ export async function pdfText(bytes: Uint8Array): Promise<{ text: string; pages:
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
   // pdf.js takes ownership of the buffer it's given: pass a copy.
   const pdf = await pdfjs.getDocument({ data: bytes.slice() }).promise;
-  const out: string[] = [];
+  const pageTexts: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
+    const out: string[] = [];
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     let line = '';
@@ -75,9 +78,10 @@ export async function pdfText(bytes: Uint8Array): Promise<{ text: string; pages:
       }
     }
     if (line) out.push(line);
-    out.push('');
+    pageTexts.push(out.join('\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim());
   }
-  const text = out.join('\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  // Pages stay separated (PAGE_BREAK) so a whole book can be split into units page by page.
+  const text = pageTexts.join(PAGE_BREAK).trim();
   return { text, pages: pdf.numPages, scanned: text.replace(/\s/g, '').length < 80 * pdf.numPages };
 }
 
