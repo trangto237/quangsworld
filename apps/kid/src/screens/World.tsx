@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { conceptMission, isDue, stars } from '@atlas/engine';
-import { MODES, modeFor, type GameMode } from '@atlas/game';
+import { MODES, modeFor, modesFor, type GameMode } from '@atlas/game';
 import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
 import type { ConceptDef } from '@atlas/shared';
 import { Button, Modal, cx, useQuery } from '@atlas/ui';
@@ -98,37 +98,49 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
             <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">
               <T en="Play as" />
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-3 gap-1.5 sm:gap-2">
               {(Object.keys(MODES) as GameMode[]).map((m) => {
-                const best = modeFor([open.id]);
+                const suited = modesFor([open.id]);
+                const best = suited[0];
                 const selected = (mode ?? best) === m;
                 return (
                   <button
                     key={m}
                     onClick={() => setMode(m)}
                     className={cx(
-                      'rounded-xl p-2 text-left text-sm ring-2 transition',
+                      'relative flex flex-col items-center rounded-xl p-2 text-center text-xs ring-2 transition sm:text-sm',
                       selected ? 'bg-amber-50 ring-amber-400 dark:bg-amber-950/40' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800',
                     )}
                     aria-pressed={selected}
+                    title={MODES[m].blurb}
                   >
-                    <span className="text-lg">{MODES[m].emoji}</span> <b>
+                    <span className="text-2xl leading-none sm:text-3xl">{MODES[m].emoji}</span>
+                    <b className="mt-1 leading-tight">
                       <T en={MODES[m].name} />
                     </b>
-                    {m === best && (
-                      <span className="ml-1 rounded bg-emerald-100 px-1 text-[10px] font-bold uppercase text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                    <span className="mt-0.5 hidden text-[11px] leading-snug text-slate-500 sm:block dark:text-slate-400">
+                      <T en={MODES[m].blurb} />
+                    </span>
+                    {m === best ? (
+                      <span className="absolute -top-2 right-1 rounded bg-emerald-100 px-1 text-[9px] font-bold uppercase text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                         <T en="recommended" />
                       </span>
+                    ) : (
+                      suited.includes(m) && (
+                        <span className="absolute -top-2 right-1 rounded bg-sky-100 px-1 text-[9px] font-bold uppercase text-sky-800 dark:bg-sky-900 dark:text-sky-200">
+                          <T en="good fit" />
+                        </span>
+                      )
                     )}
                   </button>
                 );
               })}
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 3), mode: mode ?? undefined }, fromPlan: false })}>
+              <Button variant="secondary" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 3), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
                 <TB en="⚡ Quick (3 min)" />
               </Button>
-              <Button variant="game" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 6), mode: mode ?? undefined }, fromPlan: false })}>
+              <Button variant="game" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 6), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
                 <TB en="⚔️ Play (6 min)" />
               </Button>
             </div>

@@ -5,34 +5,70 @@
  * grammar → Castle Defense.
  */
 
-export type GameMode = 'defense' | 'runner' | 'knight' | 'duel';
+import { ComebackTracker, type ComebackCard } from './arcade';
+
+export type GameMode = 'defense' | 'runner' | 'knight' | 'duel' | 'sprint' | 'meteor' | 'penalty' | 'race' | 'detective';
 
 export const MODES: Record<GameMode, { name: string; emoji: string; blurb: string }> = {
   defense: { name: 'Castle Defense', emoji: '🏰', blurb: 'Answers power your chess towers.' },
   runner: { name: 'Word Runner', emoji: '🏃', blurb: 'Steer into the right gate before it reaches you!' },
   knight: { name: "Knight's Quest", emoji: '♞', blurb: 'Every right answer earns a knight move. Hunt the Glitch king.' },
   duel: { name: 'Boss Duel', emoji: '⚔️', blurb: 'Turn-based duel — take your time, every answer is an attack.' },
+  sprint: { name: 'Sentence Sprint', emoji: '🧩', blurb: 'Build sentences against the clock to launch your rocket.' },
+  meteor: { name: 'Meteor Defense', emoji: '☄️', blurb: 'Blast the right meteor before it hits the city!' },
+  penalty: { name: 'Penalty Shootout', emoji: '⚽', blurb: 'Pick the right corner to score — then save their kicks.' },
+  race: { name: 'Grand Prix', emoji: '🏎️', blurb: 'Right answers boost, 3 in a row fire nitro. Reach the podium!' },
+  detective: { name: 'Word Detective', emoji: '🕵️', blurb: 'Every right answer is a clue. Unmask the culprit!' },
 };
 
-/** The best-suited mode for a mission's concepts (the kid can still pick another one). */
-export function modeFor(conceptIds: string[], kind: 'learn' | 'review' | 'boss' = 'learn'): GameMode {
-  if (kind === 'boss') return 'duel';
-  const votes: Record<GameMode, number> = { defense: 0, runner: 0, knight: 0, duel: 0 };
-  for (const id of conceptIds) {
-    if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') votes.duel++;
-    else if (id === 'en.exam.communication' || id === 'en.exam.arrange') votes.knight++;
-    else if (id === 'en.exam.signs') votes.runner++;
-    else if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers') || id.startsWith('en.pron')) votes.runner++;
-    else if (id.startsWith('math.') || id.startsWith('logic.')) votes.knight++;
-    else votes.defense++;
-  }
-  return (Object.entries(votes) as [GameMode, number][]).sort((a, b) => b[1] - a[1])[0][0];
+/** Modes that suit each kind of content, best first. The daily quest rotates through them. */
+const SUITED: Record<string, GameMode[]> = {
+  order: ['sprint'],
+  fast: ['runner', 'meteor', 'penalty', 'race'],
+  calm: ['duel', 'detective'],
+  dialogue: ['knight', 'detective', 'penalty'],
+  logic: ['knight', 'race', 'penalty'],
+  grammar: ['defense', 'race', 'penalty', 'meteor'],
+};
+
+function category(id: string): keyof typeof SUITED {
+  if (id === 'en.grammar.word-order') return 'order';
+  if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') return 'calm';
+  if (id === 'en.exam.communication' || id === 'en.exam.arrange') return 'dialogue';
+  if (id === 'en.exam.signs') return 'fast';
+  if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers') || id.startsWith('en.pron')) return 'fast';
+  if (id.startsWith('math.') || id.startsWith('logic.')) return 'logic';
+  return 'grammar';
+}
+
+/** All modes suited to these concepts, best first. */
+export function modesFor(conceptIds: string[], kind: 'learn' | 'review' | 'boss' = 'learn'): GameMode[] {
+  if (kind === 'boss') return ['duel'];
+  const votes = new Map<string, number>();
+  for (const id of conceptIds) votes.set(category(id), (votes.get(category(id)) ?? 0) + 1);
+  const top = [...votes].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'grammar';
+  return SUITED[top];
+}
+
+/**
+ * The mode for a mission's concepts (the kid can still pick another one). With a `seed` (e.g. the
+ * mission id) it rotates among the suitable modes, so the same topic doesn't always give the same game.
+ */
+export function modeFor(conceptIds: string[], kind: 'learn' | 'review' | 'boss' = 'learn', seed?: string): GameMode {
+  const list = modesFor(conceptIds, kind);
+  if (!seed) return list[0];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return list[h % list.length];
 }
 
 // ── Boss Duel ───────────────────────────────────────────────────
 export type DuelEvent =
   | { type: 'attack'; damage: number; crit: boolean; ultimate: boolean }
   | { type: 'hurt'; damage: number }
+  | { type: 'blocked' }
+  | { type: 'card'; card: ComebackCard }
+  | { type: 'healed'; amount: number }
   | { type: 'bossDown'; wave: number }
   | { type: 'end'; victory: boolean };
 
@@ -55,10 +91,33 @@ export class DuelSim {
   readonly heroMax: number;
   wave = 1;
   status: 'playing' | 'won' | 'lost' = 'playing';
+  /** Comeback cards: offered after 3 right answers in a row while losing. */
+  readonly comeback = new ComebackTracker(['heal', 'double', 'shield']);
+  doubleNext = false;
+  shieldNext = false;
 
   constructor(readonly cfg: DuelConfig) {
     this.bossHp = this.bossMax = cfg.bossHp;
     this.heroHp = this.heroMax = cfg.heroHp ?? 100;
+  }
+
+  /** Behind on health (relative), and hurt. */
+  get losing() {
+    return this.heroHp / this.heroMax < this.bossHp / this.bossMax && this.heroHp <= this.heroMax * 0.7;
+  }
+
+  /** Play the held comeback card. */
+  useCard(): DuelEvent[] {
+    const card = this.comeback.take();
+    if (!card || this.status !== 'playing') return [];
+    if (card.id === 'heal') {
+      const amount = Math.min(40, this.heroMax - this.heroHp);
+      this.heroHp += amount;
+      return [{ type: 'healed', amount }];
+    }
+    if (card.id === 'double') this.doubleNext = true;
+    if (card.id === 'shield') this.shieldNext = true;
+    return [];
   }
 
   get enraged() {
@@ -72,7 +131,8 @@ export class DuelSim {
     if (correct) {
       const ultimate = streak > 0 && streak % 5 === 0;
       const crit = !ultimate && streak >= 3;
-      const damage = Math.round((10 + difficulty * 2) * (ultimate ? 3 : crit ? 1.5 : 1));
+      const damage = Math.round((10 + difficulty * 2) * (ultimate ? 3 : crit ? 1.5 : 1) * (this.doubleNext ? 2 : 1));
+      this.doubleNext = false;
       this.bossHp = Math.max(0, this.bossHp - damage);
       out.push({ type: 'attack', damage, crit, ultimate });
       if (this.bossHp === 0) {
@@ -86,6 +146,9 @@ export class DuelSim {
           out.push({ type: 'end', victory: true });
         }
       }
+    } else if (this.shieldNext) {
+      this.shieldNext = false;
+      out.push({ type: 'blocked' });
     } else {
       const damage = this.enraged ? BOSS_ENRAGED_HIT : BOSS_HIT;
       this.heroHp = Math.max(this.cfg.noDefeat ? 1 : 0, this.heroHp - damage);
@@ -94,6 +157,10 @@ export class DuelSim {
         this.status = 'lost';
         out.push({ type: 'end', victory: false });
       }
+    }
+    if (this.status === 'playing') {
+      const card = this.comeback.check(correct, streak, this.losing);
+      if (card) out.push({ type: 'card', card });
     }
     return out;
   }

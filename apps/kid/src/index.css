@@ -18,3 +18,20 @@
   from { transform: translate(-50%, 0); }
   to { transform: translate(-50%, -8px); }
 }
+
+/* Meteor Defense: twinkling star field. */
+.meteor-stars {
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 32% 42%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 58% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 76% 36%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 88% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 66%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 66% 58%, #fff 50%, transparent 51%);
+  animation: twinkle 3s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from { opacity: 0.35; }
+  to { opacity: 0.8; }
+}

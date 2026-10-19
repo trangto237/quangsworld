@@ -3,6 +3,7 @@ import { TOWERS, loadBattle, type BattleConfig, type BattleController, type HudS
 import { getConcept, type PresentedQuestion } from '@atlas/knowledge';
 import { Button, Modal, cx } from '@atlas/ui';
 import { QuestionCard } from './QuestionCard';
+import { ComebackCardButton } from './modes/ComebackCard';
 import { stopSpeaking } from '../lib/speech';
 import { T, TB, tr, useLang } from '../i18n';
 
@@ -89,6 +90,9 @@ export function BattleArena(p: ArenaProps) {
           if (e.type === 'strike') flash('♛ Checkmate Strike! 5 in a row!');
           if (e.type === 'baseHit') flash('A Glitch reached the castle!');
           if (e.type === 'empty') flash('A tower is out of ammo — answer to resupply!');
+          if (e.type === 'card') flash('🃏 Comeback card! Tap it to play.');
+          if (e.type === 'freeze') flash('❄️ The Glitches are frozen!');
+          if (e.type === 'repair') flash('🧱 The castle is repaired!');
         },
         onEnd: (victory) => end(victory, false),
       });
@@ -178,6 +182,16 @@ export function BattleArena(p: ArenaProps) {
                   <div className="h-full bg-gradient-to-r from-red-600 to-orange-400 transition-all" style={{ width: `${(hud.bossHp / (hud.bossMaxHp || 1)) * 100}%` }} />
                 </div>
               </div>
+            )}
+            {hud?.card && (
+              <ComebackCardButton
+                card={hud.card}
+                className="absolute bottom-2 left-2"
+                onPlay={() => {
+                  battle.current?.useCard();
+                  p.onActivity?.();
+                }}
+              />
             )}
             {toast && (
               <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 animate-pop whitespace-nowrap rounded-2xl bg-black/70 px-4 py-2 text-center text-sm font-bold">

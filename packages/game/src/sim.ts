@@ -7,6 +7,8 @@
  * Enemies ("Glitches") walk right→left; one reaching the castle costs a heart.
  */
 
+import { ComebackTracker, type ComebackCard } from './arcade';
+
 export type TowerKind = 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen';
 export type EnemyKind = 'grunt' | 'runner' | 'tank' | 'boss';
 
@@ -104,6 +106,9 @@ export type SimEvent =
   | { type: 'empty'; tower: Tower }
   | { type: 'finale' }
   | { type: 'boss'; enemy: Enemy }
+  | { type: 'card'; card: ComebackCard }
+  | { type: 'freeze'; until: number }
+  | { type: 'repair' }
   | { type: 'end'; victory: boolean };
 
 export interface BattleConfig {
@@ -136,6 +141,9 @@ export interface HudState {
   bossMaxHp: number | null;
   status: BattleStatus;
   towersOnField: number;
+  /** A comeback card waiting to be played. */
+  card: ComebackCard | null;
+  frozen: boolean;
 }
 
 export const ENERGY_PER_CORRECT = 25;
@@ -165,6 +173,9 @@ export class BattleSim {
   private events: SimEvent[] = [];
   private readonly hpScale: number;
   private readonly interval: number;
+  /** Comeback cards: after 3 right answers in a row while the castle is in trouble. */
+  readonly comeback = new ComebackTracker(['freeze', 'queen', 'repair']);
+  frozenUntil = 0;
 
   constructor(
     readonly cfg: BattleConfig,
@@ -243,11 +254,49 @@ export class BattleSim {
         this.events.push({ type: 'resupply', shots: RESUPPLY_SHOTS });
       }
       if (streak > 0 && streak % STRIKE_EVERY === 0) this.strike();
+      const card = this.comeback.check(true, streak, this.inTrouble);
+      if (card) this.events.push({ type: 'card', card });
     } else {
+      this.comeback.check(false, 0, this.inTrouble);
       this.energy = Math.max(0, this.energy - WRONG_PENALTY);
       for (const e of this.enemies) e.x -= SURGE_PX;
       this.events.push({ type: 'energy', amount: -WRONG_PENALTY }, { type: 'surge' });
     }
+  }
+
+  /** Castle damaged, or a Glitch is deep in the left half of the field. */
+  get inTrouble() {
+    return this.hearts < this.maxHearts || this.enemies.some((e) => e.x < GRID.left + GRID.cell * 3);
+  }
+
+  /** Play the held comeback card. */
+  useCard(): ComebackCard | null {
+    if (this.status !== 'playing') return null;
+    const card = this.comeback.take();
+    if (!card) return null;
+    if (card.id === 'freeze') {
+      this.frozenUntil = this.time + 8000;
+      this.events.push({ type: 'freeze', until: this.frozenUntil });
+    } else if (card.id === 'repair') {
+      this.hearts = Math.min(this.maxHearts, this.hearts + 1);
+      this.events.push({ type: 'repair' });
+    } else if (card.id === 'queen') {
+      // A free Queen in the lane of the most advanced Glitch (or the middle lane), as far forward as possible.
+      const front = [...this.enemies].sort((a, b) => a.x - b.x)[0];
+      const rows = front ? [front.row, ...[0, 1, 2, 3, 4].filter((r) => r !== front.row)] : [2, 1, 3, 0, 4];
+      for (const row of rows) {
+        const maxCol = front && front.row === row ? Math.floor((front.x - GRID.left) / GRID.cell) - 1 : GRID.cols - 3;
+        for (let col = Math.max(0, Math.min(GRID.cols - 1, maxCol)); col >= 0; col--) {
+          if (this.towerAt(row, col)) continue;
+          const spec = TOWERS.queen;
+          const tower: Tower = { id: this.nextId++, kind: 'queen', row, col, hp: spec.hp, maxHp: spec.hp, level: 2, cooldown: 200, ammo: maxAmmoFor('queen', 2), maxAmmo: maxAmmoFor('queen', 2) };
+          this.towers.push(tower);
+          this.events.push({ type: 'place', tower });
+          return card;
+        }
+      }
+    }
+    return card;
   }
 
   /** Streak reward: "Checkmate Strike" damages every enemy on the field. */
@@ -370,6 +419,7 @@ export class BattleSim {
         }
         continue;
       }
+      if (this.time < this.frozenUntil) continue;
       const slowed = e.slowUntil > this.time ? 0.5 : 1;
       e.x -= (spec.speed * slowed * dt) / 1000;
       if (e.x <= GRID.baseX) {
@@ -404,6 +454,8 @@ export class BattleSim {
       bossMaxHp: boss ? boss.maxHp : null,
       status: this.status,
       towersOnField: this.towers.length,
+      card: this.comeback.card,
+      frozen: this.time < this.frozenUntil,
     };
   }
 }

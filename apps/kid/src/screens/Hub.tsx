@@ -56,13 +56,13 @@ export function Hub({ student }: { student: StudentProfile }) {
                       <span>
                         {i + 1}. <T en="{d} min" vars={{ d: m.duration }} /> · <T en={m.label} />
                       </span>
-                      <span className="text-lg" title={MODES[m.mode ?? modeFor(m.concepts, m.kind)].name}>
-                        {m.done ? '✅' : MODES[m.mode ?? modeFor(m.concepts, m.kind)].emoji}
+                      <span className="text-lg" title={MODES[m.mode ?? modeFor(m.concepts, m.kind, m.id)].name}>
+                        {m.done ? '✅' : MODES[m.mode ?? modeFor(m.concepts, m.kind, m.id)].emoji}
                       </span>
                     </span>
                     <span className="mt-2 font-display text-lg font-semibold">{m.title}</span>
                     <span className="text-xs text-white/60">
-                      <T en={MODES[m.mode ?? modeFor(m.concepts, m.kind)].name} />
+                      <T en={MODES[m.mode ?? modeFor(m.concepts, m.kind, m.id)].name} />
                     </span>
                     <span className="mt-auto pt-2 text-xs text-white/60">
                       🪙 {m.reward.coins}
