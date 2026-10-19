@@ -311,6 +311,9 @@ const VI: Record<string, string> = {
   // Family code
   'Sign in': 'Đăng nhập',
   'Sign out': 'Đăng xuất',
+  'Restart the trial': 'Làm lại thử thách từ đầu',
+  'Restart the Trial of Five Realms from the beginning?': 'Làm lại Thử thách Năm Vương quốc từ đầu?',
+  'Your answers in the trial and the coins you won in it are cleared. Nothing else changes.': 'Các câu trả lời trong thử thách và số xu em giành được sẽ bị xoá. Những thứ khác giữ nguyên.',
   'Sign out of this device?': 'Đăng xuất khỏi máy này?',
   'Your progress is saved in the cloud. Sign in again any time to continue.': 'Tiến độ của em đã được lưu trên mạng. Đăng nhập lại bất cứ lúc nào để chơi tiếp.',
   'Sign out anyway? Progress since the last sync on this device will be lost.': 'Vẫn đăng xuất? Phần chơi trên máy này từ lần đồng bộ trước sẽ bị mất.',

@@ -226,6 +226,20 @@ export class Repo {
     return this.getKv<PlacementState>(`placement:${studentId}`);
   }
 
+  /**
+   * Restart the Trial of Five Realms (only while it isn't finished): its saved progress, answers and
+   * sessions go, and the coins/XP earned in it — the only way to earn before the trial is done.
+   */
+  async restartTrial(studentId: string) {
+    if (this.getStudent(studentId)?.placementDone) throw new Error('The trial is already finished. Use “Reset progress” in the parent app to start over.');
+    await this.db.write((o) => {
+      o.delete(t.kv).where(eq(t.kv.key, `placement:${studentId}`)).run();
+      o.delete(t.attempts).where(and(eq(t.attempts.studentId, studentId), eq(t.attempts.context, 'placement'))).run();
+      o.delete(t.sessions).where(and(eq(t.sessions.studentId, studentId), eq(t.sessions.kind, 'placement'))).run();
+      o.update(t.wallets).set({ coins: 100, gems: 0, xp: 0 }).where(eq(t.wallets.studentId, studentId)).run();
+    });
+  }
+
   async savePlacementProgress(studentId: string, state: PlacementState, answer?: Omit<Attempt, 'id' | 'createdAt' | 'studentId' | 'context'>) {
     await this.db.write((o) => {
       o.insert(t.kv).values({ key: `placement:${studentId}`, value: state }).onConflictDoUpdate({ target: t.kv.key, set: { value: state } }).run();

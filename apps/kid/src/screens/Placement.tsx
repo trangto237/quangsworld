@@ -1,3 +1,5 @@
+import { confirmSignOut } from '@atlas/db/cloud';
+import { useKidCloud } from '../components/JoinFamily';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import {
@@ -11,7 +13,7 @@ import type { GameMode } from '@atlas/game';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
-import { T, TB } from '../i18n';
+import { T, TB, tr, useLang } from '../i18n';
 
 /** Each realm plays a different game, suited to its content. */
 const REALM_MODE: Record<string, GameMode> = {
@@ -42,6 +44,7 @@ type Phase = { kind: 'welcome' } | { kind: 'map' } | { kind: 'realm'; index: num
 export function Placement({ student }: { student: StudentProfile }) {
   const repo = useRepo();
   const { go, logout } = useKid();
+  const lang = useLang();
   const [state, setState] = useState<PlacementState>(() => repo.getPlacementProgress(student.id) ?? createPlacement());
   const stateRef = useRef(state);
   const [phase, setPhase] = useState<Phase>(() => (answeredCount(state) === 0 ? { kind: 'welcome' } : { kind: 'map' }));
@@ -234,13 +237,57 @@ export function Placement({ student }: { student: StudentProfile }) {
             );
           })}
         </ol>
-        {state.sectionIndex > 0 && (
-          <button onClick={logout} className="mx-auto mt-6 block text-sm text-white/60 hover:underline">
-            <T en="Rest for now (come back later)" />
-          </button>
-        )}
+        <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-white/60">
+          {state.sectionIndex > 0 && (
+            <button onClick={logout} className="hover:underline">
+              <T en="Rest for now (come back later)" />
+            </button>
+          )}
+          {answeredCount(state) > 0 && (
+            <button
+              className="hover:underline"
+              onClick={async () => {
+                if (!confirm(`${tr(lang, 'Restart the Trial of Five Realms from the beginning?')}\n\n${tr(lang, 'Your answers in the trial and the coins you won in it are cleared. Nothing else changes.')}`)) return;
+                await repo.restartTrial(student.id);
+                update(createPlacement());
+                setPhase({ kind: 'welcome' });
+              }}
+            >
+              ↺ <T en="Restart the trial" />
+            </button>
+          )}
+        </div>
       </div>
     </Shell>
+  );
+}
+
+/** Always reachable during the trial: switch player, or sign out of this device. */
+function TrialCorner() {
+  const logout = useKid((s) => s.logout);
+  const lang = useLang();
+  const { status, cloud } = useKidCloud();
+  const connected = !!status.email || !!status.viaCode;
+  return (
+    <div className="absolute right-3 top-3 z-10 flex gap-1 text-xs sm:right-5 sm:top-4">
+      <button onClick={logout} className="rounded-xl px-3 py-2 text-white/70 hover:bg-white/10 hover:text-white" title={tr(lang, 'Switch player')}>
+        ⇄ <T en="Switch player" />
+      </button>
+      {connected && (
+        <button
+          onClick={async () => {
+            const out = await confirmSignOut(cloud, {
+              ask: `${tr(lang, 'Sign out of this device?')}\n\n${tr(lang, 'Your progress is saved in the cloud. Sign in again any time to continue.')}`,
+              unsynced: tr(lang, 'Sign out anyway? Progress since the last sync on this device will be lost.'),
+            });
+            if (out) logout();
+          }}
+          className="rounded-xl px-3 py-2 text-white/70 hover:bg-white/10 hover:text-white"
+        >
+          🚪 <T en="Sign out" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -248,6 +295,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-gradient-to-b from-indigo-700 via-violet-800 to-slate-950 p-4 text-white sm:p-8">
       <Stars />
+      <TrialCorner />
       <div className="relative flex w-full justify-center">{children}</div>
     </div>
   );

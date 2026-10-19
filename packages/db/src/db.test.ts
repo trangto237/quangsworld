@@ -149,6 +149,33 @@ describe('Repo', () => {
     expect(Object.keys(repo.getStates(other)).length).toBeGreaterThan(0);
   });
 
+  it('restarts an unfinished placement trial only', async () => {
+    const { repo } = await fresh();
+    const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊' });
+    let s = createPlacement();
+    const r = rng(5);
+    for (let i = 0; i < 6; i++) {
+      const q = nextPlacementQuestion(s, r)!;
+      const answer = { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct: true, msSpent: 2000 };
+      s = recordPlacementAnswer(s, answer);
+      await repo.savePlacementProgress(id, s, answer);
+    }
+    await repo.completeMission(id, { states: [], session: { kind: 'placement', startedAt: 0, endedAt: 1000, activeMs: 1000, missionTitle: 'Trial' }, reward: { coins: 40, gems: 0, xp: 60 } });
+    await repo.setKv(`lang:${id}`, 'vi');
+
+    await repo.restartTrial(id);
+
+    expect(repo.getPlacementProgress(id)).toBeUndefined();
+    expect(repo.listAttempts(id, 0)).toHaveLength(0);
+    expect(repo.listSessions(id)).toHaveLength(0);
+    expect(repo.getWallet(id)).toEqual({ coins: 100, gems: 0, xp: 0 });
+    expect(repo.getKv(`lang:${id}`)).toBe('vi');
+    expect(repo.getStudent(id)?.name).toBe('Quang');
+
+    await repo.completePlacement(id, scorePlacement(s));
+    await expect(repo.restartTrial(id)).rejects.toThrow(/already finished/);
+  });
+
   it('removes a kv entry when set to null', async () => {
     const { repo } = await fresh();
     await repo.setKv('exam-progress:x', { examId: 'hn10' });
