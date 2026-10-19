@@ -254,3 +254,21 @@ describe('no repeated questions', () => {
     for (let i = 0; i < 40; i++) expect(placementSeen).not.toContain(promptOf(sess.next()!));
   });
 });
+
+describe('placement variety', () => {
+  it('never asks the same kind of question more than twice in a realm, even when every answer is right', async () => {
+    const { createPlacement, nextPlacementQuestion, recordPlacementAnswer } = await import('./placement');
+    for (let run = 0; run < 5; run++) {
+      let s = createPlacement();
+      let index = -1;
+      let prompts = new Map<string, number>();
+      for (let q = nextPlacementQuestion(s); q; q = nextPlacementQuestion(s)) {
+        if (s.sectionIndex !== index) (index = s.sectionIndex), (prompts = new Map());
+        const n = (prompts.get(q.prompt) ?? 0) + 1;
+        prompts.set(q.prompt, n);
+        if (s.sections[index].answers.length < 15 && index === 2) expect(n, q.prompt).toBeLessThanOrEqual(2);
+        s = recordPlacementAnswer(s, { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct: true, msSpent: 1000 });
+      }
+    }
+  });
+});

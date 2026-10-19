@@ -388,7 +388,7 @@ const teenTy = (n: number) => (n >= 13 && n <= 19 ? (n - 10) * 10 : n % 10 === 0
 const digitWord = (c: string) => (c === '0' ? 'oh' : ONES[+c]);
 
 const listeningNumbersGen: Generator = (d, r) => {
-  const kind = d <= 1 ? pick(r, ['number', 'time'] as const) : d === 2 ? pick(r, ['price', 'time', 'number'] as const) : d === 3 ? pick(r, ['date', 'spell'] as const) : d === 4 ? pick(r, ['phone', 'spell', 'date'] as const) : 'total';
+  const kind = d <= 1 ? pick(r, ['number', 'time'] as const) : d === 2 ? pick(r, ['price', 'time', 'number'] as const) : d === 3 ? pick(r, ['date', 'spell'] as const) : d === 4 ? pick(r, ['phone', 'spell', 'date', 'total'] as const) : pick(r, ['total', 'difference', 'delay', 'phone', 'date'] as const);
   if (kind === 'number') {
     const n = r() < 0.5 ? int(r, 13, 19) : int(r, 3, 9) * 10;
     return { prompt: 'What number did you hear?', audio: `The number is ${words(n)}.`, answer: String(n), distractors: [String(teenTy(n)), String(n + 1), String(n - 1)] };
@@ -442,14 +442,143 @@ const listeningNumbersGen: Generator = (d, r) => {
     const audio = `You can call me on ${[digits.slice(0, 4), digits.slice(4, 7), digits.slice(7)].map((g) => g.split('').map(digitWord).join(' ')).join(', ')}.`;
     return { prompt: 'What is the phone number?', audio, answer: group(digits), distractors: [group(swap(digits, 5)), group(change(digits, 8)), group(swap(digits, 2))] };
   }
+  if (kind === 'difference') {
+    const a = int(r, 3, 9) * 10 + int(r, 1, 9);
+    const b = a - int(r, 12, 29);
+    const what = pick(r, ['tickets', 'books', 'students'] as const);
+    const signed = what === 'students';
+    return {
+      prompt: `How many more ${what} ${signed ? 'signed up' : 'were sold'} this year than last year?`,
+      audio: signed
+        ? `This year ${words(a)} students signed up for the club. Last year it was only ${words(b)}.`
+        : `This year we sold ${words(a)} ${what}. Last year it was only ${words(b)}.`,
+      answer: String(a - b),
+      distractors: [String(a - b + 10), String(a - b - 2), String(b)],
+    };
+  }
+  if (kind === 'delay') {
+    const h = int(r, 7, 10);
+    const late = pick(r, [15, 20, 30, 45]);
+    const fmt = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+    const start = h * 60 + pick(r, [0, 30]);
+    const what = pick(r, ['The train to Hải Phòng', 'The school trip', 'The football match', 'The concert']);
+    const said = start % 60 ? `half past ${words(h)}` : `${words(h)} o'clock`;
+    return {
+      prompt: 'What time will it start now?',
+      audio: `${what} was supposed to start at ${said}, but it has been delayed by ${words(late)} minutes.`,
+      answer: fmt(start + late),
+      distractors: [fmt(start), fmt(start - late), fmt(start + late + 15)],
+    };
+  }
   const a = int(r, 3, 9) * 10 + int(r, 0, 9);
   const b = int(r, 11, 29);
+  const [who, verb, prompt] = pick(r, [
+    ['people', 'came', 'How many people came in total?'],
+    ['students', 'joined', 'How many students joined in total?'],
+    ['visitors', 'came', 'How many visitors came in total?'],
+  ] as const);
   return {
-    prompt: 'How many people came in total?',
-    audio: `About ${words(a)} people came in the morning, and another ${words(b)} arrived in the afternoon.`,
+    prompt,
+    audio: `About ${words(a)} ${who} ${verb} in the morning, and another ${words(b)} arrived in the afternoon.`,
     answer: String(a + b),
     distractors: [String(a), String(a + teenTy(b) - b || a + b + 10), String(a + b + 10)],
   };
+};
+
+// ── Listening: details & main idea ───────────────────────────
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const PLACES = ['the library', 'the school gate', 'the café', 'the bus stop', 'the sports hall', 'the park'];
+const PEOPLE = ['Minh', 'Lan', 'Huy', 'Mai', 'Tom', 'Anna', 'Nam', 'Linh'];
+const ITEMS = ['a raincoat', 'a water bottle', 'a packed lunch', 'a pencil case', 'a calculator', 'a hat', 'some money', 'a dictionary', 'a torch', 'a towel'];
+const REASONS: [string, string][] = [
+  ['the heavy rain', 'because of the heavy rain'],
+  ['a problem with the bus', 'because there was a problem with the bus'],
+  ['the teacher being ill', 'because the teacher was ill'],
+  ['not enough tickets sold', 'because not enough tickets were sold'],
+  ['a power cut', 'because there was a power cut'],
+  ['the road being closed', 'because the road was closed'],
+];
+const EVENTS = ['The school trip', 'The football match', 'The concert', 'The science fair', 'The class party'];
+
+const listeningDetailsGen: Generator = (d, r) => {
+  const kinds = d <= 2 ? (['day', 'place'] as const) : d === 3 ? (['day', 'place', 'who', 'item'] as const) : (['who', 'item', 'reason', 'place'] as const);
+  const kind = pick(r, kinds);
+  if (kind === 'day') {
+    const [first, second, ...rest] = sample(r, DAYS, 4);
+    const thing = pick(r, ['meet', 'have the practice', 'go swimming', 'do the project']);
+    return {
+      prompt: 'Which day did they finally choose?',
+      audio: `Shall we ${thing} on ${first}? Oh no, I have a test on ${first}. Let's make it ${second} instead.`,
+      answer: second,
+      distractors: [first, ...rest],
+    };
+  }
+  if (kind === 'place') {
+    const [a, b, c, e] = sample(r, PLACES, 4);
+    const audio =
+      d <= 2
+        ? `Let's meet at ${a}. No, wait, it's closed today. Let's meet at ${b}.`
+        : `I know we said ${a}, and ${c} is too far, so let's meet at ${b}, just next to the main road.`;
+    return { prompt: 'Where will they meet?', audio, answer: cap(b), distractors: [cap(a), cap(c), cap(e)] };
+  }
+  if (kind === 'who') {
+    const [p1, p2, p3, p4] = sample(r, PEOPLE, 4);
+    const job = pick(r, ['book the tickets', 'bring the cake', 'give the presentation', 'call the coach']);
+    return {
+      prompt: `Who will ${job}?`,
+      audio: `${p1} was going to ${job} but is ill this week. ${p2} offered too, but ${p3} has more free time, so ${p3} will do it.`,
+      answer: p3,
+      distractors: [p1, p2, p4],
+    };
+  }
+  if (kind === 'item') {
+    const [x, y, z, notNeeded] = sample(r, ITEMS, 4);
+    return {
+      prompt: 'Which thing do the students NOT need to bring?',
+      audio: `For tomorrow, please bring ${x}, ${y} and ${z}. You don't need ${notNeeded} — we'll give you one there.`,
+      answer: cap(notNeeded),
+      distractors: [cap(x), cap(y), cap(z)],
+    };
+  }
+  const [real, fake, ...rest] = sample(r, REASONS, 4);
+  const event = pick(r, EVENTS);
+  return {
+    prompt: `Why was ${event.toLowerCase()} cancelled?`,
+    audio: `${event} was cancelled. Many people think it was ${fake[1]}, but actually it was ${real[1]}.`,
+    answer: cap(real[0]),
+    distractors: [cap(fake[0]), ...rest.map((x) => cap(x[0]))],
+  };
+};
+
+/** Each purpose / attitude with a few things a speaker might say. */
+const PURPOSES: [string, string[]][] = [
+  ['to apologise for a delay', ["We're very sorry, but the 8:15 train will arrive twenty minutes late.", 'Sorry for the wait, everyone. The doctor is running about half an hour behind today.', 'We apologise: the film will start a little later than planned because of a technical problem.']],
+  ['to give a warning', ['Please be careful: the floor near the entrance is wet and very slippery.', 'Remember, the river is deep here, so do not go near the edge.', 'Watch out for your bags in this market. There have been some thefts recently.']],
+  ['to invite people', ["We're having a party for Mai's birthday on Saturday, and we'd love you all to come.", 'Everyone is welcome to join the English club. We meet every Thursday after school.', 'Would your family like to come to our school concert next Friday? Entry is free.']],
+  ['to give instructions', ['First, write your name at the top. Then answer all the questions in pencil.', 'Press the green button, wait for the beep, then put your card in the machine.', 'Mix the flour and the eggs, add a little milk, then cook it for three minutes on each side.']],
+  ['to advertise a product', ['Our new phone has the best camera ever, and this week it is twenty per cent cheaper!', 'Try our fresh fruit smoothies. Buy one, get one free, all weekend!', 'Looking for a comfortable bag for school? Our new backpacks are light, strong and cheap.']],
+  ['to complain', ['I ordered this jacket two weeks ago, it still has not arrived, and nobody answers my emails.', 'The air conditioner in our classroom has been broken for a month, and it is far too hot to study.', 'The noise from the building site starts at six in the morning every day. It is not acceptable.']],
+  ['to give advice', ["If you want to remember new words, try to use them in a sentence on the same day.", "You should get enough sleep before the exam. Staying up late won't help.", 'It is a good idea to drink water regularly when you play sport in hot weather.']],
+];
+const ATTITUDES: [string, string[]][] = [
+  ['disappointed', ['I had waited months for this film, but honestly the story was weak and the ending was boring.', 'Everyone said the restaurant was amazing. The food was cold and I would not go back.']],
+  ['surprised', ["I thought the test would be really hard, but it was much easier than I expected! I couldn't believe it.", 'I had no idea Huy could sing like that. Nobody knew!']],
+  ['worried', ['The exam is next week and I still have three units to revise. I am not sure I will be ready.', "My sister hasn't called since she arrived, and her phone is switched off."]],
+  ['grateful', ['Thank you so much for helping me with my project. I could not have finished it without you.', 'I really appreciate the extra lessons. They made a big difference.']],
+  ['annoyed', ['This is the third time the bus has been late this week. I am tired of waiting!', 'My brother used my headphones again without asking, and now they are broken.']],
+];
+
+const listeningMainIdeaGen: Generator = (d, r) => {
+  if (d >= 4 && r() < 0.5) {
+    const [mood, lines] = pick(r, ATTITUDES);
+    const others = sample(r, ATTITUDES, 3, (x) => x[0] === mood).map((x) => x[0]);
+    return { prompt: 'How does the speaker feel?', audio: pick(r, lines), answer: mood, distractors: others };
+  }
+  const [purpose, lines] = pick(r, PURPOSES);
+  const others = sample(r, PURPOSES, 3, (x) => x[0] === purpose).map((x) => x[0]);
+  const audio = d >= 3 ? sample(r, lines, 2).join(' ') : pick(r, lines);
+  return { prompt: d >= 3 ? 'What is the main purpose of the talk?' : 'Why is the speaker talking?', audio, answer: purpose, distractors: others };
 };
 
 export const englishGenerators: Record<string, Generator> = {
@@ -464,4 +593,6 @@ export const englishGenerators: Record<string, Generator> = {
   'en.grammar.conditionals': conditionalGen,
   'en.grammar.comparatives': comparativeGen,
   'en.listening.numbers': listeningNumbersGen,
+  'en.listening.details': listeningDetailsGen,
+  'en.listening.main-idea': listeningMainIdeaGen,
 };

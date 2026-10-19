@@ -59,17 +59,27 @@ export function nextPlacementQuestion(s: PlacementState, rand: () => number = Ma
   if (!def) return undefined;
   const sec = s.sections[s.sectionIndex];
   const seen = new Set(sec.answers.map((a) => a.questionId));
+  // How often each kind of question (same wording) came up in this realm: at most twice each.
+  const asked = new Map<string, number>();
   for (const a of sec.answers) {
     const q = getQuestion(a.questionId);
-    if (q) seen.add(promptKey(q));
+    if (!q) continue;
+    seen.add(promptKey(q));
+    asked.set(q.prompt, (asked.get(q.prompt) ?? 0) + 1);
   }
+  const fresh = (q: Question | undefined) => !!q && (asked.get(q.prompt) ?? 0) < MAX_SAME_PROMPT;
   const counts = new Map(def.concepts.map((c) => [c, 0]));
   sec.answers.forEach((a) => counts.set(a.conceptId, (counts.get(a.conceptId) ?? 0) + 1));
   const order = [...def.concepts].sort((a, b) => counts.get(a)! - counts.get(b)! || rand() - 0.5);
+  const tries = (conceptId: string) => Array.from({ length: 6 }, () => pickQuestion({ conceptId, difficulty: sec.difficulty, exclude: seen, rand }));
+  // Prefer a new kind of question within one step of the target, so the staircase stays meaningful.
   for (const conceptId of order) {
-    const q = pickQuestion({ conceptId, difficulty: sec.difficulty, exclude: seen, rand });
-    // Prefer items within one step of the target so the staircase stays meaningful.
-    if (q && Math.abs(q.difficulty - sec.difficulty) <= 1) return q;
+    const q = tries(conceptId).find((x) => fresh(x) && Math.abs(x!.difficulty - sec.difficulty) <= 1);
+    if (q) return q;
+  }
+  for (const conceptId of order) {
+    const q = tries(conceptId).find(fresh);
+    if (q) return q;
   }
   for (const conceptId of order) {
     const q = pickQuestion({ conceptId, difficulty: sec.difficulty, exclude: seen, rand });
@@ -77,6 +87,9 @@ export function nextPlacementQuestion(s: PlacementState, rand: () => number = Ma
   }
   return undefined;
 }
+
+/** The same question wording (e.g. "How many people came in total?") at most this often per realm. */
+const MAX_SAME_PROMPT = 2;
 
 const kFactor = (n: number) => Math.max(6, 28 / (1 + 0.12 * n));
 
