@@ -112,6 +112,43 @@ describe('Repo', () => {
     await expect(repo.purchase(id, 'tower.knight')).rejects.toThrow(/Already/);
   });
 
+  it('resets a child to a fresh start but keeps the profile and settings', async () => {
+    const { repo } = await fresh();
+    const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊', pin: '1234' });
+    const other = await repo.addStudent({ name: 'Lan', age: 10, grade: 5, avatar: '🐼' });
+    let s = createPlacement();
+    const r = rng(3);
+    while (!isPlacementDone(s)) {
+      const q = nextPlacementQuestion(s, r)!;
+      s = recordPlacementAnswer(s, { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct: true, msSpent: 2000 });
+    }
+    for (const sid of [id, other]) await repo.completePlacement(sid, scorePlacement(s));
+    await repo.completeMission(id, { states: [], session: { kind: 'mission', startedAt: 0, endedAt: 60000, activeMs: 60000, missionTitle: 'T' }, reward: { coins: 300, gems: 2, xp: 90 } });
+    await repo.purchase(id, 'tower.knight');
+    await repo.setKv(`lang:${id}`, 'vi');
+    await repo.setKv(`plan:${id}:2026-10-19`, { blocks: [] });
+    await repo.setKv(`exam-progress:${id}`, { examId: 'hn10' });
+
+    await repo.resetStudentProgress(id);
+
+    const kid = repo.getStudent(id)!;
+    expect(kid.placementDone).toBe(false);
+    expect(kid.name).toBe('Quang');
+    expect(await repo.verifyStudentPin(id, '1234')).toBe(true);
+    expect(Object.keys(repo.getStates(id))).toHaveLength(0);
+    expect(repo.listSessions(id)).toHaveLength(0);
+    expect(repo.latestPlacement(id)).toBeUndefined();
+    expect(repo.getWallet(id)).toEqual({ coins: 100, gems: 0, xp: 0 });
+    expect(repo.listUnlocks(id)).not.toContain('tower.knight');
+    expect(repo.getKv(`lang:${id}`)).toBe('vi');
+    expect(repo.getKv(`plan:${id}:2026-10-19`)).toBeUndefined();
+    expect(repo.getKv(`exam-progress:${id}`)).toBeUndefined();
+    expect(repo.listGoals(id).length).toBeGreaterThan(0);
+    // The other child is untouched.
+    expect(repo.getStudent(other)!.placementDone).toBe(true);
+    expect(Object.keys(repo.getStates(other)).length).toBeGreaterThan(0);
+  });
+
   it('removes a kv entry when set to null', async () => {
     const { repo } = await fresh();
     await repo.setKv('exam-progress:x', { examId: 'hn10' });

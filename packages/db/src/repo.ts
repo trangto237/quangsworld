@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, like } from 'drizzle-orm';
 import type {
   Attempt, ConceptDef, ConceptState, Goal, GoalKind, PlacementScores, Question, Reward, Student, StudySession, Wallet,
 } from '@atlas/shared';
@@ -145,6 +145,24 @@ export class Repo {
       o.delete(t.students).where(eq(t.students.id, id)).run();
       o.delete(t.kv).where(eq(t.kv.key, `placement:${id}`)).run();
       o.delete(t.kv).where(eq(t.kv.key, `equipped:${id}`)).run();
+    });
+  }
+
+  /**
+   * Start a child over: answers, mastery, placement, Mistake Book, exam results, rewards and saved
+   * games are cleared, so the next login begins with the placement trial again. The profile (name,
+   * avatar, PIN), the parent's goals and the language setting stay.
+   */
+  async resetStudentProgress(id: string) {
+    await this.db.write((o) => {
+      for (const table of [t.conceptStates, t.attempts, t.sessions, t.placementResults, t.unlocks, t.mistakes, t.examResults] as const) {
+        o.delete(table).where(eq(table.studentId, id)).run();
+      }
+      o.update(t.wallets).set({ coins: 100, gems: 0, xp: 0 }).where(eq(t.wallets.studentId, id)).run();
+      for (const itemId of STARTER_ITEMS) o.insert(t.unlocks).values({ studentId: id, itemId, createdAt: Date.now() }).run();
+      o.update(t.students).set({ placementDone: false }).where(eq(t.students.id, id)).run();
+      for (const key of [`placement:${id}`, `equipped:${id}`, `exam-progress:${id}`]) o.delete(t.kv).where(eq(t.kv.key, key)).run();
+      o.delete(t.kv).where(like(t.kv.key, `plan:${id}:%`)).run();
     });
   }
 

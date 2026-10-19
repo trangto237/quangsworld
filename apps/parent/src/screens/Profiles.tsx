@@ -71,6 +71,18 @@ export function Profiles() {
                   Remove PIN
                 </Button>
               )}
+              <Button
+                variant="ghost"
+                className="text-amber-700 dark:text-amber-400"
+                title="Start over: clears answers, placement, Mistake Book, exam results and rewards. Keeps the profile, PIN, goals and language."
+                onClick={() =>
+                  confirm(
+                    `Reset ${s.name}'s progress?\n\nThis clears all answers, the placement trial, the Mistake Book, exam results, coins and unlocked items. ${s.name} starts again with the placement trial.\n\nThe profile, PIN, goals and language setting stay. This cannot be undone.`,
+                  ) && void repo.resetStudentProgress(s.id)
+                }
+              >
+                Reset progress
+              </Button>
               <Button variant="ghost" className="text-rose-600" onClick={() => confirm(`Delete ${s.name} and all progress? This cannot be undone.`) && void repo.removeStudent(s.id)}>
                 Delete
               </Button>
