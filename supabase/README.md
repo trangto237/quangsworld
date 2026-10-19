@@ -13,8 +13,7 @@ Supabase's free tier is plenty: a family uses a few MB at most.
    only read and write its own rows. Running it again is safe, and it's also how you update an older setup.
 3. **Authentication → Sign In / Providers**:
    - **Email**: keep it enabled. If you'd rather not click a confirmation link, turn off **Confirm email**.
-   - Turn on **Allow anonymous sign-ins**. That's how your child's devices connect with the family code,
-     without an email or password.
+   - Turn on **Allow anonymous sign-ins** if your child should be able to join with the code only (no email).
 4. **Project Settings → API**: copy the **Project URL** and the **anon public** key.
    (Never use the `service_role` key in the app.)
 
@@ -33,25 +32,31 @@ variables to check that the caller is the signed-in parent; it also needs an `AN
 
 ## 3. Connect your devices
 
-1. **Your phone (or computer):** open `/parent/`. Create the dashboard account and your child's profile, then go to
-   **Settings → Cloud sync → Create family account**. (Already set up on another device? On the welcome
-   screen choose **Sign in to your family cloud** instead.)
-2. Still in **Settings → Cloud sync**, press **Make a family code**. You get a code like `K7P2Q-X9MHT`.
-3. **Your child's laptop (or any device):** they open the app and tap **Connect to my family**, then type the
-   code. Their hero appears, and everything they play syncs. You never need to touch their device.
+**One parent login.** Your email + password is the only login you need. It signs you in on any device and
+also unlocks the parent dashboard.
 
-The code works on as many devices as needed (school computer, tablet). **Make a new code** stops the old code
-from working; devices already connected stay connected. **Disconnect** under *Connected devices* stops a
-device from syncing.
+1. **Your phone or computer:** open `/parent/` → **Create your parent account** (name, email, password), then
+   create your child's profile. On any other device: open `/parent/` → **Sign in**, and your family's data
+   downloads.
+2. **Settings → Cloud sync → Make a family code.** You get a code like `K7P2Q-X9MHT`. Your child uses it once.
+3. **Your child's devices**, in the kid app → **Connect to my family**:
+   - **New account** (12+): their own email + password + the family code. After that they just **Sign in**
+     with their email on any device.
+   - **Code only** (no email): the device joins with the code.
 
-If a device already has its own data when you sign in with email, you'll be asked to **use the cloud data**
-(replace this device's) or **merge both**. A child's device that joins with the code takes the cloud's data,
-unless it already has play history; then the two are merged.
+You never need to touch your child's device. **Settings → Family logins** lists every login in your family
+(your child's email, code-only devices); **Remove** stops one from syncing. **Make a new code** stops the old
+code from working; logins already in the family stay.
+
+If a device that already has its own data signs in with the parent account, you'll be asked to **use the
+cloud data** (replace this device's) or **merge both**.
 
 ## How it works
 
-- One Supabase email account is the family. Devices that join with the family code sign in anonymously and
-  are recorded in `atlas_members`, so row-level security lets them use that family's rows and nothing else.
+- The parent's Supabase account is the family. A child's own email account or a code-only device (signed in
+  anonymously) joins with the family code and is recorded in `atlas_members`, so row-level security lets it
+  use that family's rows and nothing else. Only the parent can make codes, see and remove family logins, and
+  use the AI question maker.
   Wrong codes are limited to 10 tries per 15 minutes per device; codes are 10 characters (about 50 bits).
 - Each device keeps its own encrypted SQLite copy and works offline. Triggers record every changed row.
 - Changed rows are uploaded as JSON to `atlas_rows` (one row per app row). Each upload gets an increasing
