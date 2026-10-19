@@ -36,3 +36,5 @@ export { translatePrompt, translateExplanation, LESSONS_VI } from './vi';
 export { lookup as glossaryLookup, GLOSSARY, type Gloss } from './english/glossary-vi';
 export { stressOf, unmark, STRESS, SOUND_GROUPS, ED, S } from './english/pronunciation';
 export { PASSAGE_SETS } from './english/passages';
+export { coach, whyNot, analyseStress, stressWord, wordsForRule, stressDrill, endingDrill, soundDrill, pairsDrill, lastSound, STRESS_RULES, SOUND_TIPS, STRATEGIES } from './english/tutor';
+export type { Bi, CoachChip, CoachStep, CoachPlan, DrillItem, StressRule, StressAnalysis } from './english/tutor';

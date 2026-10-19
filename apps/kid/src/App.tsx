@@ -12,6 +12,7 @@ import { Shop } from './screens/Shop';
 import { MistakeBook } from './screens/MistakeBook';
 import { ExamHall } from './screens/ExamHall';
 import { Exam } from './screens/Exam';
+import { CoachCorner } from './screens/CoachCorner';
 
 export function App() {
   const studentId = useKid((s) => s.studentId);
@@ -53,6 +54,8 @@ function Screens() {
       return <MistakeBook student={student} />;
     case 'exam-hall':
       return <ExamHall student={student} />;
+    case 'coach':
+      return <CoachCorner student={student} topic={screen.topic} conceptId={screen.conceptId} />;
     case 'exam':
       return <Exam key={screen.examId} student={student} examId={screen.examId} />;
     default:

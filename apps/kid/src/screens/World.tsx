@@ -86,6 +86,15 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
                 )}
               </div>
             )}
+            {open.id.startsWith('en.') && (
+              <button
+                type="button"
+                onClick={() => go({ name: 'coach', conceptId: open.id })}
+                className="mt-2 text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
+              >
+                🦉 <T en="Learn the rules with Coach Owl" />
+              </button>
+            )}
             <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">
               <T en="Play as" />
             </p>

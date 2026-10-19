@@ -199,7 +199,7 @@ const soundsGen: Generator = (d, r) => {
 
 // ── Sound twins (listening) ─────────────────────────────────────
 /** [word A, word B, what differs] */
-const PAIRS: [string, string, string][] = [
+export const PAIRS: [string, string, string][] = [
   ['ship', 'sheep', '/ɪ/ short vs /iː/ long'],
   ['live', 'leave', '/ɪ/ short vs /iː/ long'],
   ['sit', 'seat', '/ɪ/ short vs /iː/ long'],

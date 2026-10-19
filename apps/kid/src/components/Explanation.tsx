@@ -4,6 +4,8 @@ import { Marked } from '@atlas/ui';
 import { speak } from '../lib/speech';
 import { T, useLang } from '../i18n';
 import { GlossText } from './GlossText';
+import { useState } from 'react';
+import { CoachWalkthrough } from './Coach';
 
 /** "Your answer / right answer / why" — used in the post-battle review and the Mistake Book. */
 export function Explanation({ question: q, picked }: { question: Question; picked?: string }) {
@@ -13,6 +15,8 @@ export function Explanation({ question: q, picked }: { question: Question; picke
   const help = lang !== 'en';
   const explanationVi = help ? translateExplanation(q.explanation) : null;
   const lessonVi = help ? LESSONS_VI[q.conceptId] : undefined;
+  const [coachOpen, setCoachOpen] = useState(false);
+  const canCoach = q.conceptId.startsWith('en.');
   return (
     <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800/60">
       {picked && picked !== right && (
@@ -93,6 +97,18 @@ export function Explanation({ question: q, picked }: { question: Question; picke
           )}
         </p>
       )}
+      {canCoach &&
+        (coachOpen ? (
+          <CoachWalkthrough question={q} picked={picked} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCoachOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow hover:bg-indigo-500"
+          >
+            🦉 <T en="Explain step by step with Coach Owl" />
+          </button>
+        ))}
     </div>
   );
 }

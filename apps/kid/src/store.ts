@@ -12,7 +12,10 @@ export type Screen =
   | { name: 'shop' }
   | { name: 'mistakes' }
   | { name: 'exam-hall' }
-  | { name: 'exam'; examId: string };
+  | { name: 'exam'; examId: string }
+  | { name: 'coach'; topic?: CoachTopic; conceptId?: string };
+
+export type CoachTopic = 'stress' | 'endings' | 'sounds' | 'twins' | 'grammar';
 
 export interface BattleResult {
   mission: Mission;

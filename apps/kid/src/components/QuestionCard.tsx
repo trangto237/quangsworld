@@ -6,6 +6,7 @@ import { GlossText, hasGloss } from './GlossText';
 import { playQuestionAudio, stopSpeaking } from '../lib/speech';
 import { isTypedAnswerCorrect } from '@atlas/shared';
 import { Explanation } from './Explanation';
+import { CoachHint } from './Coach';
 
 export type CardMode =
   /** In battle: flash right/wrong, highlight the right option, move on quickly. Details wait for the post-battle review. */
@@ -146,6 +147,11 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
         <p lang="vi" className="mt-1.5 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-950 dark:bg-rose-950/40 dark:text-rose-100">
           {instructionVi}
         </p>
+      )}
+      {mode === 'practice' && !answered && q.conceptId.startsWith('en.') && (
+        <div className="mt-2">
+          <CoachHint key={q.id} question={q} />
+        </div>
       )}
       {gloss && !answered && (hasGloss(q.prompt) || hasGloss(q.passage)) && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}
       {isInput && (

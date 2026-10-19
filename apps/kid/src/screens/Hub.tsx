@@ -86,7 +86,10 @@ export function Hub({ student }: { student: StudentProfile }) {
             <h2 className="font-display text-2xl font-bold">
               <T en="Worlds" />
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => go({ name: 'coach' })}>
+                <TB en="🦉 Coach" />
+              </Button>
               <Button variant="secondary" onClick={() => go({ name: 'exam-hall' })}>
                 <TB en="🏛️ Exam Hall" />
               </Button>
