@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import initSqlJs from 'sql.js';
 import { AtlasDb } from './database';
 import { Repo } from './repo';
@@ -27,6 +27,29 @@ describe('AtlasDb', () => {
 
     const again = await AtlasDb.open(SQL, store, 'other');
     expect(new Repo(again).getFamily()?.parentName).toBe('Trang');
+  });
+
+  it('still saves when the cross-tab lock never comes (iOS)', async () => {
+    const { repo } = await fresh();
+    const nav = globalThis.navigator as unknown as { locks?: unknown };
+    const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    // A lock that is never granted; it only rejects when the wait is aborted.
+    const stuck = {
+      request: (_n: string, opts: { signal: AbortSignal }) =>
+        new Promise((_, reject) => opts.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))),
+    };
+    Object.defineProperty(globalThis, 'navigator', { value: { ...nav, locks: stuck }, configurable: true });
+    vi.useFakeTimers();
+    try {
+      const p = repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊' });
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(p).resolves.toBeTruthy();
+      expect(repo.listStudents()).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+      if (had) Object.defineProperty(globalThis, 'navigator', had);
+      else delete (globalThis as { navigator?: unknown }).navigator;
+    }
   });
 
   it('rolls back a failed write', async () => {

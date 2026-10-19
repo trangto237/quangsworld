@@ -18,26 +18,66 @@ export class MemoryStore implements BlobStore {
   }
 }
 
+/** How long one IndexedDB request may take before we reopen the connection and retry. */
+const IDB_TIMEOUT_MS = 6000;
+
 export class IdbStore implements BlobStore {
   private dbp: Promise<IDBDatabase>;
-  constructor(name = 'learning-os', private storeName = 'blobs') {
-    this.dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open(name, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(storeName);
-      req.onsuccess = () => resolve(req.result);
+  constructor(
+    private name = 'learning-os',
+    private storeName = 'blobs',
+  ) {
+    this.dbp = this.open();
+  }
+
+  private open(): Promise<IDBDatabase> {
+    const p = new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(this.name, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(this.storeName);
+      req.onsuccess = () => {
+        const db = req.result;
+        // iOS closes connections when the app is backgrounded: reopen on next use.
+        db.onclose = () => {
+          if (this.dbp === p) this.dbp = this.open();
+        };
+        db.onversionchange = () => db.close();
+        resolve(db);
+      };
       req.onerror = () => reject(req.error);
     });
+    return p;
   }
-  private async tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
-    const db = await this.dbp;
+
+  private once<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const t = db.transaction(this.storeName, mode);
-      const req = fn(t.objectStore(this.storeName));
-      t.oncomplete = () => resolve(req.result as T);
-      t.onerror = () => reject(t.error);
-      t.onabort = () => reject(t.error);
+      const timer = setTimeout(() => reject(new Error('Storage timed out')), IDB_TIMEOUT_MS);
+      const done = (f: () => void) => () => (clearTimeout(timer), f());
+      this.dbp.then((db) => {
+        try {
+          const t = db.transaction(this.storeName, mode);
+          const req = fn(t.objectStore(this.storeName));
+          t.oncomplete = done(() => resolve(req.result as T));
+          t.onerror = done(() => reject(t.error));
+          t.onabort = done(() => reject(t.error ?? new Error('Storage aborted')));
+        } catch (e) {
+          done(() => reject(e))();
+        }
+      }, done(() => reject(new Error('Could not open storage'))));
     });
   }
+
+  /** One retry on a fresh connection: covers stale or stalled connections after the app resumes. */
+  private async tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
+    try {
+      return await this.once<T>(mode, fn);
+    } catch {
+      const stale = this.dbp;
+      this.dbp = this.open();
+      void stale.then((db) => db.close()).catch(() => undefined);
+      return this.once<T>(mode, fn);
+    }
+  }
+
   get<T>(key: string) {
     return this.tx<T | undefined>('readonly', (s) => s.get(key));
   }

@@ -1,3 +1,4 @@
+import { createContext, useContext, useEffect, useRef } from 'react';
 import type { BattleConfig, GameMode, Skin, Theme } from '@atlas/game';
 import { BattleArena } from '../BattleArena';
 import { DetectiveArena } from './DetectiveArena';
@@ -11,19 +12,47 @@ import { SprintArena } from './SprintArena';
 import type { ModeProps } from './types';
 import { reportError } from '../../lib/errors';
 
+/** Lets the shared Leave button get the player out even when the game itself has already stopped. */
+const EscapeCtx = createContext<(() => void) | null>(null);
+export const useEscape = () => useContext(EscapeCtx);
+
 /** Picks the game for a mission. All modes share the same question/answer contract. */
 export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMode; defense: { config: BattleConfig; theme?: Theme; skin?: Skin; hint?: string } }) {
+  const ended = useRef<{ victory: boolean } | null>(null);
+  const mounted = useRef(true);
+  const timers = useRef<number[]>([]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      timers.current.forEach(clearTimeout);
+    };
+  }, []);
+  const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(() => mounted.current && fn(), ms));
+
+  const finish = (victory: boolean, retreated: boolean) => {
+    ended.current = { victory };
+    try {
+      raw.onEnd(victory, retreated);
+    } catch (e) {
+      reportError(e, 'ending the game');
+    }
+  };
+
   // A failure while saving an answer, loading the next question or ending the game must never freeze
   // the game: report it and carry on.
   const p: ModeProps = {
     ...raw,
     nextQuestion: () => {
+      let q = null;
       try {
-        return raw.nextQuestion();
+        q = raw.nextQuestion();
       } catch (e) {
         reportError(e, 'next question');
-        return null;
       }
+      // Out of questions: end the game instead of waiting forever.
+      if (!q) later(() => !ended.current && finish(true, false), 1500);
+      return q;
     },
     onAnswered: (q, correct, ms, picked) => {
       try {
@@ -34,13 +63,17 @@ export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMod
       }
     },
     onEnd: (victory, retreated) => {
-      try {
-        raw.onEnd(victory, retreated);
-      } catch (e) {
-        reportError(e, 'ending the game');
-      }
+      if (ended.current) return;
+      finish(victory, retreated);
     },
   };
+  // Leave pressed: if the game already ended but this screen is still showing, try ending again.
+  const escape = () => later(() => finish(ended.current?.victory ?? false, true), 800);
+  const arena = pick(mode, p, defense);
+  return <EscapeCtx.Provider value={escape}>{arena}</EscapeCtx.Provider>;
+}
+
+function pick(mode: GameMode, p: ModeProps, defense: { config: BattleConfig; theme?: Theme; skin?: Skin; hint?: string }) {
   switch (mode) {
     case 'duel':
       return <DuelArena {...p} />;

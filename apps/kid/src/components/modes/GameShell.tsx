@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button, Modal } from '@atlas/ui';
 import { T, TB, tr, useLang } from '../../i18n';
+import { useEscape } from './GameArena';
 
 /** Header (title, stats, progress), leave-confirmation and a full-height body shared by all game modes. */
 export function GameShell({
@@ -24,6 +25,7 @@ export function GameShell({
 }) {
   const lang = useLang();
   const [confirm, setConfirm] = useState(false);
+  const escape = useEscape();
   return (
     <div className={`flex min-h-dvh flex-col text-white ${className ?? 'bg-slate-950'}`}>
       <header className="flex items-center gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-sm">
@@ -60,6 +62,7 @@ export function GameShell({
             onClick={() => {
               setConfirm(false);
               onLeave();
+              escape?.();
             }}
           >
             <TB en="Leave" />

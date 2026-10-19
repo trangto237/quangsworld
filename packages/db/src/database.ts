@@ -20,14 +20,33 @@ const DB_KEY = 'db';
 const DEVICE_KEY = 'deviceKey';
 const LOCK = 'learning-os-db';
 
-/** In-process fallback when the Web Locks API is unavailable (tests, old browsers). */
+/** In-process queue: the fallback when Web Locks are missing (tests, old browsers) or stuck. */
 let chain: Promise<unknown> = Promise.resolve();
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
-  if (locks) return locks.request(LOCK, fn) as Promise<T>;
+function inProcess<T>(fn: () => Promise<T>): Promise<T> {
   const run = chain.then(fn, fn);
   chain = run.catch(() => undefined);
   return run;
+}
+
+/** How long to wait for the cross-tab lock before giving up on it (iOS can leave it stuck). */
+export const LOCK_WAIT_MS = 4000;
+
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  if (!locks || typeof AbortController === 'undefined') return inProcess(fn);
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), LOCK_WAIT_MS);
+  return (
+    locks.request(LOCK, { signal: ctl.signal }, () => {
+      clearTimeout(timer);
+      return fn();
+    }) as Promise<T>
+  ).catch((err: unknown) => {
+    clearTimeout(timer);
+    // Never got the lock: carry on without it rather than freeze the app.
+    if (ctl.signal.aborted && (err as Error)?.name === 'AbortError') return inProcess(fn);
+    throw err;
+  });
 }
 
 /**

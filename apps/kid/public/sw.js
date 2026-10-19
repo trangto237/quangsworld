@@ -3,7 +3,7 @@
  * Navigations: network first, falling back to the cached app shell.
  * Assets (hashed JS/CSS/wasm, fonts): cache first, then network (and cache).
  */
-const CACHE = 'atlas-v3';
+const CACHE = 'atlas-v4';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/parent/', '/manifest.webmanifest', '/icon.svg', '/icons/icon-192.png'])).catch(() => undefined));
