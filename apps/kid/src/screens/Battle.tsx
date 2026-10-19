@@ -72,7 +72,7 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
 
   return (
     <GameArena
-      mode={mission.mode ?? modeFor(mission.concepts, mission.kind)}
+      mode={mission.mode ?? modeFor(mission.concepts, mission.kind, mission.id)}
       title={mission.title}
       minutes={mission.duration}
       avatar={student.avatar}

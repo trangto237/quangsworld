@@ -22,6 +22,8 @@ export interface BattleController {
   pause(paused: boolean): void;
   /** Win immediately with a final strike (trial realms end when their challenges are done). */
   finale(): void;
+  /** Play the held comeback card. */
+  useCard(): void;
   hud(): HudState;
   destroy(): void;
 }
@@ -95,6 +97,10 @@ export function createBattle(parent: HTMLElement, o: BattleOptions): BattleContr
     },
     finale() {
       sim.finale();
+    },
+    useCard() {
+      sim.useCard();
+      emitHud();
     },
     hud: () => sim.hud(),
     destroy() {

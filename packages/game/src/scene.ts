@@ -260,7 +260,7 @@ export class BattleScene extends Phaser.Scene {
       v.setAlpha(e.x > SPAWN_X - 20 ? 0.6 : 1);
       const bar = v.getByName('hp') as Phaser.GameObjects.Rectangle;
       bar.width = ENEMIES[e.kind].radius * 2 * Math.max(0, e.hp / e.maxHp);
-      (v.list[0] as Phaser.GameObjects.Ellipse).setFillStyle(e.slowUntil > sim.time ? 0x38bdf8 : ENEMY_COLORS[e.kind]);
+      (v.list[0] as Phaser.GameObjects.Ellipse).setFillStyle(sim.time < sim.frozenUntil ? 0xe0f2fe : e.slowUntil > sim.time ? 0x38bdf8 : ENEMY_COLORS[e.kind]);
     }
     for (const [id, v] of this.enemyViews) {
       if (!alive.has(id)) {

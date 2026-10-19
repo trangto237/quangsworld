@@ -3,7 +3,8 @@ import { RunnerSim, runnerConfigFor } from '@atlas/game';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
 import { Marked, cx } from '@atlas/ui';
 import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
-import { SignBox } from '../QuestionCard';
+import { QuestionCard, SignBox } from '../QuestionCard';
+import { isFreeAnswer } from '@atlas/shared';
 import { T, useLang } from '../../i18n';
 import { GlossText } from '../GlossText';
 import { GameShell, Hearts, Pill } from './GameShell';
@@ -51,7 +52,7 @@ export function RunnerArena(p: ModeProps) {
     setLane(Math.floor(q.shown.length / 2));
     duration.current = sim.gateTime(q.prompt.length + (q.passage?.length ?? 0) / 3, q.shown.join('').length) + (q.audio ? 3000 : 0);
     startedAt.current = performance.now();
-    if (q.audio || q.script) setTimeout(() => playQuestionAudio(q), 300);
+    if ((q.audio || q.script) && !isFreeAnswer(q)) setTimeout(() => playQuestionAudio(q), 300);
   }, [sim, lang]);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export function RunnerArena(p: ModeProps) {
 
   // The gate approaches; when it arrives, the current lane is the answer.
   useEffect(() => {
-    if (!question || outcome) return;
+    if (!question || outcome || isFreeAnswer(question)) return;
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -82,12 +83,12 @@ export function RunnerArena(p: ModeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question, outcome]);
 
-  const decide = (picked: number) => {
+  const decide = (picked: number, free?: { correct: boolean; text: string; ms: number }) => {
     if (!question || outcome || ended.current) return;
-    const correct = picked === question.correct;
+    const correct = free ? free.correct : picked === question.correct;
     setOutcome({ correct, picked });
     p.onActivity?.();
-    const r = p.onAnswered(question, correct, Math.round(performance.now() - startedAt.current), question.shown[picked]);
+    const r = p.onAnswered(question, correct, free ? free.ms : Math.round(performance.now() - startedAt.current), free ? free.text : question.shown[picked]);
     setStreak(r.streak);
     sim.pass(correct);
     if (r.done) sim.finale();
@@ -102,7 +103,7 @@ export function RunnerArena(p: ModeProps) {
   // Keyboard: arrows / A D steer; 1–4 jump to a lane; Space or Enter dashes (answer now); R replays audio.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!question || outcome) return;
+      if (!question || outcome || isFreeAnswer(question)) return;
       const n = question.shown.length;
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') setLane((l) => Math.max(0, l - 1));
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') setLane((l) => Math.min(n - 1, l + 1));
@@ -146,7 +147,12 @@ export function RunnerArena(p: ModeProps) {
     >
       {/* Prompt */}
       <div className="mx-auto w-full max-w-3xl px-4 pt-4">
-        {question && (
+        {question && isFreeAnswer(question) && (
+          <div className="rounded-2xl bg-slate-100 p-4 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100">
+            <QuestionCard question={question} onAnswer={(correct, ms, text) => decide(-1, { correct, text, ms })} wrongNote={p.wrongNote} glossary={p.glossary ? p.glossary(question) : true} />
+          </div>
+        )}
+        {question && !isFreeAnswer(question) && (
           <div className="rounded-2xl bg-white/95 p-4 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-slate-100">
             {question.sign && <SignBox text={question.sign} />}
             {question.passage && (
@@ -197,6 +203,7 @@ export function RunnerArena(p: ModeProps) {
         </div>
         {/* Lane taps */}
         {question &&
+          !isFreeAnswer(question) &&
           question.shown.map((_, i) => (
             <button
               key={i}
@@ -211,6 +218,7 @@ export function RunnerArena(p: ModeProps) {
           ))}
         {/* Gates */}
         {question &&
+          !isFreeAnswer(question) &&
           question.shown.map((o, i) => {
             const isRight = outcome && i === question.correct;
             const isWrong = outcome && i === outcome.picked && !outcome.correct;

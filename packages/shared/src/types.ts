@@ -139,7 +139,7 @@ export interface Mission {
   title: string;
   kind: 'learn' | 'review' | 'boss';
   /** Game mode chosen by the learner; otherwise the best fit for the concepts. */
-  mode?: 'defense' | 'runner' | 'knight' | 'duel';
+  mode?: 'defense' | 'runner' | 'knight' | 'duel' | 'sprint' | 'meteor' | 'penalty' | 'race' | 'detective';
 }
 
 export interface Reward {

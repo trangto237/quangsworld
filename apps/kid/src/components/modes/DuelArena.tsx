@@ -7,11 +7,12 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { ComebackCardButton } from './ComebackCard';
 import type { ModeProps } from './types';
 
 const BOSSES = ['🐉', '👹', '🦂', '🐙', '🗿', '🦖', '🧌', '👾'];
 
-type Fx = { id: number; text: string; kind: 'hit' | 'crit' | 'ult' | 'hurt' | 'down' };
+type Fx = { id: number; text: string; kind: 'hit' | 'crit' | 'ult' | 'hurt' | 'down' | 'card' };
 
 /**
  * Boss Duel: a calm, turn-based fight. No clock — good for reading passages and listening.
@@ -55,6 +56,9 @@ export function DuelArena(p: ModeProps) {
         setFx((f) => [...f, { id, text: `−${e.damage} ❤`, kind: 'hurt' }]);
         setAnim('hurt');
       }
+      if (e.type === 'blocked') setFx((f) => [...f, { id, text: '🛡️ Blocked!', kind: 'card' }]);
+      if (e.type === 'healed') setFx((f) => [...f, { id, text: `+${e.amount} ❤`, kind: 'card' }]);
+      if (e.type === 'card') setFx((f) => [...f, { id, text: '🃏 Comeback card!', kind: 'card' }]);
       if (e.type === 'bossDown') {
         setFx((f) => [...f, { id, text: e.wave > 0 && p.trial ? 'Boss defeated! Another appears…' : 'Boss defeated!', kind: 'down' }]);
         setAnim('bossDown');
@@ -134,13 +138,21 @@ export function DuelArena(p: ModeProps) {
                 key={f.id}
                 className={cx(
                   'animate-pop font-display font-bold drop-shadow',
-                  f.kind === 'hurt' ? 'text-3xl text-rose-400' : f.kind === 'ult' ? 'text-5xl text-amber-300' : f.kind === 'crit' ? 'text-4xl text-orange-300' : f.kind === 'down' ? 'text-4xl text-emerald-300' : 'text-3xl text-white',
+                  f.kind === 'hurt' ? 'text-3xl text-rose-400' : f.kind === 'ult' ? 'text-5xl text-amber-300' : f.kind === 'crit' ? 'text-4xl text-orange-300' : f.kind === 'down' ? 'text-4xl text-emerald-300' : f.kind === 'card' ? 'text-3xl text-amber-200' : 'text-3xl text-white',
                 )}
               >
                 {f.text}
               </span>
             ))}
           </div>
+          {sim.comeback.card && (
+            <ComebackCardButton card={sim.comeback.card} className="absolute right-3 top-1/2 z-10" onPlay={() => show(sim.useCard())} />
+          )}
+          {(sim.doubleNext || sim.shieldNext) && (
+            <div className="absolute left-3 top-3 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-bold text-amber-200">
+              {sim.doubleNext ? '⚡ ×2' : '🛡️'} <T en="ready" />
+            </div>
+          )}
           {/* Hero */}
           <div className="relative mt-6 flex items-end gap-4">
             <div className={cx('text-6xl transition-transform duration-300 sm:text-7xl', anim === 'attack' && '-translate-y-6 translate-x-6 scale-110', anim === 'hurt' && 'translate-y-1 opacity-60')}>
