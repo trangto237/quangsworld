@@ -30,8 +30,14 @@ export const LOCAL_ONLY_TABLES = ['_changes', '_sync'];
 export function changeTriggers(table: string, pk = SYNC_TABLES[table]): string {
   const key = (row: 'NEW' | 'OLD') => `json_array(${pk.map((c) => `${row}.${c}`).join(', ')})`;
   const when = `WHEN (SELECT value FROM _sync WHERE key = 'track') = '1'`;
-  const log = (row: 'NEW' | 'OLD') => `INSERT OR REPLACE INTO _changes (tbl, pk) VALUES ('${table}', ${key(row)});`;
+  // Delete + insert rather than INSERT OR REPLACE: SQLite lets an outer upsert (INSERT … ON CONFLICT
+  // DO UPDATE) override a trigger's OR REPLACE, which made every repeated save fail.
+  const log = (row: 'NEW' | 'OLD') =>
+    `DELETE FROM _changes WHERE tbl = '${table}' AND pk = ${key(row)}; INSERT INTO _changes (tbl, pk) VALUES ('${table}', ${key(row)});`;
   return `
+  DROP TRIGGER IF EXISTS _sync_${table}_ins;
+  DROP TRIGGER IF EXISTS _sync_${table}_upd;
+  DROP TRIGGER IF EXISTS _sync_${table}_del;
   CREATE TRIGGER _sync_${table}_ins AFTER INSERT ON ${table} ${when} BEGIN ${log('NEW')} END;
   CREATE TRIGGER _sync_${table}_upd AFTER UPDATE ON ${table} ${when} BEGIN ${log('OLD')} ${log('NEW')} END;
   CREATE TRIGGER _sync_${table}_del AFTER DELETE ON ${table} ${when} BEGIN ${log('OLD')} END;`;

@@ -49,6 +49,33 @@ describe('SyncEngine', () => {
     for (const t of tables) expect(t in SYNC_TABLES || LOCAL_ONLY_TABLES.includes(t), t).toBe(true);
   });
 
+  it('saves the same row again and again while linked (upserts used to fail on _changes)', async () => {
+    const remote = new FakeRemote();
+    const { repo, sync } = await device(remote);
+    await repo.createFamily('Mum', 'pw1234');
+    const id = await repo.addStudent(kid);
+    await sync.link();
+    for (let i = 0; i < 5; i++) await repo.setKv(`placement:${id}`, { n: i });
+    expect(sync.pendingCount()).toBe(1);
+    await sync.syncOnce();
+    expect(sync.pendingCount()).toBe(0);
+    expect(remote.rows.get(`kv|${JSON.stringify([`placement:${id}`])}`)?.data).toMatchObject({ key: `placement:${id}` });
+  });
+
+  it('upgrades an old change log without losing queued changes', () => {
+    const raw = new SQL.Database();
+    raw.exec('PRAGMA foreign_keys = ON');
+    for (let v = 0; v < MIGRATIONS.length - 1; v++) raw.exec(MIGRATIONS[v]);
+    raw.exec(`PRAGMA user_version = ${MIGRATIONS.length - 1}`);
+    raw.exec(`INSERT INTO _changes (tbl, pk) VALUES ('kv', '["a"]')`);
+    migrate(raw);
+    expect(raw.exec('SELECT tbl, pk FROM _changes')[0].values).toEqual([['kv', '["a"]']]);
+    raw.exec(`INSERT INTO _sync (key, value) VALUES ('track', '1')`);
+    raw.exec(`INSERT INTO kv (key, value) VALUES ('a', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value`);
+    raw.exec(`INSERT INTO kv (key, value) VALUES ('a', '2') ON CONFLICT(key) DO UPDATE SET value = excluded.value`);
+    expect(raw.exec('SELECT COUNT(*) FROM _changes')[0].values[0][0]).toBe(1);
+  });
+
   it('does not track changes before the device is linked', async () => {
     const { repo, sync } = await device(new FakeRemote());
     await repo.createFamily('Mum', 'pw1234');

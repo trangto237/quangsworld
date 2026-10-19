@@ -48,6 +48,20 @@ export const MIGRATIONS: string[] = [
     .map((t) => changeTriggers(t))
     .join('\n')}
   `,
+  // Fix: repeated saves failed ("UNIQUE constraint failed: _changes"). New triggers, and a change log
+  // whose ids are never reused (so a change made during an upload can't be cleared by mistake).
+  `
+  ${Object.keys(SYNC_TABLES)
+    .map((t) => ['ins', 'upd', 'del'].map((k) => `DROP TRIGGER IF EXISTS _sync_${t}_${k};`).join(' '))
+    .join('\n')}
+  CREATE TABLE _changes_new (seq INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT NOT NULL, pk TEXT NOT NULL, UNIQUE (tbl, pk));
+  INSERT INTO _changes_new (tbl, pk) SELECT tbl, pk FROM _changes ORDER BY rowid;
+  DROP TABLE _changes;
+  ALTER TABLE _changes_new RENAME TO _changes;
+  ${Object.keys(SYNC_TABLES)
+    .map((t) => changeTriggers(t))
+    .join('\n')}
+  `,
 ];
 
 export function migrate(db: Database) {
