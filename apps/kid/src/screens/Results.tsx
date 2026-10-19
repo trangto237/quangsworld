@@ -1,12 +1,26 @@
 import { useMemo, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { getConcept } from '@atlas/knowledge';
+import { modeFor, type GameMode } from '@atlas/game';
 import { Button, useRepo } from '@atlas/ui';
 import { MistakeReview } from '../components/MistakeReview';
 import { T, TB } from '../i18n';
 import type { BattleResult } from '../store';
 import { useKid } from '../store';
 import { Stars } from './ProfilePicker';
+
+/** What losing looks like in each game. */
+const LOSS: Record<GameMode, string> = {
+  defense: 'The castle fell…',
+  runner: 'Out of breath…',
+  knight: 'The Glitch king escaped…',
+  duel: 'The boss won this time…',
+  sprint: 'The rocket ran out of fuel…',
+  meteor: 'The city took too many hits…',
+  penalty: 'Lost on penalties…',
+  race: 'Off the podium this time…',
+  detective: 'The case went cold…',
+};
 
 const starOf = (m: number) => (m >= 80 ? 3 : m >= 60 ? 2 : m >= 40 ? 1 : 0);
 
@@ -20,7 +34,8 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
   const [reviewing, setReviewing] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const acc = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
-  const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : 'The castle fell…';
+  const mode: GameMode = r.mission.mode ?? modeFor(r.mission.concepts, r.mission.kind, r.mission.id);
+  const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : LOSS[mode];
   const sub = r.victory ? '{name}, the realm is safe!' : r.retreated ? 'Rest up, hero. The Glitches will be back.' : 'Every hero loses sometimes. You still grew stronger.';
 
   if (reviewing)
