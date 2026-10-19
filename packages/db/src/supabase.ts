@@ -4,20 +4,20 @@ import type { Remote, RemoteRow } from './sync';
 /** Table created by supabase/setup.sql. Row-level security limits every query to the signed-in family. */
 const TABLE = 'atlas_rows';
 
-/** The family cloud: one Supabase user = one family. */
+/** The family cloud: rows of one family (the parent account, joined by devices with the family code). */
 export class SupabaseRemote implements Remote {
   constructor(
     private client: SupabaseClient,
-    private userId: string,
+    private familyId: string,
   ) {}
 
   accountId() {
-    return this.userId;
+    return this.familyId;
   }
 
   async push(rows: RemoteRow[]) {
     const { error } = await this.client.from(TABLE).upsert(
-      rows.map((r) => ({ family_id: this.userId, tbl: r.tbl, pk: r.pk, data: r.data, deleted: r.deleted })),
+      rows.map((r) => ({ family_id: this.familyId, tbl: r.tbl, pk: r.pk, data: r.data, deleted: r.deleted })),
       { onConflict: 'family_id,tbl,pk' },
     );
     if (error) throw new Error(`Upload failed: ${error.message}`);

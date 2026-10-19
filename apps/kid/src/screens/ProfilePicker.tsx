@@ -3,6 +3,7 @@ import { Button, Modal, useQuery, useRepo } from '@atlas/ui';
 import type { StudentProfile } from '@atlas/db';
 import { useKid } from '../store';
 import { T, TB, tr } from '../i18n';
+import { JoinFamily, useKidCloud } from '../components/JoinFamily';
 
 export function ProfilePicker() {
   const repo = useRepo();
@@ -12,6 +13,9 @@ export function ProfilePicker() {
   const [pinFor, setPinFor] = useState<StudentProfile | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const { status: cloud, canJoin } = useKidCloud();
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const pick = (s: StudentProfile) => {
     if (s.hasPin) {
@@ -41,7 +45,26 @@ export function ProfilePicker() {
       <div className="relative w-full max-w-2xl text-center">
         <div className="animate-float text-6xl">🧭</div>
         <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Atlas</h1>
-        {!family || students.length === 0 ? (
+        {(!family || students.length === 0) && !joining && cloud.viaCode && cloud.state === 'syncing' ? (
+          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
+            <p className="text-lg font-semibold">
+              <T en="Downloading your family's adventure…" />
+            </p>
+          </div>
+        ) : (!family || students.length === 0) && (canJoin || joining) ? (
+          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
+            <p className="text-lg font-semibold">
+              <T en="Connect to my family" />
+            </p>
+            <p className="mb-4 mt-1 text-white/80">
+              <T en="Type the family code and your hero appears here." />
+            </p>
+            <JoinFamily onBusy={setJoining} />
+            <a href="/parent/" className="mt-5 inline-block text-sm text-white/60 underline-offset-4 hover:underline">
+              <T en="No code? Set up on this device instead" />
+            </a>
+          </div>
+        ) : !family || students.length === 0 ? (
           <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
             <p className="text-lg font-semibold">
               <T en="Your adventure is almost ready!" />
@@ -67,12 +90,22 @@ export function ProfilePicker() {
                 </button>
               ))}
             </div>
-            <a href="/parent/" className="mt-10 inline-block text-sm text-white/60 underline-offset-4 hover:underline">
-              <T en="Parent dashboard" />
-            </a>
+            <div className="mt-10 flex flex-wrap justify-center gap-6">
+              <a href="/parent/" className="text-sm text-white/60 underline-offset-4 hover:underline">
+                <T en="Parent dashboard" />
+              </a>
+              {canJoin && (
+                <button onClick={() => setJoinOpen(true)} className="text-sm text-white/60 underline-offset-4 hover:underline">
+                  ☁️ <T en="Connect to my family" />
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
+      <Modal open={joinOpen} onClose={() => setJoinOpen(false)} title={tr('help', 'Connect to my family')}>
+        <JoinFamily onDone={() => setJoinOpen(false)} />
+      </Modal>
       <Modal open={!!pinFor} onClose={() => setPinFor(null)} title={tr('help', 'Hi {name}! Enter your PIN', { name: pinFor?.name ?? '' })}>
         <div className="flex justify-center gap-3" aria-live="polite">
           {[0, 1, 2, 3].map((i) => (

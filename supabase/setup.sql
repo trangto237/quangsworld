@@ -6,10 +6,40 @@
 -- their own family's rows. Every insert/update gets a new, increasing `seq`; devices download
 -- "everything with seq > what I last saw".
 
+
+-- ── Family codes ─────────────────────────────────────────────────────────────
+-- The parent account owns the family (family_id = the parent's user id). Other devices, like the
+-- kid's laptop, join with a family code: they sign in anonymously and become *members* of the family.
+
+create table if not exists public.atlas_members (
+  user_id    uuid        primary key references auth.users (id) on delete cascade,
+  family_id  uuid        not null references auth.users (id) on delete cascade,
+  label      text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.atlas_family_codes (
+  family_id  uuid        primary key references auth.users (id) on delete cascade,
+  code       text        not null unique,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.atlas_join_attempts (
+  user_id uuid        not null,
+  at      timestamptz not null default now()
+);
+create index if not exists atlas_join_attempts_user on public.atlas_join_attempts (user_id, at);
+
+-- The family the signed-in user belongs to: their own (parent) or the one they joined.
+create or replace function public.atlas_my_family() returns uuid
+language sql stable security definer set search_path = '' as $$
+  select coalesce((select m.family_id from public.atlas_members m where m.user_id = auth.uid()), auth.uid());
+$$;
+
 create sequence if not exists public.atlas_rows_seq;
 
 create table if not exists public.atlas_rows (
-  family_id  uuid        not null default auth.uid() references auth.users (id) on delete cascade,
+  family_id  uuid        not null default public.atlas_my_family() references auth.users (id) on delete cascade,
   tbl        text        not null,
   pk         text        not null,
   data       jsonb,
@@ -18,6 +48,8 @@ create table if not exists public.atlas_rows (
   seq        bigint      not null default nextval('public.atlas_rows_seq'),
   primary key (family_id, tbl, pk)
 );
+
+alter table public.atlas_rows alter column family_id set default public.atlas_my_family();
 
 create index if not exists atlas_rows_family_seq on public.atlas_rows (family_id, seq);
 
@@ -35,26 +67,105 @@ drop trigger if exists atlas_rows_touch on public.atlas_rows;
 create trigger atlas_rows_touch before insert or update on public.atlas_rows
   for each row execute function public.atlas_rows_touch();
 
--- Row-level security: only your own family's rows.
+-- Row-level security: only your own family's rows (parent account or a device that joined it).
 alter table public.atlas_rows enable row level security;
 
 drop policy if exists "family can read own rows" on public.atlas_rows;
 create policy "family can read own rows" on public.atlas_rows
-  for select to authenticated using ((select auth.uid()) = family_id);
+  for select to authenticated using ((select public.atlas_my_family()) = family_id);
 
 drop policy if exists "family can insert own rows" on public.atlas_rows;
 create policy "family can insert own rows" on public.atlas_rows
-  for insert to authenticated with check ((select auth.uid()) = family_id);
+  for insert to authenticated with check ((select public.atlas_my_family()) = family_id);
 
 drop policy if exists "family can update own rows" on public.atlas_rows;
 create policy "family can update own rows" on public.atlas_rows
-  for update to authenticated using ((select auth.uid()) = family_id) with check ((select auth.uid()) = family_id);
+  for update to authenticated using ((select public.atlas_my_family()) = family_id) with check ((select public.atlas_my_family()) = family_id);
 
 -- Deletions are synced as `deleted = true` (tombstones), so no delete policy is needed.
 
 grant usage on sequence public.atlas_rows_seq to authenticated;
 grant select, insert, update on public.atlas_rows to authenticated;
 revoke all on public.atlas_rows from anon;
+
+
+-- ── Family code functions ────────────────────────────────────────────────────
+alter table public.atlas_members enable row level security;
+alter table public.atlas_family_codes enable row level security;
+alter table public.atlas_join_attempts enable row level security;
+
+drop policy if exists "parent sees family devices" on public.atlas_members;
+create policy "parent sees family devices" on public.atlas_members
+  for select to authenticated using ((select auth.uid()) = family_id or (select auth.uid()) = user_id);
+drop policy if exists "parent removes family devices" on public.atlas_members;
+create policy "parent removes family devices" on public.atlas_members
+  for delete to authenticated using ((select auth.uid()) = family_id);
+
+drop policy if exists "parent sees own code" on public.atlas_family_codes;
+create policy "parent sees own code" on public.atlas_family_codes
+  for select to authenticated using ((select auth.uid()) = family_id);
+-- atlas_join_attempts: no policies — only the functions below touch it.
+
+grant select, delete on public.atlas_members to authenticated;
+grant select on public.atlas_family_codes to authenticated;
+revoke all on public.atlas_members, public.atlas_family_codes, public.atlas_join_attempts from anon;
+
+-- Parent: create (or replace) the family code. Old codes stop working; joined devices stay joined.
+create or replace function public.atlas_new_family_code() returns text
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  me uuid := auth.uid();
+  alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; -- no 0/O, 1/I/L
+  bytes bytea;
+  c text;
+begin
+  if me is null then raise exception 'Sign in first.'; end if;
+  if coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) or exists (select 1 from public.atlas_members where user_id = me) then
+    raise exception 'Only the parent account can make a family code.';
+  end if;
+  loop
+    bytes := uuid_send(gen_random_uuid()) || uuid_send(gen_random_uuid());
+    c := '';
+    for i in 0..9 loop
+      c := c || substr(alphabet, 1 + (get_byte(bytes, i) % length(alphabet)), 1);
+    end loop;
+    exit when not exists (select 1 from public.atlas_family_codes where code = c);
+  end loop;
+  insert into public.atlas_family_codes (family_id, code) values (me, c)
+    on conflict (family_id) do update set code = excluded.code, created_at = now();
+  return c;
+end;
+$$;
+
+-- Device: join the family that owns this code. Returns the family id, or null for a wrong code.
+create or replace function public.atlas_join_family(p_code text, p_label text default null) returns uuid
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  me uuid := auth.uid();
+  fam uuid;
+  clean text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
+begin
+  if me is null then raise exception 'Sign in first.'; end if;
+  if (select count(*) from public.atlas_join_attempts where user_id = me and at > now() - interval '15 minutes') >= 10 then
+    raise exception 'Too many wrong codes. Wait 15 minutes and try again.';
+  end if;
+  select family_id into fam from public.atlas_family_codes where code = clean;
+  if fam is null then
+    -- Return instead of raising, so the failed try is recorded (a raise would roll it back).
+    insert into public.atlas_join_attempts (user_id) values (me);
+    return null;
+  end if;
+  if fam = me or exists (select 1 from public.atlas_family_codes where family_id = me) then
+    raise exception 'This device is signed in as a parent account already.';
+  end if;
+  insert into public.atlas_members (user_id, family_id, label) values (me, fam, left(p_label, 80))
+    on conflict (user_id) do update set family_id = excluded.family_id, label = excluded.label, created_at = now();
+  return fam;
+end;
+$$;
+
+revoke all on function public.atlas_my_family(), public.atlas_new_family_code(), public.atlas_join_family(text, text) from public, anon;
+grant execute on function public.atlas_my_family(), public.atlas_new_family_code(), public.atlas_join_family(text, text) to authenticated;
 
 -- Realtime: devices are told immediately when another device uploads.
 do $$

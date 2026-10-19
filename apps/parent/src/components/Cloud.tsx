@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type FormEvent } from 'react';
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { getCloud, type CloudStatus } from '@atlas/db/cloud';
 import { Button, Field, Modal, cx, inputClass, useRepo } from '@atlas/ui';
 
@@ -170,6 +170,90 @@ export function LinkChoice() {
   );
 }
 
+
+/** Parent: the family code a child types into their app to connect a device, and the devices that did. */
+function FamilyCode() {
+  const { cloud } = useCloud();
+  const [code, setCode] = useState<string | null | undefined>(undefined);
+  const [devices, setDevices] = useState<{ id: string; label: string | null; joinedAt: string }[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    try {
+      setCode(await cloud.familyCode());
+      setDevices(await cloud.devices());
+      setErr(null);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  };
+  useEffect(() => {
+    void load();
+    const t = window.setInterval(() => void load(), 15_000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const make = async () => {
+    if (code && !confirm('Make a new code? The old code stops working (devices already connected stay connected).')) return;
+    setBusy(true);
+    try {
+      setCode(await cloud.newFamilyCode());
+      setErr(null);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
+      <div>
+        <p className="font-semibold">Family code</p>
+        <p className="text-slate-500">Your child opens the app on their laptop (or any device), taps <b>Connect to my family</b> and types this code. No email or password needed.</p>
+      </div>
+      {code === undefined && !err && <p className="text-slate-500">Loading…</p>}
+      {code && (
+        <div className="flex flex-wrap items-center gap-3">
+          <code className="rounded-lg bg-white px-4 py-2 font-mono text-2xl font-bold tracking-widest ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">{code}</code>
+          <Button variant="secondary" onClick={() => void navigator.clipboard?.writeText(code)}>
+            Copy
+          </Button>
+        </div>
+      )}
+      {code !== undefined && (
+        <Button variant={code ? 'ghost' : 'primary'} disabled={busy} onClick={make}>
+          {code ? 'Make a new code' : 'Make a family code'}
+        </Button>
+      )}
+      {err && <p className="text-rose-600">{err}</p>}
+      {devices.length > 0 && (
+        <div>
+          <p className="font-semibold">Connected devices</p>
+          <ul className="mt-1 divide-y divide-slate-200 dark:divide-slate-700">
+            {devices.map((d) => (
+              <li key={d.id} className="flex items-center justify-between gap-2 py-1.5">
+                <span>
+                  {d.label || 'Device'} <span className="text-slate-500">· since {new Date(d.joinedAt).toLocaleDateString()}</span>
+                </span>
+                <button
+                  className="text-sm font-semibold text-rose-600 hover:underline"
+                  onClick={async () => {
+                    if (!confirm(`Disconnect "${d.label || 'this device'}"? It stops syncing.`)) return;
+                    await cloud.removeDevice(d.id);
+                    void load();
+                  }}
+                >
+                  Disconnect
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Settings → Cloud sync. */
 export function CloudCardBody() {
   const { cloud, status } = useCloud();
@@ -216,10 +300,10 @@ export function CloudCardBody() {
         </dd>
         <dt className="text-slate-500">Status</dt>
         <dd className={cx('font-semibold', status.state === 'error' && 'text-rose-600')}>{LABEL[status.state]}</dd>
-        {status.email && (
+        {(status.email || status.viaCode) && (
           <>
             <dt className="text-slate-500">Account</dt>
-            <dd>{status.email}</dd>
+            <dd>{status.viaCode ? 'Connected with the family code' : status.email}</dd>
           </>
         )}
         {status.state !== 'signed-out' && status.state !== 'needs-link' && (
@@ -255,8 +339,9 @@ export function CloudCardBody() {
           </Button>
         </div>
       )}
+      {status.state !== 'signed-out' && status.state !== 'needs-link' && !status.viaCode && <FamilyCode />}
       <p className="text-xs text-slate-500">
-        Sign in once on each device (on your child's laptop, open this dashboard there and sign in). The kid app on that device then syncs automatically. Uploaded files (PDFs, images) stay on the device where they were added; flashcards imported from CSV do sync.
+        Your phone or computer: sign in here once. Your child's devices: they type the family code in the kid app — you don't need to touch them. Uploaded files (PDFs, images) stay on the device where they were added; flashcards imported from CSV do sync.
       </p>
       <LinkChoice />
     </div>

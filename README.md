@@ -66,7 +66,9 @@ dashboard updates while the child plays. The parent password and kid PINs are st
 your phone shows progress made on the kid's laptop. Setup takes about 10 minutes: see
 [`supabase/README.md`](supabase/README.md) and run [`supabase/setup.sql`](supabase/setup.sql). Changed rows
 are recorded by SQLite triggers, uploaded as JSON to a single `atlas_rows` table protected by row-level
-security (only your family account can read it), and downloaded by the other devices. The last upload wins
+security (only your family can read it), and downloaded by the other devices. The parent signs in with
+email on their own device; the child's devices connect by typing a **family code** in the kid app (an
+anonymous sign-in that joins the family), so nobody has to set up the child's laptop for them. The last upload wins
 per row. Uploaded files (PDF, DOCX, images) stay on the device where they were added; CSV flashcards
 sync. supabase-js is downloaded only on devices where sync is set up. Code: `packages/db/src/sync.ts`
 (engine, tested against an in-memory cloud), `supabase.ts`, `cloud.ts`.

@@ -300,6 +300,15 @@ const VI: Record<string, string> = {
   correct: 'đúng',
   'Wrong answers are saved in your Mistake Book.': 'Câu sai đã được lưu vào Sổ lỗi sai.',
   'Review answers →': 'Xem lại đáp án →',
+  // Family code
+  'Connect to my family': 'Kết nối với gia đình',
+  'Type the family code and your hero appears here.': 'Nhập mã gia đình và nhân vật của em sẽ hiện ra ở đây.',
+  'No code? Set up on this device instead': 'Không có mã? Cài đặt trên máy này',
+  'Family code': 'Mã gia đình',
+  "Ask your parent: it's in the parent app, Settings → Cloud sync.": 'Hỏi bố mẹ: mã nằm trong ứng dụng phụ huynh, Cài đặt → Đồng bộ đám mây.',
+  'Connecting…': 'Đang kết nối…',
+  'Connect →': 'Kết nối →',
+  "Downloading your family's adventure…": 'Đang tải cuộc phiêu lưu của gia đình…',
   // Coach
   'Coach Owl': 'Thầy Cú',
   "Coach Owl's corner": 'Góc học cùng Thầy Cú',

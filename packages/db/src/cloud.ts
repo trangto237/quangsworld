@@ -29,6 +29,8 @@ export type CloudState =
 export interface CloudStatus {
   state: CloudState;
   email?: string;
+  /** This device joined with a family code (no email account of its own). */
+  viaCode?: boolean;
   lastSyncedAt: number | null;
   pending: number;
   error?: string;
@@ -59,6 +61,8 @@ export class CloudSync {
   private client: SupabaseClient | null = null;
   private engine: SyncEngine | null = null;
   private user: User | null = null;
+  private familyId: string | null = null;
+  private attachSeq = 0;
   private stopAuto: (() => void) | null = null;
   private started: Promise<void> | null = null;
 
@@ -112,10 +116,10 @@ export class CloudSync {
     this.client = createClient(cfg.url, cfg.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
     this.client.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') this.detach();
-      else if (session?.user && session.user.id !== this.user?.id) this.attach(session.user);
+      else if (session?.user && session.user.id !== this.user?.id) void this.attach(session.user);
     });
     const { data } = await this.client.auth.getSession();
-    if (data.session?.user) this.attach(data.session.user);
+    if (data.session?.user) await this.attach(data.session.user);
     else this.set({ state: 'signed-out', email: undefined });
   }
 
@@ -125,12 +129,25 @@ export class CloudSync {
     this.client = null;
   }
 
-  private attach(user: User) {
+  /** The family this account belongs to: its own (parent) or the one it joined with a family code. */
+  private async resolveFamily(user: User): Promise<string> {
+    if (!this.client) return user.id;
+    const { data, error } = await this.client.rpc('atlas_my_family');
+    // Projects set up before family codes existed don't have the function: the account is the family.
+    return !error && typeof data === 'string' ? data : user.id;
+  }
+
+  private async attach(user: User) {
     if (!this.client) return;
+    const seq = ++this.attachSeq;
     this.stopAuto?.();
+    this.stopAuto = null;
     this.user = user;
-    this.engine = new SyncEngine(this.repo.db, new SupabaseRemote(this.client, user.id));
-    this.set({ email: user.email ?? undefined, error: undefined });
+    const familyId = await this.resolveFamily(user);
+    if (seq !== this.attachSeq || !this.client) return; // a newer sign-in won
+    this.familyId = familyId;
+    this.engine = new SyncEngine(this.repo.db, new SupabaseRemote(this.client, familyId));
+    this.set({ email: user.email || undefined, viaCode: !!user.is_anonymous, error: undefined });
     this.refreshCounts();
     if (this.engine.isLinked()) this.beginAuto();
     else this.set({ state: 'needs-link' });
@@ -141,7 +158,9 @@ export class CloudSync {
     this.stopAuto = null;
     this.engine = null;
     this.user = null;
-    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, pending: 0 });
+    this.familyId = null;
+    this.attachSeq++;
+    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, viaCode: undefined, pending: 0 });
   }
 
   private async ensureClient(): Promise<SupabaseClient> {
@@ -161,7 +180,7 @@ export class CloudSync {
     const { data, error } = await client.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
     if (!data.session?.user) return 'confirm-email';
-    this.attach(data.session.user);
+    await this.attach(data.session.user);
     return 'signed-in';
   }
 
@@ -169,7 +188,7 @@ export class CloudSync {
     const client = await this.ensureClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
-    this.attach(data.user);
+    await this.attach(data.user);
   }
 
   async signOut() {
@@ -200,6 +219,68 @@ export class CloudSync {
     this.stopAuto = null;
     await this.engine?.unlink();
     this.set({ state: this.engine ? 'needs-link' : 'signed-out' });
+  }
+
+  // ── Family code ──
+  /** Parent: the current family code, if one was made ("ABCDE-FGHJK"). */
+  async familyCode(): Promise<string | null> {
+    const client = await this.ensureClient();
+    const { data, error } = await client.from('atlas_family_codes').select('code').maybeSingle();
+    if (error) throw new Error(friendly(error.message));
+    return data?.code ? formatCode(data.code) : null;
+  }
+
+  /** Parent: make a new family code. The old one stops working; joined devices stay joined. */
+  async newFamilyCode(): Promise<string> {
+    const client = await this.ensureClient();
+    const { data, error } = await client.rpc('atlas_new_family_code');
+    if (error) throw new Error(friendly(error.message));
+    return formatCode(String(data));
+  }
+
+  /** Parent: devices that joined with the family code. */
+  async devices(): Promise<{ id: string; label: string | null; joinedAt: string }[]> {
+    const client = await this.ensureClient();
+    const { data, error } = await client.from('atlas_members').select('user_id, label, created_at').eq('family_id', this.familyId ?? '').order('created_at');
+    if (error) throw new Error(friendly(error.message));
+    return (data ?? []).map((d) => ({ id: d.user_id, label: d.label, joinedAt: d.created_at }));
+  }
+
+  /** Parent: disconnect a device; it keeps what it has but can't sync any more. */
+  async removeDevice(id: string) {
+    const client = await this.ensureClient();
+    const { error } = await client.from('atlas_members').delete().eq('user_id', id);
+    if (error) throw new Error(friendly(error.message));
+  }
+
+  /**
+   * Kid's device: join the family with its code — no email or password. Signs in anonymously
+   * (Supabase: Authentication → Sign In / Providers → "Allow anonymous sign-ins"), joins, then
+   * downloads the family's data. A device without play history simply takes the cloud's data.
+   */
+  async joinFamily(code: string, label: string) {
+    const client = await this.ensureClient();
+    this.set({ state: 'syncing', error: undefined });
+    try {
+      let { data: sess } = await client.auth.getSession();
+      if (sess.session && !sess.session.user.is_anonymous) throw new Error('This device is signed in to the parent account already — it syncs without a code.');
+      if (!sess.session) {
+        const { error } = await client.auth.signInAnonymously();
+        if (error) throw new Error(/anonymous/i.test(error.message) ? 'Family codes need "Allow anonymous sign-ins" turned on in Supabase (Authentication → Sign In / Providers).' : error.message);
+        ({ data: sess } = await client.auth.getSession());
+      }
+      const { data: fam, error } = await client.rpc('atlas_join_family', { p_code: code, p_label: label });
+      if (error) throw new Error(friendly(error.message));
+      if (!fam) throw new Error('That family code is not right. Check it in the parent app: Settings → Cloud sync.');
+      await this.attach(sess.session!.user);
+      if (!this.engine) throw new Error('Could not connect. Try again.');
+      const played = Number(this.repo.db.raw.exec('SELECT COUNT(*) FROM attempts')[0]?.values[0][0] ?? 0) > 0;
+      await this.link(played ? 'merge' : 'cloud');
+    } catch (e) {
+      const err = new Error(friendly(e instanceof Error ? e.message : String(e)));
+      this.fail(err);
+      throw err;
+    }
   }
 
   // ── Syncing ──
@@ -237,8 +318,8 @@ export class CloudSync {
     window.addEventListener('online', onFocus);
     // Realtime: another device uploaded → download now.
     const channel = this.client
-      ?.channel(`atlas-${this.user?.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atlas_rows', filter: `family_id=eq.${this.user?.id}` }, () => soon(500))
+      ?.channel(`atlas-${this.familyId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'atlas_rows', filter: `family_id=eq.${this.familyId}` }, () => soon(500))
       .subscribe();
     this.stopAuto = () => {
       window.clearInterval(interval);
@@ -251,6 +332,14 @@ export class CloudSync {
     now();
   }
 }
+
+const formatCode = (c: string) => (c.length === 10 ? `${c.slice(0, 5)}-${c.slice(5)}` : c);
+const friendly = (m: string) =>
+  /atlas_(family_codes|members|join_family|new_family_code)|schema cache|does not exist/i.test(m)
+    ? 'Your Supabase project needs the latest setup script: run supabase/setup.sql again in the SQL editor.'
+    : /failed to fetch|network/i.test(m)
+      ? "Can't reach Supabase. Check the internet connection."
+      : m;
 
 const instances = new WeakMap<Repo, CloudSync>();
 
