@@ -1,7 +1,7 @@
 import type { StudentProfile } from '@atlas/db';
 import { isDue, stars } from '@atlas/engine';
 import { MODES, modeFor } from '@atlas/game';
-import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
+import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { startOfDay } from '@atlas/shared';
 import { Button, cx, useQuery } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
@@ -103,7 +103,7 @@ export function Hub({ student }: { student: StudentProfile }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {WORLDS.map((w) => {
+            {visibleWorlds().map((w) => {
               const cs = conceptsInWorld(w);
               const got = cs.reduce((s, c) => s + stars(states[c.id]), 0);
               const due = cs.filter((c) => states[c.id] && states[c.id].attempts > 0 && isDue(states[c.id])).length;

@@ -28,8 +28,12 @@ export interface World {
   blurb: string;
 }
 
-/** Kid-facing worlds. The child explores worlds; the parent sees subjects/domains. */
+/**
+ * Kid-facing worlds. The child explores worlds; the parent sees subjects/domains.
+ * "My Textbook" holds the family's imported units and only shows once something was imported.
+ */
 export const WORLDS: World[] = [
+  { id: 'my-textbook', name: 'My Textbook', emoji: '📘', color: '#4f46e5', subject: 'english', domains: ['My textbook'], blurb: 'Missions made from your school book — unit by unit.' },
   { id: 'word-forest', name: 'Word Forest', emoji: '🌲', color: '#16a34a', subject: 'english', domains: ['Vocabulary'], blurb: 'Hunt rare words among the ancient trees.' },
   { id: 'grammar-forge', name: 'Grammar Forge', emoji: '⚒️', color: '#ea580c', subject: 'english', domains: ['Grammar'], blurb: 'Hammer sentences into shape.' },
   { id: 'sound-temple', name: 'Sound Temple', emoji: '🔔', color: '#be185d', subject: 'english', domains: ['Pronunciation'], blurb: 'Ring the bells — stress, sounds and endings.' },
@@ -139,6 +143,8 @@ export const allConcepts = (): ConceptDef[] => [...conceptMap.values()];
 export const getConcept = (id: string): ConceptDef | undefined => conceptMap.get(id);
 export const conceptsBySubject = (s: SubjectId) => allConcepts().filter((c) => c.subject === s);
 export const conceptsInWorld = (w: World) => allConcepts().filter((c) => c.subject === w.subject && w.domains.includes(c.domain));
+/** Worlds with something to play (hides "My Textbook" until a unit was imported). */
+export const visibleWorlds = () => WORLDS.filter((w) => conceptsInWorld(w).length > 0);
 export const worldOfConcept = (id: string): World | undefined => {
   const c = getConcept(id);
   return c && WORLDS.find((w) => w.subject === c.subject && w.domains.includes(c.domain));

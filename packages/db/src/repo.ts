@@ -2,8 +2,8 @@ import { and, desc, eq, gte, isNull } from 'drizzle-orm';
 import type {
   Attempt, ConceptDef, ConceptState, Goal, GoalKind, PlacementScores, Question, Reward, Student, StudySession, Wallet,
 } from '@atlas/shared';
-import { uid } from '@atlas/shared';
-import { allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept } from '@atlas/knowledge';
+import { hashString, uid } from '@atlas/shared';
+import { PART_LABEL, allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept, type DraftPart, type DraftQuestion } from '@atlas/knowledge';
 import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, type PlacementState } from '@atlas/engine';
 import type { AtlasDb } from './database';
 import * as t from './schema';
@@ -432,6 +432,9 @@ export class Repo {
   /** Registers all family-imported content with the knowledge graph. Call on startup and after changes. */
   loadCustomContent() {
     const rows = this.db.read((o) => o.select().from(t.customItems).all());
+    // Imports deleted in another tab or on another device leave the game too.
+    const present = new Set(rows.filter((r) => r.kind === 'concept').map((r) => r.id));
+    for (const c of allConcepts()) if (c.id.startsWith('custom.') && !present.has(c.id)) unregisterConcept(c.id);
     registerCustomContent(
       rows.filter((r) => r.kind === 'concept').map((r) => r.data as ConceptDef),
       rows.filter((r) => r.kind === 'question').map((r) => r.data as Question),
@@ -466,12 +469,121 @@ export class Repo {
 
   async deleteMaterial(id: string) {
     const m = this.db.read((o) => o.select().from(t.materials).where(eq(t.materials.id, id)).get());
+    const rows = this.db.read((o) => o.select().from(t.customItems).all());
+    // Concepts touched by this material: its own concept rows and the concepts of its questions.
+    const touched = new Set<string>([
+      ...(m?.conceptId ? [m.conceptId] : []),
+      ...rows.filter((r) => r.materialId === id).map((r) => (r.kind === 'concept' ? r.id : (r.data as Question).conceptId)),
+    ]);
+    // A textbook unit can be filled by several imports: keep a concept while other imports still have questions in it.
+    const remaining = (cid: string) => rows.filter((r) => r.kind === 'question' && r.materialId !== id && (r.data as Question).conceptId === cid);
+    const emptied = [...touched].filter((cid) => remaining(cid).length === 0);
     await this.db.write((o) => {
-      if (m?.conceptId) o.delete(t.conceptStates).where(eq(t.conceptStates.conceptId, m.conceptId)).run();
+      for (const cid of emptied) {
+        o.delete(t.conceptStates).where(eq(t.conceptStates.conceptId, cid)).run();
+        o.delete(t.customItems).where(eq(t.customItems.id, cid)).run();
+      }
+      for (const cid of touched) {
+        if (emptied.includes(cid)) continue;
+        // The concept row belonged to this material: hand it to an import that still uses it.
+        const owner = remaining(cid)[0].materialId;
+        o.update(t.customItems).set({ materialId: owner }).where(and(eq(t.customItems.id, cid), eq(t.customItems.materialId, id))).run();
+      }
       o.delete(t.customItems).where(eq(t.customItems.materialId, id)).run();
       o.delete(t.materials).where(eq(t.materials.id, id)).run();
     });
     await this.db.deleteFile(id);
-    if (m?.conceptId) unregisterConcept(m.conceptId);
+    for (const cid of touched) unregisterConcept(cid);
+    this.loadCustomContent();
+  }
+
+  /**
+   * Saves questions made from a textbook page or document (offline importers or Claude).
+   * Each part of a unit (vocabulary, sentences, reading, practice questions) is one playable concept,
+   * `custom.tb.<unit>.<part>`, so importing more pages of the same unit adds to the same missions.
+   * Identical questions are skipped.
+   */
+  async importQuestions(input: {
+    unit: { id: string; title: string };
+    materialName: string;
+    kind: 'text' | 'pdf' | 'docx' | 'image';
+    drafts: DraftQuestion[];
+    via: 'offline' | 'ai';
+    /** The original file, stored encrypted on this device (not synced). */
+    bytes?: Uint8Array;
+    size?: number;
+    /** A short excerpt shown as the reading mission's lesson. */
+    excerpt?: string;
+  }): Promise<{ concepts: ConceptDef[]; added: number; skipped: number; materialId: string }> {
+    const { unit, drafts } = input;
+    if (!drafts.length) throw new Error('Nothing to save: no questions were selected.');
+    const unitShort = unit.title.split(' · ')[0];
+    const existing = new Map(this.db.read((o) => o.select().from(t.customItems).all()).map((r) => [r.id, r]));
+    const materialId = uid('mat_');
+    const concepts = new Map<string, ConceptDef>();
+    const questions: Question[] = [];
+    let skipped = 0;
+    const byPart = new Map<DraftPart, DraftQuestion[]>();
+    for (const d of drafts) byPart.set(d.part, [...(byPart.get(d.part) ?? []), d]);
+    for (const [part, list] of byPart) {
+      const cid = `custom.tb.${unit.id}.${part}`;
+      const label = PART_LABEL[part];
+      const prev = existing.get(cid)?.data as ConceptDef | undefined;
+      concepts.set(cid, {
+        id: cid,
+        subject: 'english',
+        domain: 'My textbook',
+        skill: unit.title,
+        name: `${unit.title} — ${label.en.toLowerCase()}`,
+        missionName: `${label.emoji} ${unitShort} · ${label.en}`,
+        description: `From your textbook: ${unit.title}.`,
+        cefr: 'B1',
+        lesson: prev?.lesson ?? (part === 'reading' && input.excerpt ? input.excerpt.slice(0, 600) : undefined),
+      });
+      for (const d of list) {
+        const qid = `${cid}#${hashString(`${d.type}|${d.prompt}|${d.options[d.answer]}`).toString(36)}`;
+        if (existing.has(qid) || questions.some((q) => q.id === qid)) {
+          skipped++;
+          continue;
+        }
+        questions.push({
+          id: qid,
+          conceptId: cid,
+          difficulty: d.difficulty,
+          type: d.type === 'mcq' ? (d.passage ? 'read' : 'mcq') : d.type,
+          prompt: d.prompt,
+          options: d.options,
+          answer: d.answer,
+          accept: d.accept,
+          explanation: d.explanation,
+          explanationVi: d.explanationVi,
+          passage: d.passage,
+          source: `Family upload: ${input.materialName}`,
+        });
+      }
+    }
+    const counts = [...byPart.keys()].map((p) => `${questions.filter((q) => q.conceptId.endsWith(`.${p}`)).length} ${PART_LABEL[p].en.toLowerCase()}`).join(', ');
+    if (input.bytes) await this.db.putFile(materialId, input.bytes);
+    await this.db.write((o) => {
+      o.insert(t.materials)
+        .values({
+          id: materialId,
+          name: input.materialName,
+          kind: input.kind,
+          size: input.size ?? input.bytes?.byteLength ?? 0,
+          status: 'processed',
+          note: `${unit.title}: ${questions.length} questions (${counts})${skipped ? `, ${skipped} already there` : ''}${input.via === 'ai' ? ' · made with Claude' : ''}`,
+          conceptId: [...concepts.keys()][0],
+          createdAt: Date.now(),
+        })
+        .run();
+      for (const c of concepts.values()) {
+        if (existing.has(c.id)) o.update(t.customItems).set({ data: c }).where(eq(t.customItems.id, c.id)).run();
+        else o.insert(t.customItems).values({ id: c.id, kind: 'concept', materialId, data: c }).run();
+      }
+      for (const q of questions) o.insert(t.customItems).values({ id: q.id, kind: 'question', materialId, data: q }).run();
+    });
+    registerCustomContent([...concepts.values()], questions);
+    return { concepts: [...concepts.values()], added: questions.length, skipped, materialId };
   }
 }

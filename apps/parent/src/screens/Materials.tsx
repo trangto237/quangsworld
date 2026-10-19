@@ -1,26 +1,17 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { flashcardsToConcept } from '@atlas/knowledge';
 import { Button, Card, Field, inputClass, useQuery, useRepo } from '@atlas/ui';
+import { ImportWizard } from '../components/ImportWizard';
 
 const SAMPLE = 'term,meaning\nabundant,existing in large quantities\nbrief,lasting a short time\ncautious,careful to avoid risk\ndiligent,showing care and effort\neager,wanting to do something very much';
 
-const kindOf = (f: File): 'csv' | 'pdf' | 'docx' | 'image' | null => {
-  const n = f.name.toLowerCase();
-  if (n.endsWith('.csv') || n.endsWith('.tsv') || n.endsWith('.txt')) return 'csv';
-  if (n.endsWith('.pdf')) return 'pdf';
-  if (n.endsWith('.docx')) return 'docx';
-  if (f.type.startsWith('image/')) return 'image';
-  return null;
-};
-
 /**
- * Knowledge import (PRD §6). CSV flashcards become a playable concept immediately.
- * PDF / DOCX / images are stored encrypted for the Phase 5 OCR → concept-extraction pipeline.
+ * Knowledge import (PRD §6): textbook pages, worksheets and word lists become missions (offline, or with
+ * Claude when the server has a key); CSV flashcard decks too.
  */
 export function Materials() {
   const repo = useRepo();
   const materials = useQuery((r) => r.listMaterials());
-  const fileRef = useRef<HTMLInputElement>(null);
   const [deck, setDeck] = useState('');
   const [csv, setCsv] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -35,57 +26,9 @@ export function Materials() {
     }
   }
 
-  const onFiles = async (files: FileList | null) => {
-    if (!files) return;
-    for (const f of Array.from(files)) {
-      const kind = kindOf(f);
-      if (!kind) {
-        setMsg({ ok: false, text: `${f.name}: unsupported type` });
-        continue;
-      }
-      if (kind === 'csv') {
-        setCsv(await f.text());
-        setDeck(f.name.replace(/\.[^.]+$/, ''));
-      } else {
-        await repo.storeMaterialFile(f.name, kind, new Uint8Array(await f.arrayBuffer()));
-        setMsg({ ok: true, text: `${f.name} stored privately (encrypted on this device).` });
-      }
-    }
-  };
-
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card title="Upload materials">
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            void onFiles(e.dataTransfer.files);
-          }}
-          className="rounded-2xl border-2 border-dashed border-slate-300 p-6 text-center dark:border-slate-700"
-        >
-          <div className="text-4xl">📚</div>
-          <p className="mt-2 font-semibold">Drop files here or</p>
-          <Button variant="secondary" className="mt-2" onClick={() => fileRef.current?.click()}>
-            Choose files
-          </Button>
-          <input ref={fileRef} type="file" multiple hidden accept=".csv,.tsv,.txt,.pdf,.docx,image/*" onChange={(e) => void onFiles(e.target.files)} />
-          <p className="mt-3 text-xs text-slate-500">CSV flashcards · PDF · DOCX · images (SGK, IELTS books, worksheets)</p>
-        </div>
-        <ol className="mt-4 flex flex-wrap items-center gap-1 text-xs text-slate-500">
-          {['Upload', 'OCR', 'Chunk', 'Concept extraction', 'Question generation', 'Game missions'].map((s, i) => (
-            <li key={s} className="flex items-center gap-1">
-              {i > 0 && <span>→</span>}
-              <span className={i === 0 || i >= 4 ? 'rounded bg-emerald-100 px-1.5 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'rounded bg-slate-100 px-1.5 dark:bg-slate-800'}>{s}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-2 text-xs text-slate-500">
-          Highlighted steps run today for CSV flashcards. OCR and automatic concept extraction for PDFs/images arrive in Phase 5. Materials stay private to this family
-          and are never redistributed.
-        </p>
-        {msg && <p className={`mt-3 text-sm font-semibold ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>}
-      </Card>
+      <ImportWizard />
 
       <Card title="Flashcard deck (CSV)">
         <div className="space-y-3">
@@ -117,6 +60,7 @@ export function Materials() {
               Use sample
             </Button>
           </div>
+          {msg && <p className={`text-sm font-semibold ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>}
         </div>
       </Card>
 
@@ -125,7 +69,7 @@ export function Materials() {
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {materials.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
-                <span className="text-xl">{m.kind === 'csv' ? '🗂️' : m.kind === 'pdf' ? '📕' : m.kind === 'docx' ? '📘' : '🖼️'}</span>
+                <span className="text-xl">{m.kind === 'csv' ? '🗂️' : m.kind === 'pdf' ? '📕' : m.kind === 'docx' ? '📘' : m.kind === 'text' ? '📝' : '🖼️'}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{m.name}</span>
                   <span className="text-xs text-slate-500">

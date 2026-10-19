@@ -199,3 +199,12 @@ describe('mode choice', () => {
     expect(modeFor(['en.vocab.synonyms'], 'boss', 'x')).toBe('duel');
   });
 });
+
+describe('textbook imports', () => {
+  it('sends each part of an imported unit to a suitable game', () => {
+    expect(modeFor(['custom.tb.gs9-u7.grammar'])).toBe('sprint');
+    expect(modeFor(['custom.tb.gs9-u7.reading'])).toBe('duel');
+    expect(modeFor(['custom.tb.gs9-u7.vocabulary'])).toBe('runner');
+    expect(modeFor(['en.ielts.lex.health'])).toBe('runner');
+  });
+});

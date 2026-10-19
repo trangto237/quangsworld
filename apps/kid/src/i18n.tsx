@@ -429,6 +429,9 @@ const VI: Record<string, string> = {
   'Only one suspect is left. Accuse them to close the case.': 'Chỉ còn một nghi phạm. Hãy buộc tội người đó để khép lại vụ án.',
   '👉 Accuse {name}!': '👉 Buộc tội {name}!',
   'Hint (costs a star)': 'Gợi ý (mất một sao)',
+  // Textbook import (worktree)
+  'My Textbook': 'Sách giáo khoa của em',
+  'Missions made from your school book — unit by unit.': 'Nhiệm vụ làm từ sách giáo khoa của em — từng unit một.',
 };
 
 const fill = (s: string, vars?: Record<string, string | number>) => (vars ? s.replace(/\{(\w+)\}/g, (_m, k) => String(vars[k] ?? `{${k}}`)) : s);

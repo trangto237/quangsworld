@@ -3,7 +3,7 @@ import initSqlJs from 'sql.js';
 import { AtlasDb } from './database';
 import { Repo } from './repo';
 import { MemoryStore } from './store';
-import { getConcept, allConcepts } from '@atlas/knowledge';
+import { getConcept, allConcepts, autoImport, GLOBAL_SUCCESS_9, pickQuestion, staticQuestions } from '@atlas/knowledge';
 import { createPlacement, isPlacementDone, nextPlacementQuestion, recordPlacementAnswer, scorePlacement } from '@atlas/engine';
 import { rng } from '@atlas/shared';
 
@@ -131,6 +131,62 @@ describe('Repo', () => {
     expect(getConcept(res.concept.id)).toBeDefined();
     await repo.deleteMaterial(repo.listMaterials()[0].id);
     expect(getConcept(res.concept.id)).toBeUndefined();
+  });
+
+  it('imports textbook questions per unit part, adds to the same unit, and deletes safely', async () => {
+    const { repo, store } = await fresh();
+    const unit = GLOBAL_SUCCESS_9[6];
+    const vocab = autoImport('cave (n): hang động\nwaterfall (n): thác nước\nlandscape (n): phong cảnh\nexplore (v): khám phá\npreserve (v): bảo tồn');
+    const a = await repo.importQuestions({ unit, materialName: 'Unit 7 words', kind: 'text', drafts: vocab.drafts, via: 'offline' });
+    expect(a.concepts.map((c) => c.id)).toEqual(['custom.tb.gs9-u7.vocabulary']);
+    expect(getConcept('custom.tb.gs9-u7.vocabulary')?.domain).toBe('My textbook');
+    expect(getConcept('custom.tb.gs9-u7.vocabulary')?.missionName).toBe('🔤 Unit 7 · Vocabulary');
+    expect(a.added).toBe(vocab.drafts.length);
+
+    // Same words again + a passage: duplicates skipped, new parts added to the same unit.
+    const passage = autoImport('Visitors can explore the deep caves every summer. Many tourists take a boat trip around the bay every year. Local people work hard to protect the beautiful bay.');
+    const b = await repo.importQuestions({ unit, materialName: 'Unit 7 reading', kind: 'pdf', drafts: [...vocab.drafts, ...passage.drafts], via: 'offline', bytes: new Uint8Array([1, 2, 3]) });
+    expect(b.skipped).toBe(vocab.drafts.length);
+    expect(b.concepts.map((c) => c.id)).toContain('custom.tb.gs9-u7.grammar');
+    expect(staticQuestions('custom.tb.gs9-u7.vocabulary')).toHaveLength(vocab.drafts.length);
+    const order = staticQuestions('custom.tb.gs9-u7.grammar')[0];
+    expect(order.type).toBe('order');
+    expect(pickQuestion({ conceptId: 'custom.tb.gs9-u7.grammar', difficulty: 3 })).toBeDefined();
+    expect(new TextDecoder().decode(await repo.db.getFile(b.materialId))).toBe('\u0001\u0002\u0003');
+
+    // Another device sees the imports after loading.
+    const other = new Repo(await AtlasDb.open(SQL, store, 'tb'));
+    other.loadCustomContent();
+    expect(getConcept('custom.tb.gs9-u7.grammar')).toBeDefined();
+
+    // Deleting the first import removes the vocabulary mission (only import A had questions in it).
+    await repo.deleteMaterial(a.materialId);
+    expect(getConcept('custom.tb.gs9-u7.vocabulary')).toBeUndefined();
+    expect(getConcept('custom.tb.gs9-u7.grammar')).toBeDefined();
+    expect(staticQuestions('custom.tb.gs9-u7.grammar').length).toBeGreaterThan(0);
+
+    // Re-import vocabulary, then delete the reading import: vocabulary stays, grammar goes.
+    const c = await repo.importQuestions({ unit, materialName: 'Unit 7 words again', kind: 'text', drafts: vocab.drafts, via: 'offline' });
+    expect(c.added).toBe(vocab.drafts.length);
+    await repo.deleteMaterial(b.materialId);
+    expect(getConcept('custom.tb.gs9-u7.vocabulary')).toBeDefined();
+    expect(getConcept('custom.tb.gs9-u7.grammar')).toBeUndefined();
+    expect(repo.listMaterials()).toHaveLength(1);
+    await expect(repo.importQuestions({ unit, materialName: 'x', kind: 'text', drafts: [], via: 'offline' })).rejects.toThrow(/Nothing to save/);
+  });
+
+  it('a concept shared by two imports survives deleting the one that created it', async () => {
+    const { repo } = await fresh();
+    const unit = GLOBAL_SUCCESS_9[0];
+    const mk = (p: string) => ({ type: 'mcq' as const, part: 'questions' as const, prompt: p, options: ['a', 'b', 'c', 'd'], answer: 0, difficulty: 2 });
+    const a = await repo.importQuestions({ unit, materialName: 'A', kind: 'text', drafts: [mk('One?'), mk('Two?')], via: 'offline' });
+    const b = await repo.importQuestions({ unit, materialName: 'B', kind: 'text', drafts: [mk('Three?')], via: 'ai' });
+    expect(repo.listMaterials().find((m) => m.id === b.materialId)?.note).toMatch(/made with Claude/);
+    await repo.deleteMaterial(a.materialId);
+    expect(getConcept('custom.tb.gs9-u1.questions')).toBeDefined();
+    expect(staticQuestions('custom.tb.gs9-u1.questions').map((q) => q.prompt)).toEqual(['Three?']);
+    await repo.deleteMaterial(b.materialId);
+    expect(getConcept('custom.tb.gs9-u1.questions')).toBeUndefined();
   });
 
   it('stores uploaded files encrypted', async () => {

@@ -73,6 +73,11 @@ export function scoreConcepts({ states, goals, now = Date.now(), concepts = allC
       }
       if (ielts && concept.examRefs?.some((r) => r.startsWith('IELTS'))) score += 0.3;
       if (state.attempts === 0) score += 0.2;
+      // Fresh units from the school book: what the class is doing now.
+      if (concept.domain === 'My textbook' && state.attempts < 6) {
+        score += 0.5;
+        reasons.push('from your textbook');
+      }
       // Readiness: hold back concepts whose prerequisites are still shaky.
       const prereqWeak = (concept.prerequisites ?? []).some((p) => (states[p]?.mastery ?? 30) < 35);
       if (prereqWeak) score -= 0.8;

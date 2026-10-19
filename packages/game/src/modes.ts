@@ -34,6 +34,13 @@ const SUITED: Record<string, GameMode[]> = {
 function category(id: string): keyof typeof SUITED {
   if (id === 'en.grammar.word-order') return 'order';
   if (id.startsWith('en.ielts.lex')) return 'fast';
+  // Imported textbook units: custom.tb.<unit>.<part>
+  if (id.startsWith('custom.tb.')) {
+    if (id.endsWith('.grammar')) return 'order';
+    if (id.endsWith('.reading')) return 'calm';
+    if (id.endsWith('.questions')) return 'grammar';
+    return 'fast';
+  }
   if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') return 'calm';
   if (id === 'en.exam.communication' || id === 'en.exam.arrange') return 'dialogue';
   if (id === 'en.exam.signs') return 'fast';

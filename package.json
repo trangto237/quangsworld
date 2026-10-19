@@ -11,12 +11,15 @@
     "dev:parent": "pnpm --filter @atlas/parent dev",
     "build": "pnpm -r --filter './apps/*' build && node scripts/merge-dist.mjs",
     "preview": "node scripts/serve.mjs",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc -p server",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
     "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.130.0"
   }
 }
