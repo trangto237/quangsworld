@@ -110,7 +110,14 @@ export function RaceArena(p: ModeProps) {
               const me = r === sim.you;
               return (
                 <div key={i} className={cx('relative h-14 border-b border-dashed border-white/15 last:border-0 sm:h-16', me && 'bg-amber-400/10')}>
-                  <span className="absolute left-2 top-1 text-[10px] font-bold uppercase tracking-wide text-white/40">{me ? <T en="You" /> : r.name}</span>
+                  <span className="absolute left-2 top-1 text-[10px] font-bold uppercase tracking-wide text-white/40">{me ? (
+                      <>
+                        {p.avatar ?? '🦊'} <T en="You" />
+                      </>
+                    ) : (
+                      r.name
+                    )}
+                  </span>
                   <span
                     className={cx('absolute top-1/2 -translate-y-1/2 -scale-x-100 text-4xl transition-[left] duration-700 ease-out sm:text-5xl', me && spin && 'animate-spin')}
                     style={{ left: `${x(r.pos)}%` }}
@@ -118,7 +125,6 @@ export function RaceArena(p: ModeProps) {
                   >
                     {r.car}
                   </span>
-                  {me && <span className="absolute top-1/2 -translate-y-1/2 text-2xl transition-[left] duration-700" style={{ left: `calc(${x(r.pos)}% - 2.2rem)` }}>{p.avatar ?? '🦊'}</span>}
                   {r.finished > 0 && <span className="absolute right-1 top-1/2 -translate-y-1/2 text-xl">{MEDAL[r.finished]}</span>}
                 </div>
               );

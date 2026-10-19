@@ -155,6 +155,8 @@ export function PenaltyArena(p: ModeProps) {
         ) : (
           <div className="relative mx-auto aspect-[2.2/1] w-full max-w-2xl select-none">
             {/* Goal */}
+            <div className="absolute inset-x-0 bottom-[18%] h-1 bg-white/70" aria-hidden />
+            <span className="absolute bottom-[6%] left-1/2 size-2 -translate-x-1/2 rounded-full bg-white/70" aria-hidden />
             <div className="absolute inset-x-[6%] top-[4%] bottom-[18%] rounded-t-md border-x-8 border-t-8 border-white bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.12)_0_2px,transparent_2px_14px),repeating-linear-gradient(90deg,rgba(255,255,255,0.12)_0_2px,transparent_2px_14px)]">
               {question &&
                 zones.slice(0, question.shown.length).map(([x, y], i) => {

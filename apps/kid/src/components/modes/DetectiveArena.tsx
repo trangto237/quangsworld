@@ -150,20 +150,22 @@ export function DetectiveArena(p: ModeProps) {
                   disabled={!accusable}
                   className={cx(
                     'relative overflow-hidden rounded-xl bg-white p-2 text-center text-stone-900 shadow transition',
-                    s.cleared && 'opacity-50 grayscale',
+                    s.cleared && 'bg-stone-300',
                     accusable && 'animate-pulse ring-4 ring-rose-500 hover:scale-105',
                   )}
                   aria-label={s.cleared ? `${s.name} (cleared)` : accusable ? `Accuse ${s.name}` : s.name}
                 >
-                  <div className="text-5xl">{s.emoji}</div>
-                  <div className="font-bold leading-tight">{s.name}</div>
-                  <div className="mt-1 text-[11px] leading-tight text-stone-600">
-                    🎩 {s.hat}
-                    <br />
-                    🐾 {s.pet}
+                  <div className={cx(s.cleared && 'opacity-40 grayscale')}>
+                    <div className="text-5xl">{s.emoji}</div>
+                    <div className="font-bold leading-tight">{s.name}</div>
+                    <div className="mt-1 text-[11px] leading-tight text-stone-600">
+                      🎩 {s.hat}
+                      <br />
+                      🐾 {s.pet}
+                    </div>
                   </div>
                   {s.cleared && (
-                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded border-4 border-emerald-600 px-2 font-display text-lg font-black text-emerald-700">
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded border-4 border-emerald-600 bg-white/80 px-2 font-display text-lg font-black text-emerald-700">
                       <T en="CLEARED" />
                     </span>
                   )}

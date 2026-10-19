@@ -197,9 +197,9 @@ export function MeteorArena(p: ModeProps) {
         {/* City */}
         <div className="absolute inset-x-0 bottom-0">
           {sim.shield && <div className="absolute inset-x-[4%] bottom-0 h-28 rounded-t-[100%] border-t-4 border-cyan-300/70 bg-cyan-300/10" />}
-          <div className="flex items-end justify-around border-t-4 border-slate-600 bg-slate-800/80 px-2 pt-1">
+          <div className="flex items-end justify-around border-t-4 border-slate-600 bg-slate-800/80 px-2 pb-2 pt-1">
             {sim.buildings.map((up, i) => (
-              <span key={i} className={cx('text-4xl transition-all sm:text-5xl', !up && 'translate-y-2 opacity-30 grayscale', outcome && outcome.hit === i && 'animate-shake')}>
+              <span key={i} className={cx('text-4xl leading-none transition-all sm:text-5xl', !up && 'translate-y-2 opacity-30 grayscale', outcome && outcome.hit === i && 'animate-shake')}>
                 {up ? BUILDINGS[i % BUILDINGS.length] : '🔥'}
               </span>
             ))}
