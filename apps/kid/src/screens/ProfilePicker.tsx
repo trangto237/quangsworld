@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, useQuery, useRepo } from '@atlas/ui';
+import { Button, InstallButton, Modal, useQuery, useRepo } from '@atlas/ui';
 import type { StudentProfile } from '@atlas/db';
 import { useKid } from '../store';
 import { T, TB, tr } from '../i18n';
@@ -96,6 +96,31 @@ export function ProfilePicker() {
               <a href="/parent/" className="text-sm text-white/60 underline-offset-4 hover:underline">
                 <T en="Parent dashboard" />
               </a>
+              <InstallButton
+                className="text-sm font-semibold text-amber-300 underline-offset-4 hover:underline"
+                labels={{
+                  install: (
+                    <>
+                      📲 <T en="Install the app" />
+                    </>
+                  ),
+                  iosTitle: tr('help', 'Put Atlas on your home screen'),
+                  iosSteps: (
+                    <ol className="list-decimal space-y-2 pl-5">
+                      <li>
+                        <T en="In Safari, tap the Share button (the square with an arrow) at the bottom of the screen." />
+                      </li>
+                      <li>
+                        <T en="Scroll down and tap “Add to Home Screen”, then “Add”." />
+                      </li>
+                      <li>
+                        <T en="Open Atlas from its new icon — it works like an app, even offline." />
+                      </li>
+                    </ol>
+                  ),
+                  done: <T en="Got it" />,
+                }}
+              />
               {connected && (
                 <button
                   onClick={() =>

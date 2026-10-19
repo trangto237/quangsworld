@@ -1,0 +1,19 @@
+{
+  "id": "/parent/",
+  "name": "Atlas Parent",
+  "short_name": "Atlas Parent",
+  "description": "See your child's progress, set goals and add textbook pages.",
+  "lang": "en",
+  "start_url": "/parent/",
+  "scope": "/parent/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "/parent/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/parent/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/parent/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

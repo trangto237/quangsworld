@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { ThemeToggle, cx, useQuery, useTheme } from '@atlas/ui';
+import { InstallButton, ThemeToggle, cx, useQuery, useTheme } from '@atlas/ui';
+import { INSTALL_LABELS } from './components/install';
 import { useParent, type Tab } from './store';
 import { Setup } from './screens/Setup';
 import { Login } from './screens/Login';
@@ -65,6 +66,7 @@ export function App() {
                 ))}
               </select>
             )}
+            <InstallButton labels={INSTALL_LABELS} className="rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:bg-slate-100 dark:text-brand-400 dark:hover:bg-slate-800" />
             <ThemeToggle mode={mode} onCycle={cycle} />
             <a href="/" className="hidden rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 sm:block dark:hover:bg-slate-800">
               Kid app ↗
@@ -88,7 +90,7 @@ export function App() {
             )}
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-3 pb-2" aria-label="Sections">
+        <nav className="mx-auto flex max-w-7xl flex-wrap gap-1 px-3 pb-2 sm:flex-nowrap sm:overflow-x-auto" aria-label="Sections">
           {TABS.map((t) => (
             <button
               key={t.id}

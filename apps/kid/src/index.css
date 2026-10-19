@@ -2,6 +2,9 @@
 @import "@atlas/ui/styles.css";
 @source "../../../packages/ui/src";
 
+/* Behind the safe-area padding and overscroll on phones. */
+html { background: #1e1b4b; }
+
 /* Word Runner */
 .runner-stripes {
   background-image: repeating-linear-gradient(to bottom, transparent 0 28px, rgba(255, 255, 255, 0.55) 28px 44px);

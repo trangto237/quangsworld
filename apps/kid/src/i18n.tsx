@@ -311,6 +311,12 @@ const VI: Record<string, string> = {
   // Family code
   'Sign in': 'Đăng nhập',
   'Sign out': 'Đăng xuất',
+  'Install the app': 'Cài ứng dụng',
+  '📲 Install the app': '📲 Cài ứng dụng',
+  'Put Atlas on your home screen': 'Đưa Atlas ra màn hình chính',
+  'In Safari, tap the Share button (the square with an arrow) at the bottom of the screen.': 'Trong Safari, chạm nút Chia sẻ (hình vuông có mũi tên) ở cuối màn hình.',
+  'Scroll down and tap “Add to Home Screen”, then “Add”.': 'Kéo xuống, chạm “Thêm vào MH chính”, rồi chạm “Thêm”.',
+  'Open Atlas from its new icon — it works like an app, even offline.': 'Mở Atlas từ biểu tượng mới — nó chạy như một ứng dụng, kể cả khi không có mạng.',
   'Restart the trial': 'Làm lại thử thách từ đầu',
   'Restart the Trial of Five Realms from the beginning?': 'Làm lại Thử thách Năm Vương quốc từ đầu?',
   'Your answers in the trial and the coins you won in it are cleared. Nothing else changes.': 'Các câu trả lời trong thử thách và số xu em giành được sẽ bị xoá. Những thứ khác giữ nguyên.',

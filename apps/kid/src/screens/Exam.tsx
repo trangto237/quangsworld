@@ -333,7 +333,7 @@ function PaperQuestion({
 }) {
   return (
     <li id={`q-${q.id}`} className="scroll-mt-24">
-      <div className="flex items-start gap-2">
+      <div className="relative flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2">
         <span className="mt-0.5 shrink-0 font-bold tabular-nums">Question {n}.</span>
         <div className="min-w-0 flex-1">
           {q.sign && <SignBox text={q.sign} />}
@@ -370,7 +370,7 @@ function PaperQuestion({
             </div>
           )}
         </div>
-        <button onClick={onFlag} className={cx('shrink-0 rounded px-1.5 text-lg', flagged ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500')} aria-pressed={flagged} aria-label={`Flag question ${n}`} title="Flag for review">
+        <button onClick={onFlag} className={cx('absolute right-0 top-0 shrink-0 rounded px-1.5 text-lg sm:static', flagged ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500')} aria-pressed={flagged} aria-label={`Flag question ${n}`} title="Flag for review">
           ⚑
         </button>
       </div>

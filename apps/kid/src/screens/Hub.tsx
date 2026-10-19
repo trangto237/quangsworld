@@ -3,14 +3,15 @@ import { isDue, stars } from '@atlas/engine';
 import { MODES, modeFor } from '@atlas/game';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { startOfDay } from '@atlas/shared';
-import { Button, cx, useQuery } from '@atlas/ui';
+import { Button, InstallButton, cx, useQuery } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { todayPlan } from '../lib/plan';
 import { useKid } from '../store';
-import { T, TB } from '../i18n';
+import { T, TB, tr, useLang } from '../i18n';
 
 export function Hub({ student }: { student: StudentProfile }) {
   const go = useKid((s) => s.go);
+  const lang = useLang();
   const plan = useQuery((r) => todayPlan(r, student.id), [student.id]);
   const states = useQuery((r) => r.getStates(student.id), [student.id]);
   const minutesToday = useQuery((r) => Math.round(r.listSessions(student.id, startOfDay(Date.now())).reduce((s, x) => s + x.activeMs, 0) / 60000), [student.id]);
@@ -82,11 +83,11 @@ export function Hub({ student }: { student: StudentProfile }) {
 
         {/* Worlds */}
         <section>
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-display text-2xl font-bold">
               <T en="Worlds" />
             </h2>
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
               <Button variant="secondary" onClick={() => go({ name: 'coach' })}>
                 <TB en="🦉 Coach" />
               </Button>
@@ -100,6 +101,27 @@ export function Hub({ student }: { student: StudentProfile }) {
               <Button variant="secondary" onClick={() => go({ name: 'shop' })}>
                 <TB en="🛒 Armoury" />
               </Button>
+              <InstallButton
+                className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-300"
+                labels={{
+                  install: <TB en="📲 Install the app" />,
+                  iosTitle: tr(lang, 'Put Atlas on your home screen'),
+                  iosSteps: (
+                    <ol className="list-decimal space-y-2 pl-5">
+                      <li>
+                        <T en="In Safari, tap the Share button (the square with an arrow) at the bottom of the screen." />
+                      </li>
+                      <li>
+                        <T en="Scroll down and tap “Add to Home Screen”, then “Add”." />
+                      </li>
+                      <li>
+                        <T en="Open Atlas from its new icon — it works like an app, even offline." />
+                      </li>
+                    </ol>
+                  ),
+                  done: <T en="Got it" />,
+                }}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

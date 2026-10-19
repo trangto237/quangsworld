@@ -2,6 +2,10 @@
 @import "@atlas/ui/styles.css";
 @source "../../../packages/ui/src";
 
+/* Behind the safe-area padding and overscroll on phones. */
+html { background: #f8fafc; }
+html.dark { background: #020617; }
+
 /* Chart tokens: validated categorical slots (subjects) + one-hue sequential ramp, stepped separately for dark. */
 :root {
   --series-1: #2a78d6;
