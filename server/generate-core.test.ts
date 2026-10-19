@@ -12,13 +12,28 @@ const GOOD = {
   ],
 };
 
-/** A fake Supabase /auth/v1/user and a fake Claude client. */
-function deps(opts: { user?: object | null; status?: number; reply?: unknown; stop?: string; throws?: unknown } = {}) {
+/** Fake Supabase (/auth/v1/user and the atlas_my_family RPC), a fake Gemini endpoint and a fake Claude client. */
+function deps(
+  opts: {
+    user?: object | null;
+    status?: number;
+    family?: unknown;
+    rpcStatus?: number;
+    reply?: unknown;
+    stop?: string;
+    throws?: unknown;
+    gemini?: { status?: number; body?: unknown };
+  } = {},
+) {
   const calls: { url: string; init?: RequestInit }[] = [];
   const params: unknown[] = [];
   const d: GenerateDeps = {
     fetch: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      calls.push({ url: String(url), init });
+      const u = String(url);
+      calls.push({ url: u, init });
+      if (u.includes('/rest/v1/rpc/atlas_my_family'))
+        return new Response(JSON.stringify(opts.family === undefined ? 'parent-1' : opts.family), { status: opts.rpcStatus ?? 200 });
+      if (u.includes('generativelanguage.googleapis.com')) return new Response(JSON.stringify(opts.gemini?.body ?? {}), { status: opts.gemini?.status ?? 200 });
       return new Response(JSON.stringify(opts.user === undefined ? { id: 'parent-1', is_anonymous: false } : opts.user), { status: opts.status ?? 200 });
     }) as unknown as typeof fetch,
     makeClient: () =>
@@ -46,9 +61,9 @@ const post = (body: unknown, token: string | null = 'jwt-123') =>
 
 describe('AI question generation (Pages Function)', () => {
   it('reports what is missing', () => {
-    expect(health(ENV)).toEqual({ ai: true, missing: [] });
-    expect(health({ VITE_SUPABASE_URL: 'x', VITE_SUPABASE_ANON_KEY: 'y' })).toEqual({ ai: false, missing: ['ANTHROPIC_API_KEY'] });
-    expect(health({}).missing).toEqual(['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY']);
+    expect(health(ENV)).toEqual({ ai: true, provider: 'claude', model: MODEL, missing: [] });
+    expect(health({ VITE_SUPABASE_URL: 'x', VITE_SUPABASE_ANON_KEY: 'y' })).toEqual({ ai: false, provider: null, model: null, missing: ['GEMINI_API_KEY'] });
+    expect(health({}).missing).toEqual(['GEMINI_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY']);
   });
 
   it('is unavailable without the key', async () => {
@@ -72,6 +87,18 @@ describe('AI question generation (Pages Function)', () => {
     const h = new Headers(calls[0].init?.headers);
     expect(h.get('authorization')).toBe('Bearer jwt-123');
     expect(h.get('apikey')).toBe('anon');
+    expect(calls[1].url).toBe('https://proj.supabase.co/rest/v1/rpc/atlas_my_family');
+    expect(new Headers(calls[1].init?.headers).get('authorization')).toBe('Bearer jwt-123');
+  });
+
+  it('only lets the family owner (the parent) in, not a child signed in as a member', async () => {
+    const child = await handleGenerate(post({ text: 'hi' }), ENV, deps({ user: { id: 'kid-email', is_anonymous: false }, family: 'parent-1' }).d);
+    expect(child.status).toBe(403);
+    expect((await child.json()).error).toMatch(/parent account/);
+    // An older setup.sql without the RPC (404): the signed-in non-anonymous user is the parent.
+    expect((await handleGenerate(post({ text: 'Visitors can explore the caves.' }), ENV, deps({ rpcStatus: 404, family: { code: 'PGRST202' } }).d)).status).toBe(200);
+    // Any other failure of the check refuses rather than letting the caller through.
+    expect((await handleGenerate(post({ text: 'hi' }), ENV, deps({ rpcStatus: 500, family: { message: 'boom' } }).d)).status).toBe(502);
   });
 
   it('validates the request body', () => {

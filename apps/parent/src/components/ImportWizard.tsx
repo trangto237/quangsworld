@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { GLOBAL_SUCCESS_9, PART_LABEL, autoImport, customUnit, splitByUnit, validateDrafts, type DraftPart, type DraftQuestion, type ImportIssue } from '@atlas/knowledge';
 import { Button, Card, Field, cx, inputClass, useRepo } from '@atlas/ui';
 import { ACCEPT, extractFile, mergePhotos, type Extracted } from '../lib/extract';
-import { aiStatus, generateWithAI, type AiStatus } from '../lib/ai';
+import { aiStatus, generateWithAI, providerName, type AiStatus } from '../lib/ai';
 import type { OcrProgress } from '../lib/ocr';
 import { useCloud } from './Cloud';
 
@@ -34,7 +34,7 @@ const TYPE_LABEL: Record<DraftQuestion['type'], string> = { mcq: 'Choice', order
 
 /**
  * "Add textbook / document": a page, a worksheet or a word list becomes game missions.
- * Offline questions always; "Make questions with AI" when the server has Claude set up.
+ * Offline questions always; "Make questions with AI" when the server has Gemini (or Claude) set up.
  */
 export function ImportWizard() {
   const repo = useRepo();
@@ -148,13 +148,13 @@ export function ImportWizard() {
 
   const makeWithAi = async () => {
     setError(null);
-    setBusy('Claude is reading the material and writing questions… (this can take a minute)');
+    setBusy(`${providerName(ai?.provider)} is reading the material and writing questions… (this can take a minute)`);
     try {
       const token = await cloud.parentAccessToken();
       if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
       const source: Extracted = src ? { ...src, text: text.trim() } : { name: 'Pasted text', kind: 'text', size: text.length, text: text.trim() };
       const { drafts, dropped } = await generateWithAI(token, source, { unitTitle: unit.title, focus, count });
-      review(drafts, 'ai', dropped ? [{ line: 0, message: `${dropped} question(s) from Claude were not usable and were left out.` }] : []);
+      review(drafts, 'ai', dropped ? [{ line: 0, message: `${dropped} question(s) from ${providerName(ai?.provider)} were not usable and were left out.` }] : []);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -333,13 +333,16 @@ export function ImportWizard() {
             </div>
 
             <div className="rounded-xl bg-violet-50 p-4 dark:bg-violet-950/30">
-              <p className="font-semibold">✨ Make questions with AI (Claude)</p>
+              <p className="font-semibold">✨ Make questions with AI ({providerName(ai?.provider)})</p>
               {bookMode ? (
                 <p className="mt-1 text-sm text-slate-500">AI works one unit at a time — choose a unit above (it can read that unit's pages, including scans).</p>
               ) : ai?.ai ? (
                 signedInParent ? (
                   <>
-                    <p className="mt-1 text-sm text-slate-500">Reads photos and scanned pages too, and writes explanations in English and Vietnamese.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Reads photos and scanned pages too, and writes explanations in English and Vietnamese.
+                      {ai.provider === 'gemini' && ' Uses the free Gemini tier: a daily limit applies, and Google may use the pages you send (not your child’s data) to improve its products.'}
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-3 text-sm">
                       {(['vocabulary', 'grammar', 'reading'] as const).map((f) => (
                         <label key={f} className="flex items-center gap-1.5">
@@ -360,7 +363,8 @@ export function ImportWizard() {
                 )
               ) : (
                 <p className="mt-1 text-sm text-slate-500">
-                  Not set up. To turn it on, add an <b>ANTHROPIC_API_KEY</b> secret in Cloudflare Pages (Settings → Variables and Secrets) and set up cloud sync — see the README.
+                  Not set up. To turn it on for free: get a key at <b>aistudio.google.com</b> (Get API key), add it as a <b>GEMINI_API_KEY</b> secret in Cloudflare Pages (Settings → Variables and
+                  Secrets), redeploy, and set up cloud sync — see the README.
                   {ai?.missing.length ? ` Missing on the server: ${ai.missing.join(', ')}.` : ''}
                 </p>
               )}
@@ -373,7 +377,7 @@ export function ImportWizard() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm">
-              <b>{bookMode ? `${new Set(items.map((i) => i.unitId)).size} units` : unit.title}</b> · {selected} of {items.length} questions selected {via === 'ai' && <span className="rounded bg-violet-100 px-1.5 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-300">made with Claude</span>}
+              <b>{bookMode ? `${new Set(items.map((i) => i.unitId)).size} units` : unit.title}</b> · {selected} of {items.length} questions selected {via === 'ai' && <span className="rounded bg-violet-100 px-1.5 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-300">made with {providerName(ai?.provider)}</span>}
             </p>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setItems(items.map((i) => ({ ...i, on: true })))}>

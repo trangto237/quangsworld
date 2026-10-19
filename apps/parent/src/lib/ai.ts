@@ -5,22 +5,27 @@ export interface AiStatus {
   /** The app's server function answered (not available in local preview / static hosting). */
   reachable: boolean;
   ai: boolean;
+  /** Which AI the server uses: Google Gemini (free tier) or Claude. */
+  provider: 'gemini' | 'claude' | null;
+  model: string | null;
   missing: string[];
 }
+
+export const providerName = (p: AiStatus['provider'] | undefined) => (p === 'claude' ? 'Claude' : 'Gemini');
 
 /** Is "Make questions with AI" set up on the server? */
 export async function aiStatus(): Promise<AiStatus> {
   try {
     const res = await fetch('/api/generate', { headers: { accept: 'application/json' } });
-    if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) return { reachable: false, ai: false, missing: [] };
-    const body = (await res.json()) as { ai?: boolean; missing?: string[] };
-    return { reachable: true, ai: !!body.ai, missing: body.missing ?? [] };
+    if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) return { reachable: false, ai: false, provider: null, model: null, missing: [] };
+    const body = (await res.json()) as { ai?: boolean; provider?: AiStatus['provider']; model?: string | null; missing?: string[] };
+    return { reachable: true, ai: !!body.ai, provider: body.provider ?? null, model: body.model ?? null, missing: body.missing ?? [] };
   } catch {
-    return { reachable: false, ai: false, missing: [] };
+    return { reachable: false, ai: false, provider: null, model: null, missing: [] };
   }
 }
 
-/** Asks the server (and Claude) for questions; results are validated again here. */
+/** Asks the server (and its AI, Gemini or Claude) for questions; results are validated again here. */
 export async function generateWithAI(
   token: string,
   src: Extracted,
