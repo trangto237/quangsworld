@@ -31,6 +31,21 @@ export function Explanation({ question: q, picked }: { question: Question; picke
           <Marked text={right} />
         </b>
       </p>
+      {q.script && (
+        <details className="text-slate-600 dark:text-slate-300">
+          <summary className="cursor-pointer font-bold">
+            <T en="📄 Show the transcript" />
+          </summary>
+          <div className="mt-1 space-y-1">
+            {q.script.map((l, i) => (
+              <p key={i}>
+                {q.script!.length > 1 && <b>{l.who === 'A' ? '👤' : l.who === 'B' ? '🙋' : '🎙️'} </b>}
+                <GlossText text={l.text} enabled={help} />
+              </p>
+            ))}
+          </div>
+        </details>
+      )}
       {q.audio && (
         <p className="text-slate-600 dark:text-slate-300">
           <span className="font-bold">

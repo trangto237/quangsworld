@@ -3,7 +3,8 @@ import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
 import { Button, Marked, cx } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
 import { GlossText, hasGloss } from './GlossText';
-import { speak, stopSpeaking } from '../lib/speech';
+import { playQuestionAudio, stopSpeaking } from '../lib/speech';
+import { isTypedAnswerCorrect } from '@atlas/shared';
 import { Explanation } from './Explanation';
 
 export type CardMode =
@@ -32,6 +33,10 @@ const KEYS = ['1', '2', '3', '4'];
 export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, wrongNote, glossary = true }: Props) {
   const lang = useLang();
   const [picked, setPicked] = useState<number | null>(null);
+  const [typed, setTyped] = useState('');
+  const [typedResult, setTypedResult] = useState<boolean | null>(null);
+  const isInput = q.type === 'input';
+  const hasAudio = !!(q.audio || q.script?.length);
   const instructionVi = lang === 'en' ? null : translatePrompt(q.prompt, q.conceptId);
   const [showVi, setShowVi] = useState(lang === 'vi');
   const gloss = glossary && lang !== 'en' && !q.conceptId.startsWith('en.vocab') && !q.conceptId.startsWith('custom.') && !q.conceptId.startsWith('lit.');
@@ -42,13 +47,15 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
 
   useEffect(() => {
     setPicked(null);
+    setTyped('');
+    setTypedResult(null);
     done.current = false;
     result.current = null;
     shownAt.current = performance.now();
     setShowPassage(true);
     setShowVi(lang === 'vi');
-    if (q.audio) {
-      const t = setTimeout(() => speak(q.audio!), 350);
+    if (q.audio || q.script?.length) {
+      const t = setTimeout(() => playQuestionAudio(q), 350);
       return () => {
         clearTimeout(t);
         stopSpeaking();
@@ -71,20 +78,30 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
     setTimeout(finish, correct ? 550 : 1300);
   };
 
+  const submitTyped = () => {
+    if (done.current || !typed.trim()) return;
+    done.current = true;
+    const correct = isTypedAnswerCorrect(q, typed);
+    setTypedResult(correct);
+    result.current = { correct, ms: Math.round(performance.now() - shownAt.current), text: typed.trim() };
+    if (mode === 'practice' && !correct) return;
+    setTimeout(finish, correct ? 550 : 1800);
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const i = KEYS.indexOf(e.key);
       if (i >= 0 && i < q.shown.length) choose(i);
-      if ((e.key === 'r' || e.key === 'R') && q.audio) speak(q.audio);
+      if ((e.key === 'r' || e.key === 'R') && hasAudio) playQuestionAudio(q);
       if (e.key === 'Enter' && mode === 'practice' && result.current && !result.current.correct) finish();
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
   });
 
-  const answered = picked !== null;
-  const wrong = answered && picked !== q.correct;
+  const answered = picked !== null || typedResult !== null;
+  const wrong = isInput ? typedResult === false : answered && picked !== q.correct;
 
   return (
     <div className={cx('animate-pop', wrong && 'animate-shake')}>
@@ -94,22 +111,23 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
             <T en="📜 Ancient tablet" /> {showPassage ? '▾' : '▸'}
           </button>
           {showPassage && (
-            <p className="max-h-40 overflow-y-auto">
+            <p className="max-h-56 overflow-y-auto whitespace-pre-line">
               <GlossText text={q.passage} enabled={gloss} />
             </p>
           )}
         </div>
       )}
-      {q.audio && (
+      {hasAudio && (
         <button
-          onClick={() => speak(q.audio!)}
+          onClick={() => playQuestionAudio(q)}
           className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-100 py-3 font-display text-lg font-semibold text-violet-800 hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-200"
         >
           <TB en="🔊 Play echo" /> <span className="text-xs font-normal opacity-70">(R)</span>
         </button>
       )}
+      {q.sign && <SignBox text={q.sign} />}
       <div className="flex items-start gap-2">
-        <p className={cx('flex-1 font-display font-semibold leading-snug', compact ? 'text-lg' : 'text-xl sm:text-2xl')}>
+        <p className={cx('flex-1 whitespace-pre-line font-display font-semibold leading-snug', compact ? 'text-lg' : 'text-xl sm:text-2xl')}>
           <GlossText text={q.prompt} enabled={gloss} />
         </p>
         {instructionVi && (
@@ -130,6 +148,38 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
         </p>
       )}
       {gloss && !answered && (hasGloss(q.prompt) || hasGloss(q.passage)) && <p className="mt-1 text-[11px] text-slate-400">Tip: chạm vào từ gạch chân để xem nghĩa tiếng Việt</p>}
+      {isInput && (
+        <form
+          className="mt-4 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitTyped();
+          }}
+        >
+          <input
+            autoFocus
+            value={typed}
+            disabled={answered}
+            onChange={(e) => setTyped(e.target.value)}
+            className={cx(
+              'min-w-0 flex-1 rounded-xl px-4 py-3 text-base font-semibold ring-2 outline-none',
+              typedResult === null && 'bg-white ring-slate-300 focus:ring-brand-500 dark:bg-slate-800 dark:ring-slate-600',
+              typedResult === true && 'bg-emerald-500 text-white ring-emerald-600',
+              typedResult === false && 'bg-rose-500 text-white ring-rose-600',
+            )}
+            placeholder="Type your answer…"
+            aria-label="Your answer"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <Button type="submit" disabled={answered || !typed.trim()}>
+            <TB en="Check" />
+          </Button>
+        </form>
+      )}
+      {isInput && typedResult === false && mode === 'battle' && (
+        <p className="mt-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">✓ {q.options[q.answer]}</p>
+      )}
       <div className={cx('mt-4 grid gap-2', q.shown.length === 3 ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-2')}>
         {q.shown.map((opt, i) => {
           const state = !answered ? 'idle' : i === q.correct ? 'right' : i === picked ? 'wrong' : 'dim';
@@ -161,12 +211,21 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
       )}
       {wrong && mode === 'practice' && (
         <div className="mt-4">
-          <Explanation question={q} picked={q.shown[picked!]} />
+          <Explanation question={q} picked={isInput ? typed : q.shown[picked!]} />
           <Button className="mt-3 w-full" onClick={finish}>
             <TB en="Next" /> <span className="text-xs opacity-70">(Enter)</span>
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** A sign or notice, drawn like a real sign. */
+export function SignBox({ text }: { text: string }) {
+  return (
+    <div className="mx-auto mb-3 w-fit max-w-full rounded-lg border-4 border-slate-800 bg-amber-300 px-5 py-3 text-center font-display text-lg font-bold uppercase tracking-wide text-slate-900 shadow-md dark:border-slate-200">
+      {text}
     </div>
   );
 }

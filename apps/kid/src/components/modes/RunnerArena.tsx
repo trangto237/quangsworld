@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RunnerSim, runnerConfigFor } from '@atlas/game';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
 import { Marked, cx } from '@atlas/ui';
-import { speak, stopSpeaking } from '../../lib/speech';
+import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
+import { SignBox } from '../QuestionCard';
 import { T, useLang } from '../../i18n';
 import { GlossText } from '../GlossText';
 import { GameShell, Hearts, Pill } from './GameShell';
@@ -50,7 +51,7 @@ export function RunnerArena(p: ModeProps) {
     setLane(Math.floor(q.shown.length / 2));
     duration.current = sim.gateTime(q.prompt.length + (q.passage?.length ?? 0) / 3, q.shown.join('').length) + (q.audio ? 3000 : 0);
     startedAt.current = performance.now();
-    if (q.audio) setTimeout(() => speak(q.audio!), 300);
+    if (q.audio || q.script) setTimeout(() => playQuestionAudio(q), 300);
   }, [sim, lang]);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export function RunnerArena(p: ModeProps) {
       else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') setLane((l) => Math.min(n - 1, l + 1));
       else if (/^[1-4]$/.test(e.key) && +e.key <= n) setLane(+e.key - 1);
       else if (e.key === ' ' || e.key === 'Enter') decide(laneRef.current);
-      else if ((e.key === 'r' || e.key === 'R') && question.audio) speak(question.audio);
+      else if ((e.key === 'r' || e.key === 'R') && (question.audio || question.script)) playQuestionAudio(question);
       else return;
       e.preventDefault();
       p.onActivity?.();
@@ -147,14 +148,15 @@ export function RunnerArena(p: ModeProps) {
       <div className="mx-auto w-full max-w-3xl px-4 pt-4">
         {question && (
           <div className="rounded-2xl bg-white/95 p-4 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-slate-100">
+            {question.sign && <SignBox text={question.sign} />}
             {question.passage && (
               <p className="mb-2 max-h-28 overflow-y-auto rounded-lg bg-amber-50 p-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
                 <GlossText text={question.passage} enabled={gloss} />
               </p>
             )}
             <div className="flex items-start gap-2">
-              {question.audio && (
-                <button onClick={() => speak(question.audio!)} className="shrink-0 rounded-lg bg-violet-100 px-2 py-1 text-lg dark:bg-violet-950" aria-label="Replay audio">
+              {(question.audio || question.script) && (
+                <button onClick={() => playQuestionAudio(question)} className="shrink-0 rounded-lg bg-violet-100 px-2 py-1 text-lg dark:bg-violet-950" aria-label="Replay audio">
                   🔊
                 </button>
               )}

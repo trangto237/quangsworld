@@ -10,6 +10,8 @@ import { Battle } from './screens/Battle';
 import { Results } from './screens/Results';
 import { Shop } from './screens/Shop';
 import { MistakeBook } from './screens/MistakeBook';
+import { ExamHall } from './screens/ExamHall';
+import { Exam } from './screens/Exam';
 
 export function App() {
   const studentId = useKid((s) => s.studentId);
@@ -49,6 +51,10 @@ function Screens() {
       return <Shop student={student} />;
     case 'mistakes':
       return <MistakeBook student={student} />;
+    case 'exam-hall':
+      return <ExamHall student={student} />;
+    case 'exam':
+      return <Exam key={screen.examId} student={student} examId={screen.examId} />;
     default:
       return <Hub student={student} />;
   }

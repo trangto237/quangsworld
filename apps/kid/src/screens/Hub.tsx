@@ -87,6 +87,9 @@ export function Hub({ student }: { student: StudentProfile }) {
               <T en="Worlds" />
             </h2>
             <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => go({ name: 'exam-hall' })}>
+                <TB en="🏛️ Exam Hall" />
+              </Button>
               <Button variant="secondary" onClick={() => go({ name: 'mistakes' })}>
                 <TB en="📕 Mistake Book" />
                 {openMistakes > 0 && <span className="rounded-full bg-rose-500 px-2 text-xs text-white">{openMistakes}</span>}

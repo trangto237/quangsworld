@@ -23,6 +23,21 @@ const toStudent = (r: StudentRow): Student & { hasPin: boolean } => ({
 
 export type StudentProfile = ReturnType<typeof toStudent>;
 
+export interface ExamResult {
+  id: string;
+  studentId: string;
+  examId: string;
+  startedAt: number;
+  finishedAt: number;
+  durationMs: number;
+  correct: number;
+  total: number;
+  score: number | null;
+  band: number | null;
+  sections: { id: string; title: string; correct: number; total: number }[];
+  setIds: string[];
+}
+
 export interface Mistake {
   id: string;
   studentId: string;
@@ -123,7 +138,7 @@ export class Repo {
 
   async removeStudent(id: string) {
     await this.db.write((o) => {
-      for (const table of [t.conceptStates, t.attempts, t.sessions, t.placementResults, t.goals, t.unlocks, t.mistakes] as const) {
+      for (const table of [t.conceptStates, t.attempts, t.sessions, t.placementResults, t.goals, t.unlocks, t.mistakes, t.examResults] as const) {
         o.delete(table).where(eq(table.studentId, id)).run();
       }
       o.delete(t.wallets).where(eq(t.wallets.studentId, id)).run();
@@ -339,12 +354,73 @@ export class Repo {
     });
   }
 
+  // ── Exam Hall ─────────────────────────────────────────────
+  /**
+   * Saves a finished mock exam in one write: the result, every answer (attempts), concept
+   * states, Mistake Book entries for wrong answers, and the reward.
+   */
+  async completeExam(
+    studentId: string,
+    input: {
+      result: Omit<ExamResult, 'id' | 'studentId'>;
+      answers: { question: Question; answer: string; correct: boolean }[];
+      states: ConceptState[];
+      reward: Reward;
+    },
+  ) {
+    const now = input.result.finishedAt;
+    await this.db.write((o) => {
+      o.insert(t.examResults).values({ ...input.result, id: uid('exam_'), studentId }).run();
+      for (const a of input.answers) {
+        o.insert(t.attempts)
+          .values({ id: uid('att_'), studentId, questionId: a.question.id, conceptId: a.question.conceptId, correct: a.correct, difficulty: a.question.difficulty, msSpent: 0, context: 'exam', createdAt: now })
+          .run();
+        if (a.correct) continue;
+        const openM = o
+          .select()
+          .from(t.mistakes)
+          .where(and(eq(t.mistakes.studentId, studentId), eq(t.mistakes.questionId, a.question.id), isNull(t.mistakes.resolvedAt)))
+          .get();
+        const picked = a.answer || '(no answer)';
+        if (openM) o.update(t.mistakes).set({ picked, times: openM.times + 1, lastWrongAt: now }).where(eq(t.mistakes.id, openM.id)).run();
+        else
+          o.insert(t.mistakes)
+            .values({ id: uid('mis_'), studentId, questionId: a.question.id, conceptId: a.question.conceptId, question: a.question, picked, times: 1, createdAt: now, lastWrongAt: now, reviewedAt: now })
+            .run();
+      }
+      input.states.forEach((s) => this.upsertState(o, studentId, s));
+      const w = this.getWallet(studentId);
+      o.update(t.wallets).set({ coins: w.coins + input.reward.coins, gems: w.gems + input.reward.gems, xp: w.xp + input.reward.xp }).where(eq(t.wallets.studentId, studentId)).run();
+      if (input.result.durationMs >= 5_000)
+        o.insert(t.sessions)
+          .values({ id: uid('ses_'), studentId, kind: 'mission', startedAt: input.result.startedAt, endedAt: now, activeMs: input.result.durationMs, missionTitle: `Exam: ${input.result.examId}` })
+          .run();
+    });
+  }
+
+  listExamResults(studentId: string, examId?: string): ExamResult[] {
+    const rows = this.db.read((o) =>
+      o
+        .select()
+        .from(t.examResults)
+        .where(and(eq(t.examResults.studentId, studentId), examId ? eq(t.examResults.examId, examId) : undefined))
+        .orderBy(t.examResults.finishedAt)
+        .all(),
+    );
+    return rows.map((r) => ({ ...r, sections: r.sections as ExamResult['sections'], setIds: r.setIds as string[] }));
+  }
+
   // ── Key/value ─────────────────────────────────────────────
   getKv<T>(key: string): T | undefined {
     return this.db.read((o) => o.select().from(t.kv).where(eq(t.kv.key, key)).get())?.value as T | undefined;
   }
 
+  /** Stores a JSON value; `null`/`undefined` removes the key. */
   async setKv(key: string, value: unknown) {
+    if (value == null) {
+      await this.db.write((o) => o.delete(t.kv).where(eq(t.kv.key, key)).run());
+      return;
+    }
     await this.db.write((o) => o.insert(t.kv).values({ key, value }).onConflictDoUpdate({ target: t.kv.key, set: { value } }).run());
   }
 

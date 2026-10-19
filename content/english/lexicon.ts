@@ -119,7 +119,7 @@ export const SYNONYMS: SynonymEntry[] = [
   ['abundant', 'plentiful', 'scarce', 5],
   ['reluctant', 'unwilling', 'eager', 5],
   ['mitigate', 'lessen', 'worsen', 5],
-  ['ubiquitous', 'found everywhere', 'rare', 5],
+  ['ubiquitous', 'everywhere', 'rare', 5],
 ];
 
 /** [sentence with ___, correct word, three wrong partners, difficulty] */

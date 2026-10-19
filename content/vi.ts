@@ -24,6 +24,19 @@ const RULES: Rule[] = [
   [/^Choose the word whose underlined part is pronounced differently from the others\.$/, 'Chọn từ có phần gạch chân được PHÁT ÂM KHÁC với các từ còn lại.'],
   [/^Choose the word whose main stress is placed differently from the others\.$/, 'Chọn từ có TRỌNG ÂM CHÍNH rơi vào vị trí khác với các từ còn lại.'],
   [/^Listen\. Which word do you hear\?$/, 'Nghe và chọn từ em nghe được.'],
+  // Hà Nội exam skills
+  [/^[^:\n]+: ".*"\n[^:\n]+: "___"$/s, 'Chọn câu đáp lại phù hợp nhất để hoàn thành đoạn hội thoại.'],
+  [/^What does the sign or notice mean\?$/, 'Biển báo / thông báo này có nghĩa là gì?'],
+  [/^Choose the sentence closest in meaning to: "(.+)"$/, 'Chọn câu GẦN NGHĨA nhất với câu: "$1"'],
+  [/^Choose the sentence that best combines: "(.+)"$/, 'Chọn câu KẾT HỢP tốt nhất hai câu: "$1"'],
+  [/^Choose the correct order to make a meaningful (dialogue|letter|paragraph)\.$/, (_m, k) => `Chọn thứ tự đúng để tạo thành ${{ dialogue: 'một đoạn hội thoại', letter: 'một lá thư', paragraph: 'một đoạn văn' }[k]} có nghĩa.`],
+  [/^Choose the word that best fits gap \((\d)\)\.$/, 'Đọc đoạn văn và chọn từ phù hợp nhất cho chỗ trống ($1).'],
+  // IELTS
+  [/^Choose the correct heading for paragraph (\w)\.$/, 'Chọn tiêu đề đúng cho đoạn $1.'],
+  [/^Complete with NO MORE THAN TWO WORDS from the passage: (.+)$/, 'Điền KHÔNG QUÁ HAI TỪ lấy từ bài đọc: $1'],
+  [/^Complete with ONE WORD from the passage: (.+)$/, 'Điền MỘT TỪ lấy từ bài đọc: $1'],
+  [/^Complete with a NUMBER: (.+)$/, 'Điền một CON SỐ: $1'],
+  [/^(Booking|Membership) form — (.+)$/, 'Nghe và điền vào phiếu (gõ câu trả lời, chú ý chính tả): $2'],
   [/^What number did you hear\?$/, 'Bạn nghe thấy số nào?'],
   [/^What time did you hear\?$/, 'Bạn nghe thấy mấy giờ?'],
   [/^How much is the ticket\?$/, 'Vé giá bao nhiêu?'],
@@ -93,6 +106,8 @@ export function translatePrompt(prompt: string, conceptId: string): string | nul
   }
   if (conceptId.startsWith('en.listening')) return 'Nghe đoạn âm thanh và chọn đáp án đúng. Có thể nghe lại (phím R).';
   if (conceptId.startsWith('en.reading')) return 'Đọc đoạn văn trên phiến đá và chọn đáp án đúng.';
+  if (conceptId === 'en.ielts.listening') return 'Nghe đoạn ghi âm và chọn đáp án đúng.';
+  if (conceptId === 'en.ielts.reading') return 'Đọc bài và chọn đáp án đúng.';
   return null;
 }
 
@@ -185,6 +200,15 @@ export const LESSONS_VI: Record<string, string> = {
   'en.pron.endings': 'Đuôi -ed: đọc /ɪd/ sau t, d (want-ed); đọc /t/ sau âm vô thanh p, k, f, s, sh, ch, x (watch-ed); còn lại đọc /d/ (play-ed). Đuôi -s/-es: đọc /ɪz/ sau s, z, sh, ch, ge, x (watch-es); đọc /s/ sau p, t, k, f, th (book-s); còn lại đọc /z/ (dog-s).',
   'en.pron.sounds': 'Chữ viết và âm đọc trong tiếng Anh không phải lúc nào cũng khớp. Nhớ các mẫu thường gặp: ch = /tʃ/ (church) nhưng /k/ trong từ khoa học (chemistry, school); ea = /iː/ (meat) nhưng /e/ trong bread, head, heavy; oo = /uː/ (food) nhưng /ʊ/ trong book, look, good; th = /θ/ (think) hoặc /ð/ (this). Hãy đọc to các từ — tai em sẽ giúp em.',
   'en.pron.pairs': 'Các cặp như ship/sheep chỉ khác nhau một âm. /iː/ dài, miệng cười; /ɪ/ ngắn và thả lỏng. Phụ âm cuối rất quan trọng: bike ≠ bite ≠ bye. /θ/ (think): đặt lưỡi giữa hai hàm răng.',
+  'en.exam.communication': 'Chọn theo chức năng câu nói, không chỉ theo từ. Cảm ơn → "You\'re welcome." Lời mời → "That\'s a great idea / I\'d love to." Nhờ vả "Could you…?" → "Sure." Chú ý: "Do you mind…?" / "Would you mind…?" → trả lời "No / Not at all" nghĩa là ĐỒNG Ý.',
+  'en.exam.signs': 'Biển báo dùng rất ít từ. "NO + -ing" = không được phép. "KEEP OFF" = không giẫm lên. "STAFF ONLY" = chỉ nhân viên. Chọn câu diễn đạt cùng ý bằng một câu đầy đủ.',
+  'en.exam.transformation': 'Kiểm tra cả NGHĨA và NGỮ PHÁP. Các cặp hay gặp: "started … ago" = "have … for"; "too … to" = "not … enough to"; "It\'s a pity …" = "I wish …"; "although + mệnh đề" = "despite + danh từ / V-ing"; "If … not" = "Unless …".',
+  'en.exam.combination': 'Trước hết xác định quan hệ giữa hai ý: tương phản (although), nguyên nhân (because), kết quả (so … that), điều kiện (if) hay bổ sung thông tin (who/which/whose). Sau đó kiểm tra ngữ pháp — không lặp lại đại từ sau which/who.',
+  'en.exam.arrange': 'Tìm câu mở đầu: lời chào, câu hỏi hoặc câu chủ đề. Rồi lần theo mối nối — câu hỏi đi trước câu trả lời; các từ "Firstly, Then, However, Finally" cho biết thứ tự; đại từ (it, they, there) chỉ lại điều đã nhắc trước đó.',
+  'en.exam.cloze': 'Đọc cả câu, không chỉ chỗ trống. Hỏi: cần loại từ gì? Có giới từ hay từ nối nào quyết định đáp án không? Sau đó đọc lại câu với đáp án của em.',
+  'en.reading.detail': 'Gạch chân từ khoá trong câu hỏi (số, tên, ngày tháng) rồi dò tìm trong bài. Câu hỏi "it / they / this" chỉ gì: xem câu ngay trước đó. Câu "NOT mentioned": kiểm tra từng đáp án với bài đọc.',
+  'en.ielts.reading': 'Đọc câu hỏi trước, rồi đọc lướt bài. Với câu chọn tiêu đề, đọc hai câu đầu mỗi đoạn. Với câu điền từ, chép đúng từ trong bài và tuân thủ giới hạn số từ ("NO MORE THAN TWO WORDS").',
+  'en.ielts.listening': 'Đọc câu hỏi trước khi nghe và đoán loại đáp án (con số? tên riêng?). Đáp án xuất hiện theo thứ tự. Chính tả rất quan trọng — tên riêng thường được đánh vần từng chữ cái. Cẩn thận khi người nói đổi ý.',
   'logic.patterns': 'Xem hiệu giữa các số. Nếu hiệu không đều, xét tỉ số hoặc hiệu của các hiệu.',
   'logic.deduction': '"Mọi A là B" không có nghĩa là "mọi B là A". Chỉ kết luận điều chắc chắn đúng.',
   'logic.spatial': 'Xoay từng bước một. Rẽ phải 90° bốn lần sẽ quay về hướng ban đầu.',

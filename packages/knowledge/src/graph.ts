@@ -33,6 +33,8 @@ export const WORLDS: World[] = [
   { id: 'word-forest', name: 'Word Forest', emoji: '🌲', color: '#16a34a', subject: 'english', domains: ['Vocabulary'], blurb: 'Hunt rare words among the ancient trees.' },
   { id: 'grammar-forge', name: 'Grammar Forge', emoji: '⚒️', color: '#ea580c', subject: 'english', domains: ['Grammar'], blurb: 'Hammer sentences into shape.' },
   { id: 'sound-temple', name: 'Sound Temple', emoji: '🔔', color: '#be185d', subject: 'english', domains: ['Pronunciation'], blurb: 'Ring the bells — stress, sounds and endings.' },
+  { id: 'scholars-academy', name: "Scholar's Academy", emoji: '🎓', color: '#0f766e', subject: 'english', domains: ['Exam skills'], blurb: 'Train for the grade-10 entrance exam.' },
+  { id: 'ielts-tower', name: 'IELTS Tower', emoji: '🗼', color: '#1d4ed8', subject: 'english', domains: ['IELTS'], blurb: 'Climb toward band 6.5 — long reads and real listening.' },
   { id: 'echo-caves', name: 'Echo Caves', emoji: '🦇', color: '#7c3aed', subject: 'english', domains: ['Listening'], blurb: 'Listen closely — the caves whisper answers.' },
   { id: 'reading-ruins', name: 'Reading Ruins', emoji: '🏛️', color: '#0891b2', subject: 'english', domains: ['Reading'], blurb: 'Decode the tablets of a lost civilisation.' },
   { id: 'number-citadel', name: 'Number Citadel', emoji: '🏰', color: '#059669', subject: 'math', domains: ['Number', 'Statistics', 'Combinatorics'], blurb: 'Defend the walls with the power of numbers.' },
@@ -100,8 +102,11 @@ const conceptMap = new Map<string, ConceptDef>();
 const questionsByConcept = new Map<string, Question[]>();
 const questionById = new Map<string, Question>();
 
+const questionsBySet = new Map<string, Question[]>();
+
 function indexQuestion(q: Question) {
   questionById.set(q.id, q);
+  if (q.setId) questionsBySet.set(q.setId, [...(questionsBySet.get(q.setId) ?? []), q]);
   const arr = questionsByConcept.get(q.conceptId) ?? [];
   arr.push(q);
   questionsByConcept.set(q.conceptId, arr);
@@ -126,6 +131,9 @@ export function unregisterConcept(conceptId: string) {
   for (const q of questionsByConcept.get(conceptId) ?? []) questionById.delete(q.id);
   questionsByConcept.delete(conceptId);
 }
+
+/** All questions sharing one passage or recording, in authored order. */
+export const questionsInSet = (setId: string): Question[] => questionsBySet.get(setId) ?? [];
 
 export const allConcepts = (): ConceptDef[] => [...conceptMap.values()];
 export const getConcept = (id: string): ConceptDef | undefined => conceptMap.get(id);
@@ -199,7 +207,10 @@ export interface PickOptions {
 }
 
 /** Identity of a question by its wording, so two generated items with the same text count as a repeat. */
-export const promptKey = (q: Pick<Question, 'prompt' | 'audio' | 'passage'>) => `p:${q.prompt}|${q.audio ?? ''}|${(q.passage ?? '').slice(0, 40)}`;
+export const promptKey = (q: Pick<Question, 'prompt' | 'audio' | 'passage' | 'sign' | 'options' | 'answer'>) =>
+  // The correct answer is part of the identity: many items share an instruction ("Choose the word whose…"),
+  // while the same item with different wrong options is still the same question.
+  `p:${q.prompt}|${q.audio ?? ''}|${(q.passage ?? '').slice(0, 40)}|${q.sign ?? ''}|${q.options[q.answer]}`;
 
 const lastSeen = (q: Question, history?: Map<string, number>) => Math.max(history?.get(q.id) ?? 0, history?.get(promptKey(q)) ?? 0);
 
@@ -247,6 +258,7 @@ export interface PresentedQuestion extends Question {
 
 /** Shuffle options (except T/F/NG which keep canonical order). */
 export function present(q: Question, seed = hashString(q.id + Date.now())): PresentedQuestion {
+  if (q.type === 'input') return { ...q, shown: [], correct: -1 };
   const correctText = q.options[q.answer];
   const canonical = q.options.length === 3 && q.options.includes('Not Given');
   const shown = canonical ? ['True', 'False', 'Not Given'] : shuffle(q.options, rng(seed));

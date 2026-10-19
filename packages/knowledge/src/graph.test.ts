@@ -17,7 +17,7 @@ describe('knowledge graph integrity', () => {
       expect(ids.has(q.id), q.id).toBe(false);
       ids.add(q.id);
       expect(getConcept(q.conceptId), q.id).toBeDefined();
-      expect(q.options.length, q.id).toBeGreaterThanOrEqual(3);
+      expect(q.options.length, q.id).toBeGreaterThanOrEqual(q.type === 'input' ? 1 : 3);
       expect(new Set(q.options).size, `${q.id} duplicate options`).toBe(q.options.length);
       expect(q.answer).toBeGreaterThanOrEqual(0);
       expect(q.answer).toBeLessThan(q.options.length);

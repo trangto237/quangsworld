@@ -1,5 +1,5 @@
 import type { StudentProfile } from '@atlas/db';
-import { computeInsights, dailyMinutes, levelFromXp, planDay } from '@atlas/engine';
+import { EXAMS, computeInsights, dailyMinutes, levelFromXp, planDay } from '@atlas/engine';
 import { getConcept } from '@atlas/knowledge';
 import { DAY_MS } from '@atlas/shared';
 import { Button, Card, Marked, Stat, useQuery } from '@atlas/ui';
@@ -22,6 +22,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
         placement: r.latestPlacement(student.id),
         mistakes: r.listMistakes(student.id, { since: now - 30 * DAY_MS }),
         wallet: r.getWallet(student.id),
+        exams: r.listExamResults(student.id),
         plan: planDay({ states, goals, now }),
       };
     },
@@ -197,6 +198,46 @@ export function Dashboard({ student }: { student: StudentProfile }) {
           <p className="text-sm text-slate-500">No open mistakes. Questions answered wrongly in battle appear here until {student.name} fixes them.</p>
         )}
         <p className="mt-3 text-xs text-slate-500">After each battle {student.name} reviews these with explanations; a mistake is fixed when answered correctly on a later retry in the Mistake Book.</p>
+      </Card>
+
+
+      <Card title="Exam Hall results">
+        {data.exams.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="py-2">Date</th>
+                  <th>Paper</th>
+                  <th className="text-right">Score</th>
+                  <th className="text-right">Correct</th>
+                  <th className="pl-4">Weakest part</th>
+                  <th className="text-right">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...data.exams].reverse().slice(0, 12).map((r) => {
+                  const weakest = [...r.sections].filter((s) => s.total > 0).sort((a, b) => a.correct / a.total - b.correct / b.total)[0];
+                  return (
+                    <tr key={r.id} className="border-t border-slate-200 dark:border-slate-800">
+                      <td className="py-2">{new Date(r.finishedAt).toLocaleDateString()}</td>
+                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? r.examId}</td>
+                      <td className="text-right font-bold tabular-nums">{r.score != null ? `${r.score.toFixed(2)} / 10` : r.band != null ? `Band ${r.band.toFixed(1)}` : '—'}</td>
+                      <td className="text-right tabular-nums">
+                        {r.correct}/{r.total}
+                      </td>
+                      <td className="pl-4">{weakest ? `${weakest.title} (${weakest.correct}/${weakest.total})` : '—'}</td>
+                      <td className="text-right tabular-nums">{Math.round(r.durationMs / 60000)} min</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No mock papers yet. {student.name} can take timed Hà Nội grade-10 and IELTS mini papers in the Exam Hall.</p>
+        )}
+        <p className="mt-3 text-xs text-slate-500">IELTS bands are estimates from a mini paper scaled to a full test.</p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">

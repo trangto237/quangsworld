@@ -46,7 +46,8 @@ export interface ConceptState {
   lastWrongAt: number; // epoch ms, 0 = never
 }
 
-export type QuestionType = 'mcq' | 'listen' | 'read' | 'fill';
+/** `input`: typed answer (IELTS completion questions) checked against `accept`. */
+export type QuestionType = 'mcq' | 'listen' | 'read' | 'fill' | 'input';
 
 export interface Question {
   id: string;
@@ -63,8 +64,27 @@ export interface Question {
   audio?: string;
   /** Reading passage for reading questions. */
   passage?: string;
+  /** A sign or notice shown as a sign (signs & notices questions). */
+  sign?: string;
+  /** Listening script read by different voices, e.g. [{ who: 'A', text: 'Hello…' }]. */
+  script?: { who: string; text: string }[];
+  /** Questions sharing one passage or recording (cloze, reading, IELTS). */
+  setId?: string;
+  /** Typed answers: other accepted spellings besides options[answer] ("14", "fourteen"). */
+  accept?: string[];
   source: string;
 }
+
+/** Normalise a typed answer for comparison: lower case, no punctuation, single spaces. */
+export const normalizeAnswer = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const isTypedAnswerCorrect = (q: Pick<Question, 'options' | 'answer' | 'accept'>, typed: string) =>
+  [q.options[q.answer], ...(q.accept ?? [])].some((a) => normalizeAnswer(a) === normalizeAnswer(typed));
 
 export type PlacementSectionId = 'word-hunter' | 'sentence-forge' | 'echo-cave' | 'reading-puzzle' | 'math-logic';
 
@@ -130,7 +150,7 @@ export interface Attempt {
   correct: boolean;
   difficulty: number;
   msSpent: number;
-  context: 'placement' | 'mission' | 'review';
+  context: 'placement' | 'mission' | 'review' | 'exam';
   createdAt: number;
 }
 

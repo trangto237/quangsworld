@@ -19,7 +19,9 @@ export function modeFor(conceptIds: string[], kind: 'learn' | 'review' | 'boss' 
   if (kind === 'boss') return 'duel';
   const votes: Record<GameMode, number> = { defense: 0, runner: 0, knight: 0, duel: 0 };
   for (const id of conceptIds) {
-    if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.')) votes.duel++;
+    if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') votes.duel++;
+    else if (id === 'en.exam.communication' || id === 'en.exam.arrange') votes.knight++;
+    else if (id === 'en.exam.signs') votes.runner++;
     else if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers') || id.startsWith('en.pron')) votes.runner++;
     else if (id.startsWith('math.') || id.startsWith('logic.')) votes.knight++;
     else votes.defense++;

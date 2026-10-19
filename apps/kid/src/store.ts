@@ -10,7 +10,9 @@ export type Screen =
   | { name: 'battle'; mission: Mission; fromPlan: boolean }
   | { name: 'results'; result: BattleResult }
   | { name: 'shop' }
-  | { name: 'mistakes' };
+  | { name: 'mistakes' }
+  | { name: 'exam-hall' }
+  | { name: 'exam'; examId: string };
 
 export interface BattleResult {
   mission: Mission;

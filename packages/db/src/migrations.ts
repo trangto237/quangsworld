@@ -33,6 +33,12 @@ export const MIGRATIONS: string[] = [
     reviewed_at INTEGER, resolved_at INTEGER);
   CREATE INDEX mistakes_student ON mistakes (student_id, resolved_at);
   `,
+  `
+  CREATE TABLE exam_results (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, exam_id TEXT NOT NULL, started_at INTEGER NOT NULL,
+    finished_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, correct INTEGER NOT NULL, total INTEGER NOT NULL,
+    score REAL, band REAL, sections TEXT NOT NULL, set_ids TEXT NOT NULL);
+  CREATE INDEX exam_results_student ON exam_results (student_id, finished_at);
+  `,
 ];
 
 export function migrate(db: Database) {

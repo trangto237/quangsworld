@@ -112,6 +112,14 @@ describe('Repo', () => {
     await expect(repo.purchase(id, 'tower.knight')).rejects.toThrow(/Already/);
   });
 
+  it('removes a kv entry when set to null', async () => {
+    const { repo } = await fresh();
+    await repo.setKv('exam-progress:x', { examId: 'hn10' });
+    expect(repo.getKv<{ examId: string }>('exam-progress:x')?.examId).toBe('hn10');
+    await repo.setKv('exam-progress:x', null);
+    expect(repo.getKv('exam-progress:x')).toBeUndefined();
+  });
+
   it('imports CSV flashcards as a private concept', async () => {
     const { repo, store } = await fresh();
     const csv = 'abundant,plentiful\nbrief,short\ncautious,careful\ndiligent,hard-working';
@@ -159,5 +167,25 @@ describe('Repo', () => {
     raw.exec('PRAGMA user_version = 1');
     (await import('./migrations')).migrate(raw);
     expect(raw.exec("SELECT name FROM sqlite_master WHERE name = 'mistakes'")[0].values).toHaveLength(1);
+  });
+
+  it('saves a mock exam with attempts, mistakes and reward', async () => {
+    const { repo } = await fresh();
+    const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊' });
+    const q = { id: 'en.exam.signs#x1', conceptId: 'en.exam.signs', difficulty: 1, type: 'mcq' as const, prompt: 'What does the sign or notice mean?', options: ['A', 'B'], answer: 0, source: 't', sign: 'NO SMOKING' };
+    await repo.completeExam(id, {
+      result: { examId: 'hn10', startedAt: 1, finishedAt: 2, durationMs: 60_000, correct: 1, total: 2, score: 5, band: null, sections: [{ id: 's', title: 'S', correct: 1, total: 2 }], setIds: ['cloze-green'] },
+      answers: [
+        { question: q, answer: 'A', correct: true },
+        { question: { ...q, id: 'en.exam.signs#x2' }, answer: 'B', correct: false },
+      ],
+      states: [],
+      reward: { coins: 50, gems: 1, xp: 100 },
+    });
+    expect(repo.listExamResults(id)).toHaveLength(1);
+    expect(repo.listExamResults(id)[0].setIds).toEqual(['cloze-green']);
+    expect(repo.listAttempts(id).filter((a) => a.context === 'exam')).toHaveLength(2);
+    expect(repo.listMistakes(id, { open: true })).toHaveLength(1);
+    expect(repo.getWallet(id).coins).toBe(150);
   });
 });

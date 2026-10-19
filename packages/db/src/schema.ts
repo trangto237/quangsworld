@@ -49,7 +49,7 @@ export const attempts = sqliteTable(
     correct: integer('correct', { mode: 'boolean' }).notNull(),
     difficulty: integer('difficulty').notNull(),
     msSpent: integer('ms_spent').notNull(),
-    context: text('context', { enum: ['placement', 'mission', 'review'] }).notNull(),
+    context: text('context', { enum: ['placement', 'mission', 'review', 'exam'] }).notNull(),
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('attempts_student_time').on(t.studentId, t.createdAt)],
@@ -145,4 +145,24 @@ export const mistakes = sqliteTable(
     resolvedAt: integer('resolved_at'),
   },
   (t) => [index('mistakes_student').on(t.studentId, t.resolvedAt)],
+);
+
+/** Mock exams taken in the Exam Hall. */
+export const examResults = sqliteTable(
+  'exam_results',
+  {
+    id: text('id').primaryKey(),
+    studentId: text('student_id').notNull(),
+    examId: text('exam_id').notNull(),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    correct: integer('correct').notNull(),
+    total: integer('total').notNull(),
+    score: real('score'),
+    band: real('band'),
+    sections: text('sections', { mode: 'json' }).notNull(),
+    setIds: text('set_ids', { mode: 'json' }).notNull(),
+  },
+  (t) => [index('exam_results_student').on(t.studentId, t.finishedAt)],
 );

@@ -14,6 +14,22 @@ export const hasGloss = (text?: string) => !!text && (text.match(WORD) ?? []).so
  * a small teaching note, e.g. "punctual (tính từ): đúng giờ".
  */
 export function GlossText({ text, enabled }: { text: string; enabled: boolean }) {
+  // Underlined segments ("[(3) ___]" in cloze passages) are rendered as marks, never glossed.
+  if (text.includes('[')) {
+    return (
+      <>
+        {text.split(/(\[[^\]]+\])/).map((part, i) =>
+          part.startsWith('[') ? (
+            <mark key={i} className="rounded bg-amber-300 px-1 font-bold text-slate-900">
+              {part.slice(1, -1)}
+            </mark>
+          ) : (
+            <GlossText key={i} text={part} enabled={enabled} />
+          ),
+        )}
+      </>
+    );
+  }
   if (!enabled) return <>{text}</>;
   const parts = text.split(/([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ'’-]*)/);
   return (

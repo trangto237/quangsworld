@@ -5,3 +5,4 @@ export * from './planner';
 export * from './session';
 export * from './insights';
 export * from './rewards';
+export * from './exams';
