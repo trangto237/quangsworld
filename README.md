@@ -51,7 +51,7 @@ content/            English, Math (incl. parametric generators), Logic, Literatu
 | Vietnamese help | Kid UI text has a dotted underline: hover or tap it for Vietnamese. Buttons show a small Vietnamese line. A 🇻🇳 button translates question instructions, and maths and logic prompts are translated in full. Tapping words in questions and passages gives the Vietnamese meaning, except where that would give away the answer (vocabulary items) or skew the placement estimate (English in the trial). Explanations and lessons have Vietnamese versions. A parent setting per child chooses English + help (default), mostly Vietnamese, or English only. |
 | §4.4 Parent dashboard | Weekly time, streak, mastered concepts, subject progress, concept heatmap (with a table view), struggles and strengths, recommended focus, IELTS/CEFR estimate, today's plan, live activity. |
 | §4.5 Daily adaptive engine | `engine/planner.ts` scores concepts by due reviews, weakness, recent mistakes, parent goals and prerequisites. It builds blocks such as 8/7/5 min plus a 5 min boss. The plan is fixed for the day. |
-| §6 Knowledge import | **Add textbook or document** (parent → Materials): upload PDF, Word or TXT pages, photos of pages, or paste text, and pick the **Tiếng Anh 9 Global Success** unit (or name another book). Offline, the app recognises *Quick Import* questions (numbered, options A–D, `*` marks the right one), word lists (`cave (n): hang động`) and reading texts, and makes word quizzes, typed spelling, Sentence Sprint word-order items and gap-fills (`packages/knowledge/src/importers.ts`). With Claude set up on the server (below), **Make questions with AI** also reads photos and scanned PDFs and writes explanations in English and Vietnamese. **Scanned books** are read on the device (OCR with tesseract.js, English + Vietnamese, served from `/parent/ocr/`, free, about 3–8 s per page). **Whole book — split by unit** finds each unit page by page ("UNIT n" lines and page headers, unit titles, "Getting started" openers; the contents, Review and answer-key pages are skipped) and saves each unit's questions to that unit. The parent reviews and edits every question before saving. Each unit part becomes a mission in the kid's **📘 My Textbook** world (vocabulary, sentences & grammar, reading, practice questions); importing more pages of a unit adds to the same missions, and the daily plan favours fresh units. CSV flashcard decks still work. Originals are kept encrypted on the device; the questions sync. |
+| §6 Knowledge import | **Add textbook or document** (parent → Materials): upload PDF, Word or TXT pages, photos of pages, or paste text, and pick the **Tiếng Anh 9 Global Success** unit (or name another book). Offline, the app recognises *Quick Import* questions (numbered, options A–D, `*` marks the right one), word lists (`cave (n): hang động`) and reading texts, and makes word quizzes, typed spelling, Sentence Sprint word-order items and gap-fills (`packages/knowledge/src/importers.ts`). With AI set up on the server (below — Google Gemini's free tier, or Claude), **Make questions with AI** also reads photos and scanned PDFs and writes explanations in English and Vietnamese. **Scanned books** are read on the device (OCR with tesseract.js, English + Vietnamese, served from `/parent/ocr/`, free, about 3–8 s per page). **Whole book — split by unit** finds each unit page by page ("UNIT n" lines and page headers, unit titles, "Getting started" openers; the contents, Review and answer-key pages are skipped) and saves each unit's questions to that unit. The parent reviews and edits every question before saving. Each unit part becomes a mission in the kid's **📘 My Textbook** world (vocabulary, sentences & grammar, reading, practice questions); importing more pages of a unit adds to the same missions, and the daily plan favours fresh units. CSV flashcard decks still work. Originals are kept encrypted on the device; the questions sync. |
 | §7 Rewards | Coins, gems, XP and levels. The Armoury unlocks towers, skins, battlefields, avatar items and chess sets. Nothing is bought with real money. |
 | §12 Non-functional | Works offline (service worker plus local DB). Laptop-first layout that also works on phones. Dark mode, autosave after each answer, AES-GCM encryption at rest, Phaser loaded on demand. Self-hosted fonts (Baloo 2, Nunito) with full Vietnamese support. |
 
@@ -76,20 +76,32 @@ sync. supabase-js is downloaded only on devices where sync is set up. Code: `pac
 ## Making questions with AI (optional)
 
 The **Make questions with AI** button calls a Cloudflare Pages Function, `functions/api/generate.ts`
-(logic and tests in `server/generate-core.ts`), which asks Claude (`claude-opus-5-5`, structured JSON output)
-for questions grounded only in the uploaded material. Each question is checked again on the server and in
-the browser before it can reach the game. To turn it on:
+(logic and tests in `server/`), which asks an AI model (structured JSON output) for questions grounded only in the
+uploaded material. Each question is checked again on the server and in the browser before it can reach the game.
+Without AI the app still makes questions offline from word lists, reading passages and marked exercises.
 
-1. Get an API key at <https://console.anthropic.com> (pay-as-you-go; it uses Claude Opus 5.5, roughly 10–30 US cents per unit of pages).
-2. Cloudflare Pages → your project → **Settings → Variables and Secrets** → add a **secret**
-   `ANTHROPIC_API_KEY`. The function also needs the Supabase URL and anon key: the `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_ANON_KEY` variables from cloud sync are reused (or set `SUPABASE_URL` / `SUPABASE_ANON_KEY`).
-3. Redeploy. In the parent app, sign in to the family cloud account (Settings → Cloud sync).
+**Google Gemini (free, recommended)** — `server/gemini.ts`, REST API, model `gemini-2.5-flash` by default:
 
-The key never reaches the browser. Only the signed-in parent account can use the function: it checks the
-Supabase sign-in on every request and refuses kid devices that joined with the family code, so nobody else can
-spend your credits. Locally (`pnpm preview`) there is no function, and the button explains how to enable it;
-`npx wrangler pages dev dist` runs the function locally.
+1. Get a free API key at <https://aistudio.google.com> → **Get API key** (a Google account is enough).
+2. Cloudflare Pages → your project → **Settings → Variables and Secrets** → add a **secret** `GEMINI_API_KEY`.
+   Optionally set `GEMINI_MODEL` to another Gemini model (e.g. a newer Flash). The function also needs the
+   Supabase URL and anon key: the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` variables from cloud sync are
+   reused (or set `SUPABASE_URL` / `SUPABASE_ANON_KEY`).
+3. Redeploy. In the parent app, sign in to the family account.
+
+The free tier has per-project limits (requests per minute and per day, shown in AI Studio); when they're used up
+the app says so and it works again after the daily reset — about one unit of pages per request. On the free tier
+Google may use what you send (the book pages, not your child's data) to improve its products; a paid Gemini key
+doesn't. One request takes up to about 20 MB (do one unit at a time).
+
+**Claude (paid, optional)** — set `ANTHROPIC_API_KEY` instead (from <https://console.anthropic.com>, pay-as-you-go;
+Claude Opus 5.5 costs roughly 10–30 US cents per unit of pages). If both keys are set, Gemini is used.
+
+The key never reaches the browser (Gemini's goes in a request header, not the URL). Only the family's parent
+account can use the function: it checks the Supabase sign-in on every request and refuses anonymous family-code
+devices, a child's own member login (only the family owner passes `atlas_my_family`) and strangers, so nobody
+else can use up your quota. Locally (`pnpm preview`) there is no function, and the button explains how to enable
+it; `npx wrangler pages dev dist` runs the function locally.
 
 ## Not yet built
 

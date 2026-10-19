@@ -28,8 +28,8 @@ Either:
 - **Or per device:** parent dashboard → **Settings → Cloud sync** → paste them → **Save**.
 
 The optional **Make questions with AI** feature (Materials → Add textbook or document) reuses the two Cloudflare
-variables to check that the caller is the signed-in parent; it also needs an `ANTHROPIC_API_KEY` secret — see
-"Making questions with AI" in the main README.
+variables to check that the caller is the signed-in parent; it also needs a free `GEMINI_API_KEY` secret (or a paid
+`ANTHROPIC_API_KEY`) — see "Making questions with AI" in the main README.
 
 ## 3. Connect your devices
 

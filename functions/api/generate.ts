@@ -1,7 +1,7 @@
 /**
  * Cloudflare Pages Function: /api/generate
- *   GET  → { ai, missing } — is "Make questions with AI" available?
- *   POST → questions made by Claude from textbook material (parent account only).
+ *   GET  → { ai, provider, model, missing } — is "Make questions with AI" available?
+ *   POST → questions made by AI (Gemini, or Claude) from textbook material (parent account only).
  * Logic and tests live in server/generate-core.ts.
  */
 import { handleGenerate, health, type GenerateEnv } from '../../server/generate-core';
