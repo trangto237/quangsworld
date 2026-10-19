@@ -3,6 +3,7 @@ import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { AtlasDb } from './database';
 import { Repo } from './repo';
 import { IdbStore } from './store';
+import { getCloud } from './cloud';
 
 /** Opens the family database in the browser (IndexedDB + encrypted SQLite). */
 export async function openBrowserRepo(): Promise<Repo> {
@@ -14,5 +15,7 @@ export async function openBrowserRepo(): Promise<Repo> {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void db.refresh();
   });
+  // Family cloud sync, if set up and signed in on this device (supabase-js loads only then).
+  void getCloud(repo).start();
   return repo;
 }

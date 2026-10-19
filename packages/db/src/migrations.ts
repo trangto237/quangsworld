@@ -1,4 +1,5 @@
 import type { Database } from 'sql.js';
+import { SYNC_TABLES, changeTriggers } from './sync-tables';
 
 /**
  * Forward-only migrations, tracked with PRAGMA user_version.
@@ -38,6 +39,14 @@ export const MIGRATIONS: string[] = [
     finished_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, correct INTEGER NOT NULL, total INTEGER NOT NULL,
     score REAL, band REAL, sections TEXT NOT NULL, set_ids TEXT NOT NULL);
   CREATE INDEX exam_results_student ON exam_results (student_id, finished_at);
+  `,
+  // Cloud sync: a change log filled by triggers, and sync state (cursor, linked account, tracking flag).
+  `
+  CREATE TABLE _changes (tbl TEXT NOT NULL, pk TEXT NOT NULL, PRIMARY KEY (tbl, pk));
+  CREATE TABLE _sync (key TEXT PRIMARY KEY, value TEXT);
+  ${Object.keys(SYNC_TABLES)
+    .map((t) => changeTriggers(t))
+    .join('\n')}
   `,
 ];
 

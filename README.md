@@ -56,13 +56,22 @@ content/            English, Math (incl. parametric generators), Logic, Literatu
 
 ## Data & privacy
 
-All data stays on the device. After each write the SQLite database is exported, encrypted with AES-GCM
+Each device keeps its own copy. After each write the SQLite database is exported, encrypted with AES-GCM
 using a non-extractable device key, and stored in IndexedDB. The Web Locks API makes writes from
 different tabs run one at a time. A BroadcastChannel tells the other app to refresh, so the parent
 dashboard updates while the child plays. The parent password and kid PINs are stored as PBKDF2 hashes.
 
+**Cloud sync (optional).** With your own Supabase project, devices sync through it: the parent dashboard on
+your phone shows progress made on the kid's laptop. Setup takes about 10 minutes: see
+[`supabase/README.md`](supabase/README.md) and run [`supabase/setup.sql`](supabase/setup.sql). Changed rows
+are recorded by SQLite triggers, uploaded as JSON to a single `atlas_rows` table protected by row-level
+security (only your family account can read it), and downloaded by the other devices. The last upload wins
+per row. Uploaded files (PDF, DOCX, images) stay on the device where they were added; CSV flashcards
+sync. supabase-js is downloaded only on devices where sync is set up. Code: `packages/db/src/sync.ts`
+(engine, tested against an in-memory cloud), `supabase.ts`, `cloud.ts`.
+
 ## Not yet built
 
-Cloud sync (Supabase), OCR and concept extraction for PDFs and images, speaking and writing practice,
+Syncing uploaded files, OCR and concept extraction for PDFs and images, speaking and writing practice,
 and the AI features from PRD §13. Listening questions use the device's speech synthesis, so voice
 quality depends on the browser and OS.
