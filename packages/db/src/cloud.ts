@@ -179,11 +179,16 @@ export class CloudSync {
   /** Returns 'confirm-email' when the Supabase project requires email confirmation first. */
   async signUp(email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
     const client = await this.ensureClient();
-    const { data, error } = await client.auth.signUp({ email, password });
+    const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/parent/` } });
     if (error) throw new Error(authFriendly(error.message));
     if (!data.session?.user) return 'confirm-email';
     await this.attach(data.session.user);
     return 'signed-in';
+  }
+
+  /** The signed-in account, if any (used to finish setting up after an email confirmation). */
+  signedInEmail(): string | undefined {
+    return this.status.role === 'parent' ? this.status.email : undefined;
   }
 
   async signIn(email: string, password: string) {
@@ -278,7 +283,7 @@ export class CloudSync {
    */
   async signUpMember(email: string, password: string, code: string, label: string): Promise<'joined' | 'confirm-email'> {
     const client = await this.ensureClient();
-    const { data, error } = await client.auth.signUp({ email, password });
+    const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/` } });
     if (error) throw new Error(friendly(error.message));
     if (!data.session?.user) {
       localStorage.setItem(PENDING_CODE, JSON.stringify({ email: email.toLowerCase(), code, label }));
@@ -456,7 +461,7 @@ const formatCode = (c: string) => (c.length === 10 ? `${c.slice(0, 5)}-${c.slice
 /** Supabase sign-in/sign-up errors in plain words, with what to do. */
 const authFriendly = (m: string) =>
   /invalid login credentials/i.test(m)
-    ? 'Wrong email or password — or this account doesn’t exist yet. A password made before cloud sync was only for one device: create the account with “Create a parent account”.'
+    ? 'Wrong email or password — or this account doesn’t exist yet. A password made before cloud sync was only for one device: create the account with the “Create account” tab.'
     : /email not confirmed/i.test(m)
       ? 'This email isn’t confirmed yet. Open the confirmation email from Supabase and tap the link, then sign in. (Or turn off “Confirm email” in Supabase → Authentication → Sign In / Providers → Email.)'
       : /already registered|already been registered|user already exists/i.test(m)

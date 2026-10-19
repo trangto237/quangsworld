@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button, Card, Field, inputClass, useRepo } from '@atlas/ui';
 import { StudentForm } from '../components/StudentForm';
 import { LinkChoice, useCloud } from '../components/Cloud';
@@ -16,7 +16,8 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   const { cloud, status } = useCloud();
   const online = !!cloud.config();
   const [step, setStep] = useState<'family' | 'kid'>(hasFamily ? 'kid' : 'family');
-  const [mode, setMode] = useState<'create' | 'signin'>('create');
+  /** create: new parent account · signin: existing account · finish: signed in, family not set up yet. */
+  const [mode, setMode] = useState<'create' | 'signin' | 'finish'>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
@@ -24,6 +25,32 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Already signed in on this device (e.g. back from the confirmation email): fetch the family's data,
+  // or — if the account has none yet — just ask for the parent's name to finish.
+  const signedIn = online && !hasFamily && status.role === 'parent' && !!status.email;
+  useEffect(() => {
+    if (!signedIn || mode === 'finish') return;
+    setEmail(status.email ?? '');
+    void (async () => {
+      try {
+        await cloud.link('cloud');
+      } catch {
+        /* shown by the form */
+      }
+      if (!repo.getFamily()) setMode('finish');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn]);
+
+  /** The account exists and is signed in: create the family for it (name + the account password). */
+  const finishFamily = async (password: string) => {
+    if (!name.trim()) throw new Error('Add your name to finish.');
+    await repo.createFamily(name.trim(), password);
+    await cloud.link('merge');
+    signIn();
+    setStep('kid');
+  };
 
   const run = (fn: () => Promise<void>) => async (e: FormEvent) => {
     e.preventDefault();
@@ -50,34 +77,49 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   /** One parent account in the cloud; the same password unlocks the dashboard. */
   const createOnline = run(async () => {
     if (pw !== pw2) throw new Error('Passwords do not match');
-    const r = await cloud.signUp(email.trim(), pw);
+    let r: 'signed-in' | 'confirm-email';
+    try {
+      r = await cloud.signUp(email.trim(), pw);
+    } catch (err) {
+      // The account already exists (e.g. created earlier, then confirmed by email): just sign in.
+      if (!/already exists/i.test((err as Error).message)) throw err;
+      await cloud.signIn(email.trim(), pw);
+      r = 'signed-in';
+    }
     if (r === 'confirm-email') {
       setMode('signin');
-      setNote('Account created. Open the confirmation email we just sent, then sign in here.');
+      setNote('Account created! Open the confirmation email we just sent and tap the link — it brings you back here, signed in.');
       return;
     }
-    if (!repo.getFamily()) await repo.createFamily(name.trim() || 'Parent', pw);
-    await cloud.link('merge');
-    signIn();
-    setStep('kid');
+    await cloud.link(repo.getFamily() ? 'auto' : 'cloud');
+    if (repo.getFamily()) {
+      await repo.setParentPassword(pw);
+      signIn();
+      if (!repo.listStudents().length) setStep('kid');
+      return;
+    }
+    await finishFamily(pw);
   });
 
   const signInOnline = run(async () => {
     await cloud.signIn(email.trim(), pw);
     await cloud.link(repo.getFamily() ? 'auto' : 'cloud');
     if (!repo.getFamily()) {
-      // A new account without a family yet (e.g. confirmed by email just now): finish creating it.
-      if (!name.trim()) {
-        setMode('create');
-        throw new Error('Signed in. Now add your name to finish creating the family.');
-      }
-      await repo.createFamily(name.trim(), pw);
-      await cloud.link('merge');
+      // A new account without a family yet (e.g. confirmed by email just now): one last step.
+      setMode('finish');
+      setNote('Signed in! One last step: your name.');
+      return;
     }
     await repo.setParentPassword(pw);
     signIn();
     if (repo.listStudents().length) return;
     setStep('kid');
+  });
+
+  const finishOnline = run(async () => {
+    // Confirm the password (it also unlocks the dashboard on this device).
+    await cloud.signIn(email.trim() || status.email || '', pw);
+    await finishFamily(pw);
   });
 
   return (
@@ -90,7 +132,7 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
             {online ? 'One parent account for all your devices. Your family’s data is private to your family.' : 'A game-first learning world for your child. Everything stays private on this device.'}
           </p>
         </div>
-        <Card title={step === 'kid' ? 'Step 2 · Your child' : mode === 'signin' ? 'Sign in' : online ? 'Step 1 · Create your parent account' : 'Step 1 · Parent account'}>
+        <Card title={step === 'kid' ? 'Step 2 · Your child' : mode === 'finish' ? 'Finish setting up' : online ? 'Parent account' : 'Step 1 · Parent account'}>
           {step === 'kid' ? (
             <StudentForm
               submitLabel="Create hero profile"
@@ -116,46 +158,62 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
               </Button>
             </form>
           ) : (
-            <form className="space-y-4" onSubmit={mode === 'create' ? createOnline : signInOnline}>
-              {mode === 'create' && (
-                <Field label="Your name">
-                  <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trang" required />
-                </Field>
+            <div className="space-y-4">
+              {mode !== 'finish' && (
+                <div className="flex gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold dark:bg-slate-800" role="tablist">
+                  {(
+                    [
+                      ['signin', 'Sign in'],
+                      ['create', 'Create account'],
+                    ] as const
+                  ).map(([m, label]) => (
+                    <button
+                      key={m}
+                      type="button"
+                      role="tab"
+                      aria-selected={mode === m}
+                      onClick={() => (setMode(m), setError(null), setNote(null))}
+                      className={`flex-1 rounded-lg py-2 ${mode === m ? 'bg-white shadow-sm dark:bg-slate-900' : 'text-slate-500'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
-              <Field label="Email">
-                <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-              </Field>
-              <Field label="Password" hint={mode === 'create' ? 'At least 6 characters. Use it to sign in on any device and to unlock this dashboard.' : undefined}>
-                <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required autoComplete={mode === 'create' ? 'new-password' : 'current-password'} />
-              </Field>
-              {mode === 'create' && (
-                <Field label="Confirm password">
-                  <input className={inputClass} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={6} required autoComplete="new-password" />
+              <form className="space-y-4" onSubmit={mode === 'create' ? createOnline : mode === 'finish' ? finishOnline : signInOnline}>
+                {mode === 'finish' && (
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    You're signed in{status.email || email ? ` as ${status.email || email}` : ''}. Add your name to finish setting up your family.
+                  </p>
+                )}
+                {mode !== 'signin' && (
+                  <Field label="Your name">
+                    <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trang" required />
+                  </Field>
+                )}
+                {mode !== 'finish' && (
+                  <Field label="Email">
+                    <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                  </Field>
+                )}
+                <Field label="Password" hint={mode === 'create' ? 'At least 6 characters. Use it to sign in on any device and to unlock this dashboard.' : mode === 'finish' ? 'Your account password — it also unlocks this dashboard.' : undefined}>
+                  <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required autoComplete={mode === 'create' ? 'new-password' : 'current-password'} />
                 </Field>
-              )}
-              {note && <p className="text-sm font-semibold text-emerald-600">{note}</p>}
-              {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
-              {status.state === 'syncing' && <p className="text-sm text-slate-500">Downloading your family’s data…</p>}
-              <Button type="submit" className="w-full" disabled={busy}>
-                {mode === 'create' ? 'Create account' : 'Sign in'}
-              </Button>
-            </form>
+                {mode === 'create' && (
+                  <Field label="Confirm password">
+                    <input className={inputClass} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={6} required autoComplete="new-password" />
+                  </Field>
+                )}
+                {note && <p className="text-sm font-semibold text-emerald-600">{note}</p>}
+                {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
+                {status.state === 'syncing' && <p className="text-sm text-slate-500">Downloading your family’s data…</p>}
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {mode === 'create' ? 'Create account' : mode === 'finish' ? 'Finish' : 'Sign in'}
+                </Button>
+              </form>
+            </div>
           )}
         </Card>
-        {online && step === 'family' && (
-          <p className="mt-4 text-center text-sm text-slate-500">
-            {mode === 'create' ? 'Already have an account?' : 'New here?'}{' '}
-            <button
-              className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
-              onClick={() => {
-                setMode(mode === 'create' ? 'signin' : 'create');
-                setError(null);
-              }}
-            >
-              {mode === 'create' ? 'Sign in' : 'Create a parent account'}
-            </button>
-          </p>
-        )}
         {step === 'kid' && (
           <p className="mt-4 text-center text-sm text-slate-500">
             Next, your child opens the kid app and starts the Trial of Five Realms (placement test).{online ? ' On their own laptop they sign in with their email, or the family code from Settings.' : ''}
