@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Card, Field, ThemeToggle, inputClass, useRepo, useTheme } from '@atlas/ui';
+import { CloudCardBody } from '../components/Cloud';
 
 export function Settings() {
   const repo = useRepo();
@@ -43,12 +44,15 @@ export function Settings() {
           </Button>
         </form>
       </Card>
+      <Card title="☁️ Cloud sync (Supabase)" className="lg:col-span-2">
+        <CloudCardBody />
+      </Card>
       <Card title="Privacy & storage" className="lg:col-span-2">
         <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
-          <li>All data lives on this device in an encrypted SQLite database (AES-GCM, non-exportable device key). Nothing is sent to a server.</li>
-          <li>Uploaded materials are encrypted too and stay private to your family.</li>
-          <li>The app works offline once loaded. Progress is autosaved after every answer.</li>
-          <li>Cloud sync between devices (Supabase) is planned for a future release.</li>
+          <li>Data lives on each device in an encrypted SQLite database (AES-GCM, non-exportable device key).</li>
+          <li>Without cloud sync nothing is sent to a server. With it, progress is copied to your own Supabase project, where row-level security lets only your family account read it.</li>
+          <li>Uploaded files are encrypted and stay on the device where they were added.</li>
+          <li>The app works offline once loaded. Progress is autosaved after every answer and uploaded when back online.</li>
         </ul>
       </Card>
     </div>

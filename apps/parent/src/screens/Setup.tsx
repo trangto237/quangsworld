@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Card, Field, inputClass, useRepo } from '@atlas/ui';
 import { StudentForm } from '../components/StudentForm';
+import { CloudRestore } from '../components/Cloud';
 import { useParent } from '../store';
 
 /** First run: create the family account (parent password) and the first child profile. */
@@ -12,6 +13,7 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [restore, setRestore] = useState(false);
 
   return (
     <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4 dark:from-slate-950 dark:to-slate-900">
@@ -21,8 +23,10 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
           <h1 className="mt-2 font-display text-3xl font-bold">Welcome to Atlas</h1>
           <p className="mt-1 text-slate-500">A game-first learning world for your child. Everything stays private on this device.</p>
         </div>
-        <Card title={step === 'family' ? 'Step 1 · Parent account' : 'Step 2 · Your child'}>
-          {step === 'family' ? (
+        <Card title={restore ? 'Sign in to your family cloud' : step === 'family' ? 'Step 1 · Parent account' : 'Step 2 · Your child'}>
+          {restore ? (
+            <CloudRestore onCancel={() => setRestore(false)} />
+          ) : step === 'family' ? (
             <form
               className="space-y-4"
               onSubmit={async (e) => {
@@ -62,7 +66,15 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
             />
           )}
         </Card>
-        {step === 'kid' && <p className="mt-4 text-center text-sm text-slate-500">Next, your child opens the kid app and starts the Trial of Five Realms (placement test).</p>}
+        {!restore && step === 'family' && (
+          <p className="mt-4 text-center text-sm text-slate-500">
+            Already using Atlas on another device?{' '}
+            <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => setRestore(true)}>
+              Sign in to your family cloud
+            </button>
+          </p>
+        )}
+        {!restore && step === 'kid' && <p className="mt-4 text-center text-sm text-slate-500">Next, your child opens the kid app and starts the Trial of Five Realms (placement test).</p>}
       </div>
     </div>
   );

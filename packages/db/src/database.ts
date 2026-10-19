@@ -6,7 +6,11 @@ import { generateDeviceKey, open as unseal, seal, type Sealed } from './crypto';
 import type { BlobStore } from './store';
 
 export type Orm = SQLJsDatabase<typeof schema>;
-export type ChangeOrigin = 'local' | 'remote';
+/**
+ * Who changed the data: 'local' = this app; 'remote' = another tab or the family cloud;
+ * 'sync' = cloud-sync bookkeeping only (no visible data changed).
+ */
+export type ChangeOrigin = 'local' | 'remote' | 'sync';
 
 interface StoredDb extends Sealed {
   version: number;
@@ -96,7 +100,7 @@ export class AtlasDb {
   }
 
   /** Runs `fn` in a transaction, then autosaves (encrypted) and notifies other tabs. */
-  write<T>(fn: (orm: Orm) => T): Promise<T> {
+  write<T>(fn: (orm: Orm) => T, origin: ChangeOrigin = 'local'): Promise<T> {
     return withLock(async () => {
       const stored = await this.store.get<StoredDb>(DB_KEY);
       if (stored && stored.version !== this.version) await this.load(stored);
@@ -114,7 +118,7 @@ export class AtlasDb {
       await this.store.put(DB_KEY, { ...sealed, version } satisfies StoredDb);
       this.version = version;
       this.channel?.postMessage({ version });
-      this.emit('local');
+      this.emit(origin);
       return result;
     });
   }

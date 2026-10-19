@@ -10,6 +10,7 @@ import { Materials } from './screens/Materials';
 import { Profiles } from './screens/Profiles';
 import { Settings } from './screens/Settings';
 import { LiveDot } from './components/LiveDot';
+import { CloudBadge } from './components/Cloud';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -45,6 +46,7 @@ export function App() {
             <div className="text-xs text-slate-500">Hi, {family.parentName}</div>
           </div>
           <LiveDot />
+          <CloudBadge onClick={() => setTab('settings')} />
           <div className="ml-auto flex items-center gap-2">
             {students.length > 1 && (
               <select
