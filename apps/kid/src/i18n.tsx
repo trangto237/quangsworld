@@ -338,6 +338,9 @@ const VI: Record<string, string> = {
   'Letter sounds': 'Cách đọc chữ cái',
   'Sound twins': 'Cặp âm dễ nhầm',
   'Grammar & exam skills': 'Ngữ pháp & kỹ năng thi',
+  // Textbook import (worktree)
+  'My Textbook': 'Sách giáo khoa của em',
+  'Missions made from your school book — unit by unit.': 'Nhiệm vụ làm từ sách giáo khoa của em — từng unit một.',
 };
 
 const fill = (s: string, vars?: Record<string, string | number>) => (vars ? s.replace(/\{(\w+)\}/g, (_m, k) => String(vars[k] ?? `{${k}}`)) : s);

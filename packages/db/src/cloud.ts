@@ -221,6 +221,19 @@ export class CloudSync {
     this.set({ state: this.engine ? 'needs-link' : 'signed-out' });
   }
 
+  /**
+   * The signed-in parent's access token, for the app's own server functions (e.g. /api/generate).
+   * Null when signed out, or when this device joined with the family code (anonymous kid device).
+   */
+  async parentAccessToken(): Promise<string | null> {
+    if (!this.config()) return null;
+    await this.start();
+    if (!this.client) return null;
+    const { data } = await this.client.auth.getSession();
+    const s = data.session;
+    return s && !s.user.is_anonymous ? s.access_token : null;
+  }
+
   // ── Family code ──
   /** Parent: the current family code, if one was made ("ABCDE-FGHJK"). */
   async familyCode(): Promise<string | null> {

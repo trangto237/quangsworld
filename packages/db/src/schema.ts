@@ -105,7 +105,7 @@ export const unlocks = sqliteTable(
 export const materials = sqliteTable('materials', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  kind: text('kind', { enum: ['csv', 'pdf', 'docx', 'image'] }).notNull(),
+  kind: text('kind', { enum: ['csv', 'pdf', 'docx', 'image', 'text'] }).notNull(),
   size: integer('size').notNull(),
   status: text('status', { enum: ['processed', 'stored', 'failed'] }).notNull(),
   note: text('note').notNull().default(''),

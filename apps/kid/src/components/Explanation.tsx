@@ -13,7 +13,7 @@ export function Explanation({ question: q, picked }: { question: Question; picke
   const concept = getConcept(q.conceptId);
   const right = q.options[q.answer];
   const help = lang !== 'en';
-  const explanationVi = help ? translateExplanation(q.explanation) : null;
+  const explanationVi = help ? (q.explanationVi ?? translateExplanation(q.explanation)) : null;
   const lessonVi = help ? LESSONS_VI[q.conceptId] : undefined;
   const [coachOpen, setCoachOpen] = useState(false);
   const canCoach = q.conceptId.startsWith('en.');

@@ -63,6 +63,8 @@ export interface Question {
   options: string[];
   answer: number;
   explanation?: string;
+  /** Vietnamese explanation written with the question (family imports, AI-generated items). */
+  explanationVi?: string;
   /** Text read aloud (speech synthesis) for listening questions. */
   audio?: string;
   /** Reading passage for reading questions. */

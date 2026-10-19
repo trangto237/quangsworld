@@ -27,6 +27,10 @@ Either:
   designed to be shipped to browsers; row-level security protects the data).
 - **Or per device:** parent dashboard → **Settings → Cloud sync** → paste them → **Save**.
 
+The optional **Make questions with AI** feature (Materials → Add textbook or document) reuses the two Cloudflare
+variables to check that the caller is the signed-in parent; it also needs an `ANTHROPIC_API_KEY` secret — see
+"Making questions with AI" in the main README.
+
 ## 3. Connect your devices
 
 1. **Your phone (or computer):** open `/parent/`. Create the dashboard account and your child's profile, then go to
