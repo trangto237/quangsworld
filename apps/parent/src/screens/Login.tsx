@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Card, Field, inputClass, useRepo } from '@atlas/ui';
 import { useParent } from '../store';
+import { useCloud } from '../components/Cloud';
 
 export function Login({ name }: { name: string }) {
   const repo = useRepo();
@@ -8,6 +9,9 @@ export function Login({ name }: { name: string }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { cloud, status } = useCloud();
+  /** The parent's email when this device is signed in to the family's parent account. */
+  const parentEmail = status.role === 'parent' ? status.email : undefined;
   return (
     <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4 dark:from-slate-950 dark:to-slate-900">
       <div className="w-full max-w-sm">
@@ -21,13 +25,24 @@ export function Login({ name }: { name: string }) {
             onSubmit={async (e) => {
               e.preventDefault();
               setBusy(true);
-              const ok = await repo.verifyParent(pw);
+              let ok = await repo.verifyParent(pw);
+              // Password changed on another device: the cloud account knows the new one.
+              if (!ok && parentEmail) {
+                try {
+                  await cloud.signIn(parentEmail, pw);
+                  await repo.setParentPassword(pw);
+                  ok = true;
+                } catch {
+                  ok = false;
+                }
+              }
               setBusy(false);
               if (ok) signIn();
               else setError(true);
             }}
           >
-            <Field label="Parent password">
+            {parentEmail && <p className="text-sm text-slate-500">Signed in as {parentEmail}</p>}
+            <Field label={parentEmail ? 'Password' : 'Parent password'}>
               <input className={inputClass} type="password" autoFocus value={pw} onChange={(e) => (setPw(e.target.value), setError(false))} autoComplete="current-password" />
             </Field>
             {error && <p className="text-sm font-semibold text-rose-600">Incorrect password.</p>}

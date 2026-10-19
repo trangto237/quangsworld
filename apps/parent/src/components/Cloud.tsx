@@ -92,6 +92,7 @@ function ConfigForm({ onDone }: { onDone?: () => void }) {
 /** Email + password for the family cloud account. */
 function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
   const { cloud } = useCloud();
+  const repo = useRepo();
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [busy, setBusy] = useState(false);
@@ -109,6 +110,8 @@ function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
         }
       } else await cloud.signIn(email.trim(), pw);
       await cloud.link('auto');
+      // One login: the account's password also unlocks this dashboard from now on.
+      await repo.setParentPassword(pw);
       onSignedIn?.();
     } catch (err) {
       const m = (err as Error).message;
@@ -119,10 +122,10 @@ function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
   };
   return (
     <form className="space-y-3" onSubmit={(e) => run(e, 'in')}>
-      <Field label="Family email">
+      <Field label="Parent email">
         <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
       </Field>
-      <Field label="Cloud password" hint="At least 6 characters. This is the cloud account, separate from the dashboard password.">
+      <Field label="Password" hint="At least 6 characters. It becomes your dashboard password too — one login for everything.">
         <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required autoComplete="current-password" />
       </Field>
       {msg && <p className={`text-sm font-semibold ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>}
@@ -131,7 +134,7 @@ function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
           Sign in
         </Button>
         <Button type="button" variant="secondary" disabled={busy || !email || pw.length < 6} onClick={(e) => run(e, 'up')}>
-          Create family account
+          Create parent account
         </Button>
       </div>
     </form>
@@ -175,7 +178,7 @@ export function LinkChoice() {
 function FamilyCode() {
   const { cloud } = useCloud();
   const [code, setCode] = useState<string | null | undefined>(undefined);
-  const [devices, setDevices] = useState<{ id: string; label: string | null; joinedAt: string }[]>([]);
+  const [devices, setDevices] = useState<{ id: string; label: string | null; email: string | null; joinedAt: string }[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const load = async () => {
@@ -209,7 +212,9 @@ function FamilyCode() {
     <div className="space-y-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
       <div>
         <p className="font-semibold">Family code</p>
-        <p className="text-slate-500">Your child opens the app on their laptop (or any device), taps <b>Connect to my family</b> and types this code. No email or password needed.</p>
+        <p className="text-slate-500">
+          Your child uses this once to join the family: in the kid app, <b>New account</b> (their own email, for 12+) or <b>Code only</b> (no email). After that they just sign in.
+        </p>
       </div>
       {code === undefined && !err && <p className="text-slate-500">Loading…</p>}
       {code && (
@@ -228,17 +233,21 @@ function FamilyCode() {
       {err && <p className="text-rose-600">{err}</p>}
       {devices.length > 0 && (
         <div>
-          <p className="font-semibold">Connected devices</p>
+          <p className="font-semibold">Family logins</p>
+          <p className="text-xs text-slate-500">Your children’s own accounts and the devices that joined with the code. Only these and your account can see your family’s data.</p>
           <ul className="mt-1 divide-y divide-slate-200 dark:divide-slate-700">
             {devices.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 py-1.5">
                 <span>
-                  {d.label || 'Device'} <span className="text-slate-500">· since {new Date(d.joinedAt).toLocaleDateString()}</span>
+                  {d.email ? `👤 ${d.email}` : `📱 ${d.label || 'Device'} (family code)`}{' '}
+                  <span className="text-slate-500">
+                    {d.email && d.label ? `· ${d.label} ` : ''}· since {new Date(d.joinedAt).toLocaleDateString()}
+                  </span>
                 </span>
                 <button
                   className="text-sm font-semibold text-rose-600 hover:underline"
                   onClick={async () => {
-                    if (!confirm(`Disconnect "${d.label || 'this device'}"? It stops syncing.`)) return;
+                    if (!confirm(`Remove "${d.email || d.label || 'this device'}" from the family? It stops syncing and can't see your family's data any more.`)) return;
                     await cloud.removeDevice(d.id);
                     void load();
                   }}
@@ -339,7 +348,7 @@ export function CloudCardBody() {
           </Button>
         </div>
       )}
-      {status.state !== 'signed-out' && status.state !== 'needs-link' && !status.viaCode && <FamilyCode />}
+      {status.state !== 'signed-out' && status.state !== 'needs-link' && status.role === 'parent' && <FamilyCode />}
       <p className="text-xs text-slate-500">
         Your phone or computer: sign in here once. Your child's devices: they type the family code in the kid app — you don't need to touch them. Uploaded files (PDFs, images) stay on the device where they were added; flashcards imported from CSV do sync.
       </p>

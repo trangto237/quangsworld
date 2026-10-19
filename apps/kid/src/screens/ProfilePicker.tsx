@@ -57,7 +57,7 @@ export function ProfilePicker() {
               <T en="Connect to my family" />
             </p>
             <p className="mb-4 mt-1 text-white/80">
-              <T en="Type the family code and your hero appears here." />
+              <T en="Sign in with your own email, or use the family code from your parent." />
             </p>
             <JoinFamily onBusy={setJoining} />
             <a href="/parent/" className="mt-5 inline-block text-sm text-white/60 underline-offset-4 hover:underline">

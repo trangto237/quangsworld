@@ -88,6 +88,18 @@ export class Repo {
     await this.db.write((o) => o.update(t.family).set({ passwordHash: hash, salt }).where(eq(t.family.id, f.id)).run());
   }
 
+  /**
+   * Sets the dashboard password without the old one — used right after the parent proved who they are
+   * by signing in to the family's cloud account, so both are always the same password.
+   */
+  async setParentPassword(password: string) {
+    const f = this.getFamily();
+    if (!f) return;
+    if (await verifySecret(password, f.passwordHash, f.salt)) return;
+    const { hash, salt } = await hashSecret(password);
+    await this.db.write((o) => o.update(t.family).set({ passwordHash: hash, salt }).where(eq(t.family.id, f.id)).run());
+  }
+
   // ── Students ──────────────────────────────────────────────
   listStudents(): StudentProfile[] {
     return this.db.read((o) => o.select().from(t.students).orderBy(t.students.createdAt).all()).map(toStudent);

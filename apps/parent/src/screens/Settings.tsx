@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Card, Field, ThemeToggle, inputClass, useRepo, useTheme } from '@atlas/ui';
-import { CloudCardBody } from '../components/Cloud';
+import { CloudCardBody, useCloud } from '../components/Cloud';
 
 export function Settings() {
   const repo = useRepo();
@@ -8,6 +8,8 @@ export function Settings() {
   const [oldPw, setOldPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const { cloud, status } = useCloud();
+  const parentOnline = status.role === 'parent' && !!status.email;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -17,14 +19,24 @@ export function Settings() {
           <ThemeToggle mode={mode} onCycle={cycle} className="ring-1 ring-slate-200 dark:ring-slate-700" />
         </div>
       </Card>
-      <Card title="Parent password">
+      <Card title={parentOnline ? 'Parent account' : 'Parent password'}>
+        {parentOnline && (
+          <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
+            Signed in as <b>{status.email}</b>. This one password signs you in on every device and unlocks this dashboard.
+          </p>
+        )}
         <form
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
             try {
+              if (!(await repo.verifyParent(oldPw))) throw new Error('Current password is incorrect');
+              if (parentOnline) {
+                if (newPw.length < 6) throw new Error('Use at least 6 characters.');
+                await cloud.changePassword(newPw);
+              }
               await repo.changeParentPassword(oldPw, newPw);
-              setMsg({ ok: true, text: 'Password changed.' });
+              setMsg({ ok: true, text: parentOnline ? 'Password changed on all your devices.' : 'Password changed.' });
               setOldPw('');
               setNewPw('');
             } catch (err) {

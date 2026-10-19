@@ -28,6 +28,9 @@ create table if not exists public.atlas_join_attempts (
   user_id uuid        not null,
   at      timestamptz not null default now()
 );
+-- Members who signed in with their own email (e.g. a child aged 12+) show it in the parent's list.
+alter table public.atlas_members add column if not exists email text;
+
 create index if not exists atlas_join_attempts_user on public.atlas_join_attempts (user_id, at);
 
 -- The family the signed-in user belongs to: their own (parent) or the one they joined.
@@ -158,8 +161,8 @@ begin
   if fam = me or exists (select 1 from public.atlas_family_codes where family_id = me) then
     raise exception 'This device is signed in as a parent account already.';
   end if;
-  insert into public.atlas_members (user_id, family_id, label) values (me, fam, left(p_label, 80))
-    on conflict (user_id) do update set family_id = excluded.family_id, label = excluded.label, created_at = now();
+  insert into public.atlas_members (user_id, family_id, label, email) values (me, fam, left(p_label, 80), nullif(auth.jwt() ->> 'email', ''))
+    on conflict (user_id) do update set family_id = excluded.family_id, label = excluded.label, email = excluded.email, created_at = now();
   return fam;
 end;
 $$;

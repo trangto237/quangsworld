@@ -31,6 +31,8 @@ export interface CloudStatus {
   email?: string;
   /** This device joined with a family code (no email account of its own). */
   viaCode?: boolean;
+  /** 'parent': the family's own account. 'member': a child's email account or a code-joined device. */
+  role?: 'parent' | 'member';
   lastSyncedAt: number | null;
   pending: number;
   error?: string;
@@ -147,7 +149,7 @@ export class CloudSync {
     if (seq !== this.attachSeq || !this.client) return; // a newer sign-in won
     this.familyId = familyId;
     this.engine = new SyncEngine(this.repo.db, new SupabaseRemote(this.client, familyId));
-    this.set({ email: user.email || undefined, viaCode: !!user.is_anonymous, error: undefined });
+    this.set({ email: user.email || undefined, viaCode: !!user.is_anonymous, role: familyId === user.id ? 'parent' : 'member', error: undefined });
     this.refreshCounts();
     if (this.engine.isLinked()) this.beginAuto();
     else this.set({ state: 'needs-link' });
@@ -160,7 +162,7 @@ export class CloudSync {
     this.user = null;
     this.familyId = null;
     this.attachSeq++;
-    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, viaCode: undefined, pending: 0 });
+    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, viaCode: undefined, role: undefined, pending: 0 });
   }
 
   private async ensureClient(): Promise<SupabaseClient> {
@@ -231,7 +233,70 @@ export class CloudSync {
     if (!this.client) return null;
     const { data } = await this.client.auth.getSession();
     const s = data.session;
-    return s && !s.user.is_anonymous ? s.access_token : null;
+    return s && !s.user.is_anonymous && this.status.role === 'parent' ? s.access_token : null;
+  }
+
+  /** True when the signed-in account's own family already has data in the cloud (a real parent account). */
+  private async ownsFamilyData(): Promise<boolean> {
+    if (!this.client) return false;
+    const { count, error } = await this.client.from('atlas_rows').select('pk', { count: 'exact', head: true }).eq('tbl', 'family').eq('deleted', false);
+    return !error && (count ?? 0) > 0;
+  }
+
+  /** Signed-in account: change its password (the parent's is also the dashboard password). */
+  async changePassword(newPassword: string) {
+    const client = await this.ensureClient();
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(friendly(error.message));
+  }
+
+  /**
+   * A child's own email account (12+): create it and join the family with the family code.
+   * If the project asks new accounts to confirm their email, the code is kept on this device and
+   * used right after the first sign-in.
+   */
+  async signUpMember(email: string, password: string, code: string, label: string): Promise<'joined' | 'confirm-email'> {
+    const client = await this.ensureClient();
+    const { data, error } = await client.auth.signUp({ email, password });
+    if (error) throw new Error(friendly(error.message));
+    if (!data.session?.user) {
+      localStorage.setItem(PENDING_CODE, JSON.stringify({ email: email.toLowerCase(), code, label }));
+      return 'confirm-email';
+    }
+    await this.joinFamily(code, label);
+    return 'joined';
+  }
+
+  /**
+   * Sign in on a child's device with any family login: the child's own email (member) or the parent's.
+   * Applies a family code saved at sign-up, then downloads the family's data.
+   */
+  async signInMember(email: string, password: string, label: string) {
+    await this.signIn(email, password);
+    const pending = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(PENDING_CODE) ?? 'null') as { email: string; code: string; label: string } | null;
+      } catch {
+        return null;
+      }
+    })();
+    if (pending && pending.email === email.toLowerCase() && this.status.role !== 'member') {
+      await this.joinFamily(pending.code, pending.label || label);
+      localStorage.removeItem(PENDING_CODE);
+      return;
+    }
+    if (this.status.role === 'parent') {
+      // The parent's own account on this device (it already has the family's data in the cloud).
+      if (!(await this.ownsFamilyData())) {
+        await this.signOut();
+        throw new Error('This account is not part of a family yet. Create it with the family code (“New account”).');
+      }
+      if (!this.engine?.isLinked()) await this.link('cloud');
+      return;
+    }
+    if (this.status.role !== 'member') throw new Error('This account is not part of a family yet. Create it with the family code (“New account”).');
+    const played = Number(this.repo.db.raw.exec('SELECT COUNT(*) FROM attempts')[0]?.values[0][0] ?? 0) > 0;
+    if (!this.engine?.isLinked()) await this.link(played ? 'merge' : 'cloud');
   }
 
   // ── Family code ──
@@ -251,12 +316,14 @@ export class CloudSync {
     return formatCode(String(data));
   }
 
-  /** Parent: devices that joined with the family code. */
-  async devices(): Promise<{ id: string; label: string | null; joinedAt: string }[]> {
+  /** Parent: the family's other logins — children's email accounts and devices joined with the code. */
+  async devices(): Promise<{ id: string; label: string | null; email: string | null; joinedAt: string }[]> {
     const client = await this.ensureClient();
-    const { data, error } = await client.from('atlas_members').select('user_id, label, created_at').eq('family_id', this.familyId ?? '').order('created_at');
-    if (error) throw new Error(friendly(error.message));
-    return (data ?? []).map((d) => ({ id: d.user_id, label: d.label, joinedAt: d.created_at }));
+    let res = await client.from('atlas_members').select('user_id, label, email, created_at').eq('family_id', this.familyId ?? '').order('created_at');
+    // Projects set up before member emails existed have no email column.
+    if (res.error && /email/.test(res.error.message)) res = (await client.from('atlas_members').select('user_id, label, created_at').eq('family_id', this.familyId ?? '').order('created_at')) as typeof res;
+    if (res.error) throw new Error(friendly(res.error.message));
+    return (res.data ?? []).map((d) => ({ id: d.user_id, label: d.label, email: (d as { email?: string | null }).email ?? null, joinedAt: d.created_at }));
   }
 
   /** Parent: disconnect a device; it keeps what it has but can't sync any more. */
@@ -276,7 +343,8 @@ export class CloudSync {
     this.set({ state: 'syncing', error: undefined });
     try {
       let { data: sess } = await client.auth.getSession();
-      if (sess.session && !sess.session.user.is_anonymous) throw new Error('This device is signed in to the parent account already — it syncs without a code.');
+      if (sess.session && !sess.session.user.is_anonymous && this.status.role === 'parent' && this.status.state !== 'needs-link')
+        throw new Error('This device is signed in to the parent account already — it syncs without a code.');
       if (!sess.session) {
         const { error } = await client.auth.signInAnonymously();
         if (error) throw new Error(/anonymous/i.test(error.message) ? 'Family codes need "Allow anonymous sign-ins" turned on in Supabase (Authentication → Sign In / Providers).' : error.message);
@@ -346,6 +414,7 @@ export class CloudSync {
   }
 }
 
+const PENDING_CODE = 'atlas-pending-family-code';
 const formatCode = (c: string) => (c.length === 10 ? `${c.slice(0, 5)}-${c.slice(5)}` : c);
 const friendly = (m: string) =>
   /atlas_(family_codes|members|join_family|new_family_code)|schema cache|does not exist/i.test(m)
