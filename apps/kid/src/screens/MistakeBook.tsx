@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import type { Mistake, StudentProfile } from '@atlas/db';
 import { getConcept, present, translatePrompt, worldOfConcept } from '@atlas/knowledge';
 import { T, TB, tr, useLang } from '../i18n';
-import { Button, Modal, Progress, useQuery, useRepo } from '@atlas/ui';
+import { Button, Marked, Modal, Progress, useQuery, useRepo } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
 import { QuestionCard } from '../components/QuestionCard';
 import { Explanation } from '../components/Explanation';
@@ -85,7 +85,21 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
                     {ms.map((m) => (
                       <li key={m.id}>
                         <button onClick={() => setViewing(m)} className="flex w-full items-center gap-3 rounded-xl bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10">
-                          <span className="flex-1 truncate">{m.question.audio ? '🔊 ' : ''}{m.question.prompt}</span>
+                          <span className="flex-1 truncate">
+                            {m.question.conceptId.startsWith('en.pron') ? (
+                              m.question.options.map((o, i) => (
+                                <span key={o}>
+                                  {i > 0 && ' · '}
+                                  <Marked text={o} />
+                                </span>
+                              ))
+                            ) : (
+                              <>
+                                {m.question.audio ? '🔊 ' : ''}
+                                {m.question.prompt}
+                              </>
+                            )}
+                          </span>
                           {m.times > 1 && <span className="shrink-0 rounded bg-rose-500/30 px-1.5 text-xs">×{m.times}</span>}
                           {!m.reviewedAt && (
                             <span className="shrink-0 text-xs text-amber-300">

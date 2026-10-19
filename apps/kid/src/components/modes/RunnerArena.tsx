@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RunnerSim, runnerConfigFor } from '@atlas/game';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
-import { cx } from '@atlas/ui';
+import { Marked, cx } from '@atlas/ui';
 import { speak, stopSpeaking } from '../../lib/speech';
 import { T, useLang } from '../../i18n';
 import { GlossText } from '../GlossText';
@@ -176,7 +176,7 @@ export function RunnerArena(p: ModeProps) {
                     <span className="grid size-6 shrink-0 place-items-center rounded text-xs font-bold text-white" style={{ background: LANE_COLORS[i] }}>
                       {i + 1}
                     </span>
-                    {o}
+                    <Marked text={o} />
                   </li>
                 ))}
               </ol>
@@ -231,7 +231,7 @@ export function RunnerArena(p: ModeProps) {
                 }}
               >
                 <span className={cx('block', progress < 0.3 ? 'text-[1.4em]' : 'text-[0.7em] opacity-80')}>{i + 1}</span>
-                {progress >= 0.3 && <span className="line-clamp-2">{longOptions ? o.slice(0, 14) + (o.length > 14 ? '…' : '') : o}</span>}
+                {progress >= 0.3 && <span className="line-clamp-2">{longOptions ? o.slice(0, 14) + (o.length > 14 ? '…' : '') : <Marked text={o} />}</span>}
               </button>
             );
           })}

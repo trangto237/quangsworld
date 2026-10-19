@@ -4,6 +4,8 @@
  * maths and logic prompts are translated in full, so English never blocks those subjects.
  */
 
+const ORD_VI: Record<string, string> = { '1st': 'nhất', '2nd': 'hai', '3rd': 'ba', '4th': 'tư' };
+
 const DIR: Record<string, string> = { North: 'Bắc', South: 'Nam', East: 'Đông', West: 'Tây' };
 const TURN: Record<string, string> = { 'turn right': 'rẽ phải', 'turn left': 'rẽ trái', 'turn around': 'quay ngược lại' };
 
@@ -19,6 +21,9 @@ const RULES: Rule[] = [
   [/^Choose the OPPOSITE of "(.+)"\.$/, 'Chọn từ TRÁI NGHĨA với "$1".'],
   [/^Complete with the right form of "(.+)": (.+)$/, 'Điền dạng đúng của từ "$1" vào chỗ trống: $2'],
   [/^Complete: (.+)$/, 'Điền từ đúng vào chỗ trống: $1'],
+  [/^Choose the word whose underlined part is pronounced differently from the others\.$/, 'Chọn từ có phần gạch chân được PHÁT ÂM KHÁC với các từ còn lại.'],
+  [/^Choose the word whose main stress is placed differently from the others\.$/, 'Chọn từ có TRỌNG ÂM CHÍNH rơi vào vị trí khác với các từ còn lại.'],
+  [/^Listen\. Which word do you hear\?$/, 'Nghe và chọn từ em nghe được.'],
   [/^What number did you hear\?$/, 'Bạn nghe thấy số nào?'],
   [/^What time did you hear\?$/, 'Bạn nghe thấy mấy giờ?'],
   [/^How much is the ticket\?$/, 'Vé giá bao nhiêu?'],
@@ -124,6 +129,10 @@ const EXPLAIN: Rule[] = [
   [/^Sort first, then take the middle value\.$/, 'Sắp xếp các số trước, rồi lấy số ở giữa.'],
   [/^"All A are B" does not mean "all B are A"\.$/, '"Mọi A là B" không có nghĩa là "mọi B là A".'],
   [/^Order: (.+)$/, 'Thứ tự: $1'],
+  [/^(.+?) has stress on the (\w+) syllable; (.+) on the (\w+)\.$/, (_m, odd, a, rest, b) => `${odd} có trọng âm ở âm tiết thứ ${ORD_VI[a] ?? a}; ${rest} ở âm tiết thứ ${ORD_VI[b] ?? b}. (Chữ IN HOA là âm tiết được nhấn.)`],
+  [/^(-ed|-s\/-es): (.+) → (\S+); (\S+) → (\S+)\.$/, '$1: $2 đọc là $3; $4 đọc là $5.'],
+  [/^"(\w+)": (.+) → (.+); (\S+) → (.+)\.$/, (_m, l, same, a, odd, b) => `"${l}": ${same} đọc là ${a.replace('silent (not pronounced)', 'âm câm (không đọc)')}; ${odd} đọc là ${b.replace('silent (not pronounced)', 'âm câm (không đọc)')}.`],
+  [/^You heard "(\w+)", not "(\w+)": (.+)\.$/, 'Em đã nghe "$1", không phải "$2": $3.'],
 ];
 
 export function translateExplanation(text: string | undefined): string | null {
@@ -172,6 +181,10 @@ export const LESSONS_VI: Record<string, string> = {
   'math.stats.probability': 'Xác suất = số kết quả thuận lợi ÷ tổng số kết quả. Hai biến cố độc lập: nhân.',
   'math.combinatorics.counting': 'Lựa chọn thứ nhất có m cách, thứ hai có n cách → tổng cộng m × n cách.',
   'math.reasoning.word-problems': 'Gọi ẩn (đặt x = …), lập phương trình, giải, rồi kiểm tra đáp án có hợp lý không.',
+  'en.pron.stress': 'Danh từ và tính từ 2 âm tiết thường nhấn âm thứ nhất (HAP-py, TA-ble); động từ 2 âm tiết thường nhấn âm thứ hai (be-GIN, de-CIDE). Từ tận cùng -tion, -sion, -ic: nhấn âm ngay trước đuôi (in-for-MA-tion). Đuôi -ee, -eer, -oo nhận trọng âm (vol-un-TEER). Đuôi -ity, -logy, -graphy: nhấn âm thứ 3 từ cuối lên (a-BIL-i-ty).',
+  'en.pron.endings': 'Đuôi -ed: đọc /ɪd/ sau t, d (want-ed); đọc /t/ sau âm vô thanh p, k, f, s, sh, ch, x (watch-ed); còn lại đọc /d/ (play-ed). Đuôi -s/-es: đọc /ɪz/ sau s, z, sh, ch, ge, x (watch-es); đọc /s/ sau p, t, k, f, th (book-s); còn lại đọc /z/ (dog-s).',
+  'en.pron.sounds': 'Chữ viết và âm đọc trong tiếng Anh không phải lúc nào cũng khớp. Nhớ các mẫu thường gặp: ch = /tʃ/ (church) nhưng /k/ trong từ khoa học (chemistry, school); ea = /iː/ (meat) nhưng /e/ trong bread, head, heavy; oo = /uː/ (food) nhưng /ʊ/ trong book, look, good; th = /θ/ (think) hoặc /ð/ (this). Hãy đọc to các từ — tai em sẽ giúp em.',
+  'en.pron.pairs': 'Các cặp như ship/sheep chỉ khác nhau một âm. /iː/ dài, miệng cười; /ɪ/ ngắn và thả lỏng. Phụ âm cuối rất quan trọng: bike ≠ bite ≠ bye. /θ/ (think): đặt lưỡi giữa hai hàm răng.',
   'logic.patterns': 'Xem hiệu giữa các số. Nếu hiệu không đều, xét tỉ số hoặc hiệu của các hiệu.',
   'logic.deduction': '"Mọi A là B" không có nghĩa là "mọi B là A". Chỉ kết luận điều chắc chắn đúng.',
   'logic.spatial': 'Xoay từng bước một. Rẽ phải 90° bốn lần sẽ quay về hướng ban đầu.',

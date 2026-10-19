@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { translatePrompt, type PresentedQuestion } from '@atlas/knowledge';
-import { Button, cx } from '@atlas/ui';
+import { Button, Marked, cx } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
 import { GlossText, hasGloss } from './GlossText';
 import { speak, stopSpeaking } from '../lib/speech';
@@ -147,7 +147,9 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
               )}
             >
               <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-black/5 text-xs font-bold dark:bg-white/10">{i + 1}</span>
-              <span>{opt}</span>
+              <span>
+                <Marked text={opt} />
+              </span>
             </button>
           );
         })}

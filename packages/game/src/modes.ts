@@ -20,7 +20,7 @@ export function modeFor(conceptIds: string[], kind: 'learn' | 'review' | 'boss' 
   const votes: Record<GameMode, number> = { defense: 0, runner: 0, knight: 0, duel: 0 };
   for (const id of conceptIds) {
     if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.')) votes.duel++;
-    else if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers')) votes.runner++;
+    else if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers') || id.startsWith('en.pron')) votes.runner++;
     else if (id.startsWith('math.') || id.startsWith('logic.')) votes.knight++;
     else votes.defense++;
   }

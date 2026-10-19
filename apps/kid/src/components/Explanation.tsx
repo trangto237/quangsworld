@@ -1,5 +1,6 @@
 import type { Question } from '@atlas/shared';
-import { LESSONS_VI, getConcept, translateExplanation } from '@atlas/knowledge';
+import { LESSONS_VI, getConcept, stressOf, translateExplanation, unmark } from '@atlas/knowledge';
+import { Marked } from '@atlas/ui';
 import { speak } from '../lib/speech';
 import { T, useLang } from '../i18n';
 import { GlossText } from './GlossText';
@@ -19,14 +20,16 @@ export function Explanation({ question: q, picked }: { question: Question; picke
           <span className="font-bold text-rose-600 dark:text-rose-400">
             <T en="✗ You chose:" />
           </span>{' '}
-          {picked}
+          <Marked text={picked} />
         </p>
       )}
       <p>
         <span className="font-bold text-emerald-700 dark:text-emerald-400">
           <T en="✓ Answer:" />
         </span>{' '}
-        <b>{right}</b>
+        <b>
+          <Marked text={right} />
+        </b>
       </p>
       {q.audio && (
         <p className="text-slate-600 dark:text-slate-300">
@@ -38,6 +41,22 @@ export function Explanation({ question: q, picked }: { question: Question; picke
             <T en="play slowly" />
           </button>
         </p>
+      )}
+      {q.conceptId.startsWith('en.pron') && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-bold">
+            <T en="🔊 Hear the words:" />
+          </span>
+          {q.options.map((o) => (
+            <button
+              key={o}
+              onClick={() => speak(unmark(o), 0.8)}
+              className={`rounded-lg px-2 py-1 text-sm ring-1 ${o === right ? 'bg-emerald-50 ring-emerald-300 dark:bg-emerald-950' : 'ring-slate-300 dark:ring-slate-600'}`}
+            >
+              🔊 {stressOf(o) ?? <Marked text={o} />}
+            </button>
+          ))}
+        </div>
       )}
       {q.explanation && (
         <p className="text-slate-700 dark:text-slate-200">

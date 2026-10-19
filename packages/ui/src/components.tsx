@@ -108,3 +108,21 @@ export function Splash({ label = 'Loading…' }: { label?: string }) {
 }
 
 export const AVATARS = ['🦊', '🐼', '🐯', '🦉', '🐲', '🦄', '🐺', '🐧', '🦁', '🐸', '🤖', '🧙'];
+
+/** Renders "sch[oo]l" as school with "oo" underlined (pronunciation questions mark the tested letters this way). */
+export function Marked({ text }: { text: string }) {
+  if (!text.includes('[')) return <>{text}</>;
+  return (
+    <>
+      {text.split(/(\[[^\]]+\])/).map((part, i) =>
+        part.startsWith('[') ? (
+          <u key={i} className="decoration-[3px] underline-offset-4">
+            {part.slice(1, -1)}
+          </u>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}

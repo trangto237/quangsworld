@@ -32,6 +32,7 @@ export interface World {
 export const WORLDS: World[] = [
   { id: 'word-forest', name: 'Word Forest', emoji: '🌲', color: '#16a34a', subject: 'english', domains: ['Vocabulary'], blurb: 'Hunt rare words among the ancient trees.' },
   { id: 'grammar-forge', name: 'Grammar Forge', emoji: '⚒️', color: '#ea580c', subject: 'english', domains: ['Grammar'], blurb: 'Hammer sentences into shape.' },
+  { id: 'sound-temple', name: 'Sound Temple', emoji: '🔔', color: '#be185d', subject: 'english', domains: ['Pronunciation'], blurb: 'Ring the bells — stress, sounds and endings.' },
   { id: 'echo-caves', name: 'Echo Caves', emoji: '🦇', color: '#7c3aed', subject: 'english', domains: ['Listening'], blurb: 'Listen closely — the caves whisper answers.' },
   { id: 'reading-ruins', name: 'Reading Ruins', emoji: '🏛️', color: '#0891b2', subject: 'english', domains: ['Reading'], blurb: 'Decode the tablets of a lost civilisation.' },
   { id: 'number-citadel', name: 'Number Citadel', emoji: '🏰', color: '#059669', subject: 'math', domains: ['Number', 'Statistics', 'Combinatorics'], blurb: 'Defend the walls with the power of numbers.' },

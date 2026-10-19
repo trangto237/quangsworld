@@ -2,7 +2,7 @@ import type { StudentProfile } from '@atlas/db';
 import { computeInsights, dailyMinutes, levelFromXp, planDay } from '@atlas/engine';
 import { getConcept } from '@atlas/knowledge';
 import { DAY_MS } from '@atlas/shared';
-import { Button, Card, Stat, useQuery } from '@atlas/ui';
+import { Button, Card, Marked, Stat, useQuery } from '@atlas/ui';
 import { MasteryHeatmap, SubjectBars, WeeklyBars } from '../components/charts';
 import { useParent } from '../store';
 
@@ -169,10 +169,24 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                   <tr key={m.id} className="border-t border-slate-100 align-top dark:border-slate-800">
                     <td className="py-2 pr-3">
                       <div>{m.question.audio ? `🔊 “${m.question.audio}” — ` : ''}{m.question.prompt}</div>
+                      {m.conceptId.startsWith('en.pron') && (
+                        <div className="text-xs text-slate-600 dark:text-slate-300">
+                          {m.question.options.map((o, i) => (
+                            <span key={o}>
+                              {i > 0 && ' · '}
+                              <Marked text={o} />
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="text-xs text-slate-500">{getConcept(m.conceptId)?.name}</div>
                     </td>
-                    <td className="py-2 pr-3 text-rose-700 dark:text-rose-400">{m.picked}</td>
-                    <td className="py-2 pr-3 font-semibold text-emerald-700 dark:text-emerald-400">{m.question.options[m.question.answer]}</td>
+                    <td className="py-2 pr-3 text-rose-700 dark:text-rose-400">
+                      <Marked text={m.picked} />
+                    </td>
+                    <td className="py-2 pr-3 font-semibold text-emerald-700 dark:text-emerald-400">
+                      <Marked text={m.question.options[m.question.answer]} />
+                    </td>
                     <td className="py-2 text-right tabular-nums">×{m.times}</td>
                   </tr>
                 ))}

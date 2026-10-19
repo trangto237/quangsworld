@@ -245,6 +245,10 @@ const VI: Record<string, string> = {
   '♚ Checkmate!': '♚ Chiếu hết!',
   '♚ Checkmate! A new Glitch army appears…': '♚ Chiếu hết! Một đội quân Glitch mới xuất hiện…',
   'A Glitch strikes your knight!': 'Glitch tấn công quân mã của em!',
+  'Sound Temple': 'Đền Âm Thanh',
+  'Ring the bells — stress, sounds and endings.': 'Rung chuông — trọng âm, âm đọc và đuôi từ.',
+  Pronunciation: 'Ngữ âm',
+  '🔊 Hear the words:': '🔊 Nghe các từ:',
   // Top bar
   Streak: 'Chuỗi ngày học',
   Coins: 'Xu',
