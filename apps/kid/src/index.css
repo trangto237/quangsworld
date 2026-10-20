@@ -18,7 +18,10 @@ html { background: var(--paper-2); }
   --ink-soft: #85623f;
   --grass: #a9d36e;
   --grass-2: #9ccb62;
-  --plot: #b9dc84;
+  --plot: #f1e1b8;
+  --sand: #f3dca0;
+  --sea: #7cc9e6;
+  --sea-2: #9ad7ee;
 }
 .dark {
   --paper: #34283f;
@@ -29,7 +32,10 @@ html { background: var(--paper-2); }
   --ink-soft: #c9b293;
   --grass: #3e5b3a;
   --grass-2: #375233;
-  --plot: #4f7246;
+  --plot: #5c4f3e;
+  --sand: #6b5a3f;
+  --sea: #17324d;
+  --sea-2: #1f4263;
 }
 @theme inline {
   --color-paper: var(--paper);
@@ -39,6 +45,15 @@ html { background: var(--paper-2); }
   --color-ink-text: var(--ink-text);
   --color-ink-soft: var(--ink-soft);
   --color-grass: var(--grass);
+}
+
+/* Sea around the town island: soft wave marks. */
+.town-sea {
+  background-color: var(--sea);
+  background-image:
+    radial-gradient(ellipse 14px 4px at 20% 30%, var(--sea-2) 60%, transparent 62%),
+    radial-gradient(ellipse 10px 3px at 70% 75%, var(--sea-2) 60%, transparent 62%);
+  background-size: 90px 60px;
 }
 
 /* A soft diamond pattern, like fields seen from above. */

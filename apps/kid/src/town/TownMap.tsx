@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Bubble, Emoji, Flag, Ground, INK, NameTag, P, Tree, type Pt } from './iso';
 import { Car, KINDS, Lake, Pitch, RiceField, house } from './buildings';
 
@@ -59,12 +59,14 @@ export interface SpotState {
   quest?: boolean;
   /** Hidden (e.g. My Textbook before anything is imported): an ordinary house stands there. */
   hidden?: boolean;
+  /** One line about the place, for its card. */
+  blurb?: string;
 }
 
 const N = 20;
 const MARGIN = 2;
 const ROADS = [6, 13];
-const VIEW = { x: -745, y: -200, w: 1490, h: 930 };
+const VIEW = { x: -790, y: -230, w: 1580, h: 1000 };
 
 /** Screen point (in map pixels) of a spot's centre, for centring the view. */
 export const spotCenter = (s: Spot): Pt => {
@@ -100,7 +102,9 @@ function GroundAndRoads() {
   const crossings = ROADS.flatMap((rx) => ROADS.map((ry) => <Ground key={`c${rx}${ry}`} x={rx} y={ry} w={1} d={1} fill="#9aa1a8" />));
   return (
     <g>
-      <Ground x={-MARGIN - 0.3} y={-MARGIN - 0.3} w={N + 2 * MARGIN + 0.6} d={N + 2 * MARGIN + 0.6} fill="var(--grass-2)" stroke={INK} sw={2.5} />
+      {/* Sandy beach, then the grass: the town is an island in the sea. */}
+      <Ground x={-MARGIN - 1.1} y={-MARGIN - 1.1} w={N + 2 * MARGIN + 2.2} d={N + 2 * MARGIN + 2.2} fill="var(--sand)" stroke={INK} sw={2.5} />
+      <Ground x={-MARGIN - 0.3} y={-MARGIN - 0.3} w={N + 2 * MARGIN + 0.6} d={N + 2 * MARGIN + 0.6} fill="var(--grass-2)" stroke={INK} sw={1.6} />
       {tiles}
       {roads}
       {dashes}
@@ -171,9 +175,16 @@ function Cars() {
   );
 }
 
-/** Each lot is a slightly lighter plot of grass with a low outline. */
-function Plot({ s }: { s: Spot }) {
-  return <Ground x={s.x + 0.15} y={s.y + 0.15} w={s.lot - 0.3} d={s.lot - 0.3} fill="var(--plot)" stroke={INK} sw={1} />;
+/** Each lot is a paved plot; the highlighted one glows gold. */
+function Plot({ s, active }: { s: Spot; active: boolean }) {
+  return active ? (
+    <g>
+      <Ground x={s.x - 0.1} y={s.y - 0.1} w={s.lot + 0.2} d={s.lot + 0.2} fill="#ffc23d" stroke="none" />
+      <Ground x={s.x + 0.15} y={s.y + 0.15} w={s.lot - 0.3} d={s.lot - 0.3} fill="#fff1c4" stroke="#d48a00" sw={3} />
+    </g>
+  ) : (
+    <Ground x={s.x + 0.15} y={s.y + 0.15} w={s.lot - 0.3} d={s.lot - 0.3} fill="var(--plot)" stroke={INK} sw={1.2} />
+  );
 }
 
 function Flowers({ s }: { s: Spot }) {
@@ -207,12 +218,22 @@ function drawingFor(s: Spot, st: SpotState) {
 }
 
 /** The building itself with its growth extras (flowers, flag, sparkle, or scaffolding). */
-function Body({ s, st, onOpen }: { s: Spot; st: SpotState; onOpen: () => void }) {
+interface Pointing {
+  onTap: (e: MouseEvent) => void;
+  onHover: (on: boolean) => void;
+}
+
+function Body({ s, st, active, tap }: { s: Spot; st: SpotState; active: boolean; tap: Pointing }) {
   const d = drawingFor(s, st);
   const top = P(...d.top);
   const faded = st.level === 0 && !st.hidden && !SERVICE.includes(s.kind);
   return (
-    <g onClick={onOpen} style={{ cursor: 'pointer' }}>
+    <g
+      onClick={tap.onTap}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && tap.onHover(true)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && tap.onHover(false)}
+      style={{ cursor: 'pointer', transform: active ? 'translateY(-5px)' : undefined, transition: 'transform 0.15s' }}
+    >
       {/* Invisible hit area over the whole lot. */}
       <Ground x={s.x} y={s.y} w={s.lot} d={s.lot} fill="transparent" />
       <g filter={faded ? 'url(#town-faded)' : undefined}>{d.el}</g>
@@ -233,7 +254,7 @@ function Body({ s, st, onOpen }: { s: Spot; st: SpotState; onOpen: () => void })
 }
 
 /** Name tag, bubbles and the hero: drawn last so nothing covers them. Also a keyboard target. */
-function Overlay({ s, st, onOpen, hero }: { s: Spot; st: SpotState; onOpen: () => void; hero?: string }) {
+function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: string; active: boolean; dim: boolean }) {
   if (st.hidden) return null;
   const d = drawingFor(s, st);
   const top = P(...d.top);
@@ -245,9 +266,13 @@ function Overlay({ s, st, onOpen, hero }: { s: Spot; st: SpotState; onOpen: () =
       role="button"
       tabIndex={0}
       aria-label={st.title}
-      onClick={onOpen}
+      onClick={tap.onTap}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && tap.onHover(true)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && tap.onHover(false)}
+      onFocus={() => tap.onHover(true)}
+      onBlur={() => tap.onHover(false)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
-      style={{ cursor: 'pointer', outline: 'none' }}
+      style={{ cursor: 'pointer', outline: 'none', opacity: dim ? 0.45 : 1, transition: 'opacity 0.15s' }}
     >
       <Tags top={[top[0], top[1] - lift]} st={st} />
       {hero && (
@@ -256,7 +281,9 @@ function Overlay({ s, st, onOpen, hero }: { s: Spot; st: SpotState; onOpen: () =
           {hero}
         </Emoji>
       )}
-      <NameTag at={[front[0], front[1] + 4]} icon={st.icon} title={st.title} sub={st.sub} color={st.color} />
+      <g style={{ transform: active ? 'scale(1.18)' : undefined, transformOrigin: `${front[0]}px ${front[1] + 15}px`, transition: 'transform 0.15s' }}>
+        <NameTag at={[front[0], front[1] + 4]} icon={st.icon} title={st.title} sub={st.sub} color={active ? '#ffc23d' : st.color} />
+      </g>
     </g>
   );
 }
@@ -270,27 +297,51 @@ function Tags({ top, st }: { top: Pt; st: SpotState }) {
 export function TownMap({
   states,
   onOpen,
+  onSelect,
+  selected,
   focus,
   hero,
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
+  /** Touch screens: the first tap selects (the screen shows its card), the second opens. */
+  onSelect: (spot: Spot | null) => void;
+  selected: string | null;
   /** Spot to centre on at first. */
   focus?: string;
   /** Hero emoji, drawn next to the quest building (or home). */
   hero?: string;
 }) {
+  const [hover, setHover] = useState<string | null>(null);
+  const lastPointer = useRef<string>('mouse');
+  const active = hover ?? selected;
   const spots = SPOTS.filter((s) => states[s.id]);
   const questSpot = spots.find((s) => states[s.id].quest) ?? spots.find((s) => s.id === 'home');
+  const tapFor = (s: Spot): Pointing => ({
+    onTap: (e) => {
+      e.stopPropagation();
+      if (states[s.id].hidden) return;
+      // Mouse and keyboard open straight away; a touch first highlights, then opens on the second tap.
+      if (lastPointer.current !== 'touch' || selected === s.id) onOpen(s);
+      else onSelect(s);
+    },
+    onHover: (on) => setHover((h) => (on ? (states[s.id].hidden ? h : s.id) : h === s.id ? null : h)),
+  });
   const standing = [
     ...STANDING,
     ...spots.map((s) => {
       const { bx, by, size } = footprint(s);
-      return { key: s.id, depth: bx + by + size, node: <Body s={s} st={states[s.id]} onOpen={() => onOpen(s)} /> };
+      return { key: s.id, depth: bx + by + size, node: <Body s={s} st={states[s.id]} active={active === s.id} tap={tapFor(s)} /> };
     }),
   ].sort((a, b) => a.depth - b.depth);
+  // The highlighted spot's tag is drawn last, on top of the others.
+  const overlays = [...spots].sort((a, b) => (a.id === active ? 1 : 0) - (b.id === active ? 1 : 0));
   return (
-    <Viewport focus={SPOTS.find((s) => s.id === focus) ?? SPOTS.find((s) => s.id === 'exam-hall')!}>
+    <Viewport
+      focus={SPOTS.find((s) => s.id === focus) ?? SPOTS.find((s) => s.id === 'exam-hall')!}
+      onPointer={(t) => (lastPointer.current = t)}
+      onBackground={() => onSelect(null)}
+    >
       <defs>
         <filter id="town-faded">
           <feColorMatrix type="saturate" values="0.25" />
@@ -298,15 +349,24 @@ export function TownMap({
       </defs>
       <GroundAndRoads />
       {spots.map((s) => (
-        <Plot key={s.id} s={s} />
+        <Plot key={s.id} s={s} active={active === s.id} />
       ))}
       <FlatDecor />
       <Cars />
       {standing.map((d) => (
         <g key={d.key}>{d.node}</g>
       ))}
-      {spots.map((s) => (
-        <Overlay key={s.id} s={s} st={states[s.id]} onOpen={() => onOpen(s)} hero={s === questSpot ? hero : undefined} />
+      {overlays.map((s) => (
+        <Overlay
+          key={s.id}
+          s={s}
+          st={states[s.id]}
+          tap={tapFor(s)}
+          onOpen={() => onOpen(s)}
+          hero={s === questSpot ? hero : undefined}
+          active={active === s.id}
+          dim={!!active && active !== s.id}
+        />
       ))}
     </Viewport>
   );
@@ -316,7 +376,7 @@ const MIN_Z = 0.5;
 const MAX_Z = 1.6;
 
 /** Scrollable, zoomable stage. Drag with the mouse, pinch on touch screens, or use the buttons. */
-function Viewport({ children, focus }: { children: ReactNode; focus: Spot }) {
+function Viewport({ children, focus, onPointer, onBackground }: { children: ReactNode; focus: Spot; onPointer: (type: string) => void; onBackground: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 0.95 : 1.1));
   const pending = useRef<{ cx: number; cy: number } | null>(null);
@@ -356,9 +416,11 @@ function Viewport({ children, focus }: { children: ReactNode; focus: Spot }) {
     <>
       <div
         ref={ref}
-        className="fixed inset-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{ touchAction: 'pan-x pan-y', background: 'var(--grass-2)' }}
+        className="town-sea fixed inset-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ touchAction: 'pan-x pan-y' }}
+        onClick={() => !drag.current?.moved && onBackground()}
         onPointerDown={(e) => {
+          onPointer(e.pointerType);
           if (e.pointerType === 'mouse') {
             drag.current = { x: e.clientX, y: e.clientY, sl: ref.current!.scrollLeft, st: ref.current!.scrollTop, moved: false };
           } else {

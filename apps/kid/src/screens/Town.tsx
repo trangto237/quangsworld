@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { isDue, levelFromXp, stars } from '@atlas/engine';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
@@ -31,15 +31,41 @@ export function Town({ student }: { student: StudentProfile }) {
       const cs = conceptsInWorld(w);
       const got = cs.reduce((s, c) => s + stars(states[c.id]), 0);
       const due = cs.filter((c) => states[c.id] && states[c.id].attempts > 0 && isDue(states[c.id])).length;
-      out[w.id] = { level: levelFor(got, cs.length * 3), title: tr(lang, w.name), sub: `⭐ ${got}/${cs.length * 3}`, icon: w.emoji, color: w.color, due, quest: w.id === questWorld };
+      out[w.id] = {
+        level: levelFor(got, cs.length * 3),
+        title: tr(lang, w.name),
+        sub: `⭐ ${got}/${cs.length * 3}`,
+        icon: w.emoji,
+        color: w.color,
+        due,
+        quest: w.id === questWorld,
+        blurb: tr(lang, w.blurb),
+      };
     }
     if (!out['my-textbook']) out['my-textbook'] = { level: 0, title: '', icon: '', color: '#888', hidden: true };
-    out['exam-hall'] = { level: 2, title: tr(lang, 'Exam Hall'), sub: tr(lang, '{n} exams done', { n: exams }), icon: '🏛️', color: '#c0583e' };
-    out.coach = { level: 2, title: tr(lang, 'Coach Owl'), sub: tr(lang, 'Rules & tips'), icon: '🦉', color: '#8b5cf6' };
-    out.shop = { level: 2, title: tr(lang, 'Armoury'), sub: `🪙 ${wallet.coins}`, icon: '🛒', color: '#e8584a' };
-    out.home = { level: 2, title: student.name, sub: tr(lang, rankFor(levelFromXp(wallet.xp).level)), icon: student.avatar, color: '#ffc23d' };
+    out['exam-hall'] = {
+      level: 2,
+      title: tr(lang, 'Exam Hall'),
+      sub: tr(lang, '{n} exams done', { n: exams }),
+      icon: '🏛️',
+      color: '#c0583e',
+      blurb: tr(lang, 'Practice papers for the grade-10 entrance exam.'),
+    };
+    out.coach = { level: 2, title: tr(lang, 'Coach Owl'), sub: tr(lang, 'Rules & tips'), icon: '🦉', color: '#8b5cf6', blurb: tr(lang, 'Every rule explained, with practice.') };
+    out.shop = { level: 2, title: tr(lang, 'Armoury'), sub: `🪙 ${wallet.coins}`, icon: '🛒', color: '#e8584a', blurb: tr(lang, 'Spend the coins and gems you earn in battle.') };
+    out.home = {
+      level: 2,
+      title: student.name,
+      sub: tr(lang, rankFor(levelFromXp(wallet.xp).level)),
+      icon: student.avatar,
+      color: '#ffc23d',
+      blurb: tr(lang, 'Your hero: powers, badges and settings.'),
+    };
     return { out, questWorld };
   }, [states, next, lang, exams, wallet, student.name, student.avatar]);
+
+  const [selected, setSelected] = useState<Spot | null>(null);
+  const picked = selected ? spots.out[selected.id] : undefined;
 
   const open = (s: Spot) => {
     if (s.kind === 'exam-hall') go({ name: 'exam-hall' });
@@ -51,37 +77,62 @@ export function Town({ student }: { student: StudentProfile }) {
 
   return (
     <div className="text-ink-text">
-      <TownMap states={spots.out} onOpen={open} focus={spots.questWorld ?? 'exam-hall'} hero={student.avatar} />
+      <TownMap states={spots.out} onOpen={open} onSelect={setSelected} selected={selected?.id ?? null} focus={spots.questWorld ?? 'exam-hall'} hero={student.avatar} />
       <div className="pointer-events-none fixed inset-x-0 top-0 z-30 [&>*]:pointer-events-auto">
         <HeroBar student={student} />
       </div>
-      {/* Today's quest, like a chapter card on the map. */}
+      {/* A tapped place's card (phones), or today's quest, like a chapter card on the map. */}
       <div className="fixed inset-x-0 bottom-[92px] z-30 px-2">
-        <div className="town-panel mx-auto flex max-w-xl items-center gap-3 px-3 py-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Ribbon>
-                <T en="Today's quest" />
-              </Ribbon>
-              <span className="text-xs font-bold text-ink-soft">
-                {doneCount}/{plan.missions.length}
-              </span>
+        {selected && picked ? (
+          <div className="town-panel mx-auto flex max-w-xl items-center gap-3 px-3 py-2">
+            <span className="grid size-12 shrink-0 place-items-center rounded-xl border-2 border-ink text-2xl" style={{ background: `${picked.color}55` }}>
+              {picked.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-lg font-bold leading-tight">{picked.title}</div>
+              <div className="truncate text-xs font-semibold text-ink-soft">
+                {picked.sub}
+                {picked.due ? ` · 🔁 ${picked.due}` : ''}
+                {picked.quest ? ` · ⚔️ ${tr(lang, "Today's quest")}` : ''}
+              </div>
+              {picked.blurb && <div className="line-clamp-2 text-xs text-ink-soft">{picked.blurb}</div>}
             </div>
-            <button onClick={() => go({ name: 'quests' })} className="mt-1 block w-full truncate text-left font-display text-base font-bold leading-tight">
-              {next ? next.title : <T en="All done for today! 🏆" />}
-            </button>
-            <Meter value={doneCount} max={plan.missions.length} className="mt-1 h-2.5" />
+            <div className="flex shrink-0 flex-col gap-1">
+              <TownButton tone="green" onClick={() => open(selected)}>
+                <TB en="Enter ▶" />
+              </TownButton>
+              <button onClick={() => setSelected(null)} className="text-xs font-bold text-ink-soft underline">
+                <T en="Close" />
+              </button>
+            </div>
           </div>
-          {next ? (
-            <TownButton tone="green" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
-              <TB en="▶ Play" />
-            </TownButton>
-          ) : (
-            <TownButton tone="amber" onClick={() => go({ name: 'quests' })}>
-              <TB en="Quests" />
-            </TownButton>
-          )}
-        </div>
+        ) : (
+          <div className="town-panel mx-auto flex max-w-xl items-center gap-3 px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <Ribbon>
+                  <T en="Today's quest" />
+                </Ribbon>
+                <span className="text-xs font-bold text-ink-soft">
+                  {doneCount}/{plan.missions.length}
+                </span>
+              </div>
+              <button onClick={() => go({ name: 'quests' })} className="mt-1 block w-full truncate text-left font-display text-base font-bold leading-tight">
+                {next ? next.title : <T en="All done for today! 🏆" />}
+              </button>
+              <Meter value={doneCount} max={plan.missions.length} className="mt-1 h-2.5" />
+            </div>
+            {next ? (
+              <TownButton tone="green" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
+                <TB en="▶ Play" />
+              </TownButton>
+            ) : (
+              <TownButton tone="amber" onClick={() => go({ name: 'quests' })}>
+                <TB en="Quests" />
+              </TownButton>
+            )}
+          </div>
+        )}
       </div>
       <BottomNav student={student} active="map" />
     </div>
