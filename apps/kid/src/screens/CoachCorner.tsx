@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import {
-  ED, S, SOUND_GROUPS, SOUND_TIPS, STRATEGIES, STRESS_RULES, LESSONS_VI, endingDrill, getConcept, pairsDrill, soundDrill, stressDrill, wordsForRule, type Bi, type DrillItem,
+  ED, S, SOUND_GROUPS, SOUND_TIPS, STRATEGIES, STRESS_MEMORY, STRESS_RULES, LESSONS_VI, endingDrill, exceptionDrill, exceptionNote, stressExceptions, getConcept, pairsDrill, soundDrill, stressDrill, wordsForRule, type Bi, type DrillItem,
 } from '@atlas/knowledge';
 import { Button, Marked, cx, useQuery } from '@atlas/ui';
 import { TopBar } from '../components/TopBar';
@@ -128,6 +128,18 @@ function PracticeToggle({ make, title }: { make: () => DrillItem[]; title?: Bi }
   );
 }
 
+/** Exceptions that share an explanation are shown together, with the note once. */
+function exceptionGroups() {
+  const groups = new Map<string, { note: Bi; words: string[] }>();
+  for (const a of stressExceptions()) {
+    const note = exceptionNote(a);
+    const g = groups.get(note.en) ?? { note, words: [] };
+    g.words.push(a.word.display);
+    groups.set(note.en, g);
+  }
+  return [...groups.values()];
+}
+
 function StressTopic() {
   return (
     <>
@@ -152,6 +164,44 @@ function StressTopic() {
           }}
         />
       </Card>
+      <Card title={{ en: '🧠 How to remember', vi: '🧠 Mẹo ghi nhớ' }}>
+        <BiText
+          block
+          b={{
+            en: 'Most rules are really one question: where is the beat, counted from the END of the word? The ending tells you: 1, 2 or 3 from the end — or it doesn\'t count at all.',
+            vi: 'Hầu hết quy tắc thật ra chỉ là một câu hỏi: nhịp mạnh ở đâu, đếm TỪ CUỐI từ? Đuôi từ cho em biết: âm 1, 2 hay 3 từ cuối — hoặc không tính.',
+          }}
+        />
+        <div className="space-y-2">
+          {STRESS_MEMORY.endings.map((e) => (
+            <div key={e.n} className="flex gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-indigo-600 font-display text-lg font-bold text-white">{e.n}</span>
+              <div className="min-w-0 space-y-1.5">
+                <div className="font-semibold">
+                  <BiText b={e.title} />
+                </div>
+                <div className="font-mono text-sm text-indigo-700 dark:text-indigo-300">{e.endings}</div>
+                <BiText b={e.tip} className="text-xs" block />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {e.examples.map((d) => (
+                    <StressView key={d} display={d} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="font-semibold">
+          <BiText b={{ en: 'In the exam, check in this order:', vi: 'Khi làm bài, kiểm tra theo thứ tự:' }} />
+        </div>
+        <ul className="space-y-1.5">
+          {STRESS_MEMORY.steps.map((b, i) => (
+            <li key={i}>
+              <BiText b={b} block />
+            </li>
+          ))}
+        </ul>
+      </Card>
       {STRESS_RULES.map((r) => (
         <Card key={r.id} id={`stress-${r.id}`} title={r.title}>
           <BiText b={r.detail} block />
@@ -165,6 +215,25 @@ function StressTopic() {
           <PracticeToggle make={() => stressDrill(r.id, Math.random, 5)} title={r.title} />
         </Card>
       ))}
+      <Card id="stress-exceptions" title={{ en: '⚠️ Exceptions to learn by heart', vi: '⚠️ Ngoại lệ cần học thuộc' }}>
+        <BiText
+          block
+          b={{ en: 'These words break the rules. Exams love them, so tap 🥁 on each and say it out loud a few times.', vi: 'Những từ này không theo quy tắc. Đề thi rất hay hỏi, nên hãy chạm 🥁 từng từ và đọc to vài lần.' }}
+        />
+        <div className="space-y-2">
+          {exceptionGroups().map((g) => (
+            <div key={g.note.en} className="space-y-1.5 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+              <div className="flex flex-wrap gap-2">
+                {g.words.map((d) => (
+                  <StressView key={d} display={d} />
+                ))}
+              </div>
+              <BiText b={g.note} className="text-xs" block />
+            </div>
+          ))}
+        </div>
+        <PracticeToggle make={() => exceptionDrill(Math.random, 8)} title={{ en: 'Exceptions practice', vi: 'Luyện ngoại lệ' }} />
+      </Card>
       <Card title={{ en: 'Mixed practice: all the rules', vi: 'Luyện tập tổng hợp: tất cả quy tắc' }}>
         <BiText block b={{ en: 'Words from every rule, mixed up. Check the rules here if you get stuck:', vi: 'Từ của mọi quy tắc, trộn lẫn. Xem lại các quy tắc ở đây nếu bí:' }} />
         <ol className="list-decimal space-y-1 pl-5">

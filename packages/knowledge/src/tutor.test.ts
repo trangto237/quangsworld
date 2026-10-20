@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { ED, S, STRESS, analyseStress, coach, endingDrill, lastSound, pickQuestion, soundDrill, stressDrill, whyNot, wordsForRule, STRESS_RULES } from './index';
+import { ED, S, STRESS, analyseStress, coach, endingDrill, lastSound, pickQuestion, soundDrill, stressDrill, whyNot, wordsForRule, STRESS_RULES, exceptionNote } from './index';
 import { allConcepts } from './graph';
 
 const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
 describe('Coach', () => {
-  it('explains every stress word with a rule, and few are exceptions', () => {
+  it('explains every stress word with a rule; every exception is deliberate and explained', () => {
     const analyses = STRESS.map(analyseStress);
-    const exceptions = analyses.filter((a) => a.exception).map((a) => a.word.word);
-    expect(exceptions.length).toBeLessThan(STRESS.length * 0.1);
+    const exceptions = analyses.filter((a) => a.exception);
+    expect(exceptions.length).toBeLessThan(STRESS.length * 0.15);
+    // An exception without a note would mean a rule is wrong, not a word to learn by heart.
+    for (const a of exceptions) expect(exceptionNote(a).en, a.word.word).not.toMatch(/^Breaks the rule/);
     for (const r of STRESS_RULES) expect(wordsForRule(r.id).length, r.id).toBeGreaterThan(0);
   });
 

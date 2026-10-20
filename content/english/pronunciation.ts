@@ -72,6 +72,7 @@ en-ter-TAIN un-der-STAND rec-om-MEND in-tro-DUCE vol-un-TEER en-gi-NEER guar-an-
 e-CON-o-my ex-PE-ri-ence pho-TOG-ra-phy ge-OG-ra-phy bi-OL-o-gy a-BIL-i-ty ac-TIV-i-ty com-MU-ni-ty tech-NOL-o-gy ne-CES-si-ty cer-TIF-i-cate pho-TOG-ra-pher in-TEL-li-gent
 ed-u-CA-tion in-for-MA-tion con-ver-SA-tion pop-u-LA-tion com-pe-TI-tion sit-u-A-tion cel-e-BRA-tion dec-o-RA-tion in-de-PEN-dent en-ter-TAIN-ment un-der-STAND-ing ex-pla-NA-tion
 TEL-e-vi-sion CAT-e-go-ry AL-li-ga-tor CAL-cu-la-tor EL-e-va-tor
+gui-TAR po-LICE Ju-LY des-SERT ce-MENT COF-fee com-MIT-tee AR-a-bic CATH-o-lic LU-na-tic a-RITH-me-tic
 `;
 
 export interface StressWord {

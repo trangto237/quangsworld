@@ -65,10 +65,10 @@ export interface StressRule {
 export const STRESS_RULES: StressRule[] = [
   {
     id: 'suffix-takes',
-    title: bi('-ee, -eer, -oo, -oon take the stress', '-ee, -eer, -oo, -oon nhận trọng âm'),
+    title: bi('-ee, -eer, -oo, -oon, -ese take the stress', '-ee, -eer, -oo, -oon, -ese nhận trọng âm'),
     detail: bi(
-      'These endings are always stressed themselves: vol-un-TEER, ref-er-EE, kan-ga-ROO, af-ter-NOON.',
-      'Các đuôi này luôn mang trọng âm: vol-un-TEER, ref-er-EE, kan-ga-ROO, af-ter-NOON.',
+      'These endings are always stressed themselves: vol-un-TEER, ref-er-EE, kan-ga-ROO, af-ter-NOON, Jap-a-NESE.',
+      'Các đuôi này luôn mang trọng âm: vol-un-TEER, ref-er-EE, kan-ga-ROO, af-ter-NOON, Jap-a-NESE.',
     ),
   },
   {
@@ -196,6 +196,75 @@ const EXCEPTION_NOTES: Record<string, Bi> = {
   promise: bi('A common exception: PROM-ise.', 'Ngoại lệ hay gặp: PROM-ise.'),
   mistake: bi('mis- is a prefix — prefixes are usually not stressed: mis-TAKE.', 'mis- là tiền tố — tiền tố thường không mang trọng âm: mis-TAKE.'),
   answer: bi('Noun and verb, both stressed at the front: AN-swer.', 'Vừa là danh từ vừa là động từ, đều nhấn ở đầu: AN-swer.'),
+  guitar: bi('A noun stressed at the back: gui-TAR.', 'Danh từ nhưng nhấn ở sau: gui-TAR.'),
+  police: bi('Borrowed from French — French words keep the stress at the end.', 'Từ mượn tiếng Pháp — từ gốc Pháp giữ trọng âm ở cuối.'),
+  july: bi('Ju-LY is stressed at the back (but AU-gust at the front).', 'Ju-LY nhấn ở sau (nhưng AU-gust nhấn ở đầu).'),
+  polite: bi('An adjective stressed at the back: po-LITE.', 'Tính từ nhưng nhấn ở sau: po-LITE.'),
+  advice: bi('A noun stressed at the back, like its verb ad-VISE: ad-VICE.', 'Danh từ nhưng nhấn ở sau, giống động từ ad-VISE: ad-VICE.'),
+  success: bi('A noun stressed at the back, like its verb suc-CEED: suc-CESS.', 'Danh từ nhưng nhấn ở sau, giống động từ suc-CEED: suc-CESS.'),
+  dessert: bi('des-SERT (the sweet food) — don\'t mix it up with DES-ert (sand).', 'des-SERT (món tráng miệng) — đừng nhầm với DES-ert (sa mạc).'),
+  cement: bi('A noun stressed at the back: ce-MENT.', 'Danh từ nhưng nhấn ở sau: ce-MENT.'),
+  coffee: bi('Ends in -ee but stressed at the front: COF-fee (also TOF-fee).', 'Tận cùng -ee nhưng nhấn ở đầu: COF-fee (cả TOF-fee).'),
+  committee: bi('Ends in -ee but stressed in the middle: com-MIT-tee.', 'Tận cùng -ee nhưng nhấn ở giữa: com-MIT-tee.'),
+  arabic: bi('One of the 4 famous -ic exceptions: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.', 'Một trong 4 ngoại lệ nổi tiếng của -ic: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.'),
+  catholic: bi('One of the 4 famous -ic exceptions: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.', 'Một trong 4 ngoại lệ nổi tiếng của -ic: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.'),
+  lunatic: bi('One of the 4 famous -ic exceptions: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.', 'Một trong 4 ngoại lệ nổi tiếng của -ic: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.'),
+  arithmetic: bi('One of the 4 famous -ic exceptions: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.', 'Một trong 4 ngoại lệ nổi tiếng của -ic: AR-a-bic, a-RITH-me-tic, CATH-o-lic, LU-na-tic.'),
+};
+
+/** Words that break their usual rule — learn them by heart (exams love them). */
+export const stressExceptions = () => STRESS.map(analyseStress).filter((a) => a.exception);
+
+/** Note for an exception word. */
+export const exceptionNote = (a: StressAnalysis): Bi =>
+  EXCEPTION_NOTES[a.word.word] ?? bi(`Breaks the rule "${a.rule.title.en}".`, `Không theo quy tắc "${a.rule.title.vi}".`);
+
+/** Practice on the exceptions only. */
+export function exceptionDrill(r: () => number = Math.random, n = 8): DrillItem[] {
+  return shuffle(stressExceptions(), r)
+    .slice(0, n)
+    .map((a) => ({ kind: 'stress', display: a.word.display, why: stressNote(a), hint: bi('An exception — the usual rule doesn\'t work. Remember it by ear.', 'Ngoại lệ — quy tắc thường gặp không đúng. Hãy nhớ bằng tai.') }));
+}
+
+/** The "how to remember" summary: endings counted from the end of the word. */
+export const STRESS_MEMORY = {
+  endings: [
+    {
+      n: '1',
+      title: bi('Long-sound endings grab the beat: the LAST syllable', 'Đuôi có âm kéo dài tự nhận nhịp: âm tiết CUỐI'),
+      endings: '-ee, -eer, -oo, -oon, -ese',
+      tip: bi('A long "eee" or "ooo" at the end is too loud to be quiet. Say: "The kangaroo volunteer came in the afternoon."', 'Âm "iii" hay "uuu" kéo dài ở cuối thì không thể đọc nhẹ. Nói: "The kangaroo volunteer came in the afternoon."'),
+      examples: ['kan-ga-ROO', 'vol-un-TEER', 'af-ter-NOON', 'Jap-a-NESE'],
+    },
+    {
+      n: '2',
+      title: bi('"Shun" and "-ic" endings point at their neighbour: 2nd from the END', 'Đuôi "shần" và "-ic" chỉ vào âm đứng trước: âm thứ 2 TỪ CUỐI'),
+      endings: '-tion, -sion, -cian, -ic, -ious, -ial',
+      tip: bi('Anything that sounds like "shun", "shus" or "ic" is weak — the beat lands right before it.', 'Mọi đuôi đọc như "shần", "shợs" hay "ic" đều đọc nhẹ — nhịp rơi ngay trước nó.'),
+      examples: ['in-for-MA-tion', 'de-CI-sion', 'fan-TAS-tic', 'de-LI-cious'],
+    },
+    {
+      n: '3',
+      title: bi('School-subject endings: 3rd from the END', 'Đuôi của tên môn học: âm thứ 3 TỪ CUỐI'),
+      endings: '-logy, -graphy, -omy, -ity, -ate',
+      tip: bi('Think of your timetable: bi-OL-o-gy, ge-OG-ra-phy, e-CON-o-my, tech-NOL-o-gy. Count back 1-2-3 from the end.', 'Nghĩ đến thời khóa biểu: bi-OL-o-gy, ge-OG-ra-phy, e-CON-o-my, tech-NOL-o-gy. Đếm ngược 1-2-3 từ cuối.'),
+      examples: ['bi-OL-o-gy', 'ge-OG-ra-phy', 'e-CON-o-my', 'a-BIL-i-ty'],
+    },
+    {
+      n: '0',
+      title: bi('Invisible endings and prefixes don\'t count', 'Đuôi và tiền tố "tàng hình" không tính'),
+      endings: '-ful, -less, -ness, -ment, -ing, -er, -ous, -ly · un-, in-, dis-, re-',
+      tip: bi('Cover them with your thumb and stress the word that\'s left, just like the root word.', 'Lấy ngón tay che chúng đi và nhấn trọng âm như từ gốc còn lại.'),
+      examples: ['en-JOY-ment', 'BEAU-ti-ful', 'in-de-PEN-dent', 'un-der-STAND-ing'],
+    },
+  ],
+  steps: [
+    bi('1. Look at the ending: 1, 2, 3 from the end — or invisible?', '1. Nhìn đuôi: âm 1, 2, 3 từ cuối — hay "tàng hình"?'),
+    bi('2. No special ending? "Danh trước, động sau": nouns/adjectives at the front, verbs at the back (PRE-sent a gift / pre-SENT to give).', '2. Không có đuôi đặc biệt? "Danh trước, động sau": danh từ/tính từ nhấn đầu, động từ nhấn sau (PRE-sent món quà / pre-SENT trao tặng).'),
+    bi('3. Lazy syllables never take the beat: a- at the start (a-BOUT), and weak verb endings -en, -er, -ish, -y, -ow (O-pen, FIN-ish).', '3. Âm tiết "lười" không bao giờ nhận nhịp: a- ở đầu (a-BOUT), và đuôi động từ yếu -en, -er, -ish, -y, -ow (O-pen, FIN-ish).'),
+    bi('4. Still unsure? Hum it: "DA-da-da", "da-DA-da", "da-da-DA" — the right one sounds natural.', '4. Vẫn chưa chắc? Ngân nga: "ĐA-đa-đa", "đa-ĐA-đa", "đa-đa-ĐA" — cách đúng nghe tự nhiên.'),
+    bi('5. Learn the exceptions below by heart — exams love them.', '5. Học thuộc các ngoại lệ bên dưới — đề thi rất hay hỏi.'),
+  ],
 };
 
 export interface StressAnalysis {
@@ -215,7 +284,7 @@ export function analyseStress(w: StressWord): StressAnalysis {
   const word = w.word;
   const res = (id: string, predicted: number, root?: string): StressAnalysis => ({ word: w, rule: RULE[id], exception: predicted !== w.stress, root });
 
-  if (/(ee|eer|oo|oon)$/.test(word)) return res('suffix-takes', last(w));
+  if (/(ee|eer|oo|oon|ese)$/.test(word)) return res('suffix-takes', last(w));
   if (ROOTS[word]) {
     const [root, pre] = ROOTS[word];
     const rootStress = root.split('-').findIndex((s) => s === s.toUpperCase());
