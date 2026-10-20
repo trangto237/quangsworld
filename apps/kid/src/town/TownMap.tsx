@@ -274,13 +274,8 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
       style={{ cursor: 'pointer', outline: 'none', opacity: dim ? 0.45 : 1, transition: 'opacity 0.15s' }}
     >
-      <Tags top={[top[0], top[1] - lift]} st={st} />
-      {hero && (
-        // The hero stands by the quest bubble (or by home when today's quests are done).
-        <Emoji at={st.quest ? [top[0] - 62, top[1] - lift - 16] : [front[0] + 30, front[1] - 14]} size={26}>
-          {hero}
-        </Emoji>
-      )}
+      {/* The hero rides in the quest bubble (or on home when today's quests are done), never over a name. */}
+      <Tags top={[top[0], top[1] - lift]} st={st} hero={hero} />
       <g style={{ transform: active ? 'scale(1.18)' : undefined, transformOrigin: `${front[0]}px ${front[1] + 15}px`, transition: 'transform 0.15s' }}>
         <NameTag at={[front[0], front[1] + 4]} icon={st.icon} title={st.title} sub={st.sub} color={active ? '#ffc23d' : st.color} />
       </g>
@@ -288,9 +283,11 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
   );
 }
 
-function Tags({ top, st }: { top: Pt; st: SpotState }) {
-  if (st.quest) return <Bubble at={[top[0], top[1] - 4]} text={st.due ? `⚔️ Quest · 🔁 ${st.due}` : '⚔️ Quest'} color="#e8584a" bob />;
-  if (st.due) return <Bubble at={[top[0], top[1] - 4]} text={`🔁 ${st.due}`} color="#8b5cf6" />;
+function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: string }) {
+  const at: Pt = [top[0], top[1] - 4];
+  if (st.quest) return <Bubble at={at} text={`${hero ?? '⚔️'} Quest${st.due ? ` · 🔁 ${st.due}` : ''}`} color="#e8584a" bob />;
+  if (hero) return <Bubble at={at} text={`${hero} Home`} color="#f59e0b" />;
+  if (st.due) return <Bubble at={at} text={`🔁 ${st.due}`} color="#8b5cf6" />;
   return null;
 }
 

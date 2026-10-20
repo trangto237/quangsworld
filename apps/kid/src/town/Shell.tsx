@@ -158,7 +158,7 @@ export function TownScreen({
   return (
     <div className="town-bg min-h-dvh text-ink-text">
       <HeroBar student={student} back={back} showPowers={showPowers} />
-      <main className={cx('mx-auto max-w-5xl px-3 pb-32 pt-2 sm:px-4', className)}>{children}</main>
+      <main className={cx('mx-auto max-w-5xl px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-2 sm:px-4', className)}>{children}</main>
       <BottomNav student={student} active={tab} />
     </div>
   );

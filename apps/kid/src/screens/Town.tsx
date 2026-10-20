@@ -82,7 +82,7 @@ export function Town({ student }: { student: StudentProfile }) {
         <HeroBar student={student} />
       </div>
       {/* A tapped place's card (phones), or today's quest, like a chapter card on the map. */}
-      <div className="fixed inset-x-0 bottom-[92px] z-30 px-2">
+      <div className="fixed inset-x-0 z-30 px-2" style={{ bottom: 'calc(96px + max(0.5rem, env(safe-area-inset-bottom)))' }}>
         {selected && picked ? (
           <div className="town-panel mx-auto flex max-w-xl items-center gap-3 px-3 py-2">
             <span className="grid size-12 shrink-0 place-items-center rounded-xl border-2 border-ink text-2xl" style={{ background: `${picked.color}55` }}>
