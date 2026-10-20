@@ -140,8 +140,9 @@ export function geminiFetch(env: RelayEnv, fetchFn: typeof fetch): typeof fetch 
     const headers = new Headers(init?.headers);
     headers.set('x-region', region);
     if (anon) {
-      headers.set('authorization', `Bearer ${anon}`);
       headers.set('apikey', anon);
+      // Only legacy anon keys are JWTs; new "sb_publishable_…" keys must not be sent as a Bearer token.
+      if (anon.startsWith('eyJ')) headers.set('authorization', `Bearer ${anon}`);
     }
     const res = await fetchFn(`${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${encodeURIComponent(region)}&path=${encodeURIComponent(url.slice(root.length))}`, { ...init, headers });
     if (res.status === 404 && !(await res.clone().text()).includes('"error"')) {

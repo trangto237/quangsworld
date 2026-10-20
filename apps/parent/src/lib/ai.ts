@@ -59,3 +59,17 @@ export async function transcribeWithAI(token: string, images: { mediaType: strin
   if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
   return Array.isArray(body.pages) ? body.pages.map((p) => (typeof p === 'string' ? p : '')) : [];
 }
+
+export interface Check {
+  step: string;
+  ok: boolean;
+  detail: string;
+}
+
+/** Tests each link the AI features use, from the server (parent account only). */
+export async function diagnoseAI(token: string): Promise<Check[]> {
+  const res = await fetch('/api/diagnose', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
+  const body = (await res.json().catch(() => ({}))) as { checks?: Check[]; error?: string };
+  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  return body.checks ?? [];
+}

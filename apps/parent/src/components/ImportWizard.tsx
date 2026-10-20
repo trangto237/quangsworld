@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { GLOBAL_SUCCESS_9, PAGE_BREAK, PART_LABEL, autoImport, customUnit, splitByUnit, validateDrafts, type DraftPart, type DraftQuestion, type ImportIssue } from '@atlas/knowledge';
 import { Button, Card, Field, cx, inputClass, useRepo } from '@atlas/ui';
 import { ACCEPT, extractFile, mergePhotos, type Extracted } from '../lib/extract';
-import { BusyError, aiStatus, generateWithAI, providerName, transcribeWithAI, type AiStatus } from '../lib/ai';
+import { BusyError, aiStatus, diagnoseAI, generateWithAI, providerName, transcribeWithAI, type AiStatus, type Check } from '../lib/ai';
 import type { OcrProgress } from '../lib/ocr';
 import { useCloud } from './Cloud';
 
@@ -89,6 +89,7 @@ export function ImportWizard() {
   /** Just finished reading a scan: how many pages (shows the "what next" banner). */
   const [readDone, setReadDone] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(() => loadDraft());
+  const [checks, setChecks] = useState<Check[] | null>(null);
 
   useEffect(() => {
     void aiStatus().then(setAi);
@@ -223,6 +224,22 @@ export function ImportWizard() {
       setOcr(null);
       setOcrNote(null);
       ocrStop.current = null;
+    }
+  };
+
+  /** "Test the AI connection": what each link (Google direct, the Supabase relay, OpenRouter) answers. */
+  const testAi = async () => {
+    setError(null);
+    setChecks(null);
+    setBusy('Testing the AI connection…');
+    try {
+      const token = await cloud.parentAccessToken();
+      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      setChecks(await diagnoseAI(token));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -605,6 +622,22 @@ export function ImportWizard() {
         </div>
       )}
 
+      {ai?.reachable && signedInParent && step === 'source' && (
+        <div className="mt-4 text-sm">
+          <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => void testAi()} disabled={!!busy}>
+            🩺 Test the AI connection
+          </button>
+          {checks && (
+            <ul className="mt-2 space-y-1 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50" aria-label="AI connection checks">
+              {checks.map((c) => (
+                <li key={c.step}>
+                  {c.ok ? '✅' : '❌'} <b>{c.step}:</b> <span className="break-words">{c.detail}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {busy && <p className="mt-3 text-sm font-semibold text-brand-600 dark:text-brand-400">{busy}</p>}
       {error && <p className="mt-3 text-sm font-semibold text-rose-600">{error}</p>}
     </Card>
