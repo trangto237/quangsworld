@@ -225,27 +225,36 @@ export function Chest({ x, y, state, progress, onOpen }: { x: number; y: number;
   );
 }
 
-/** Fog over a world he hasn't explored yet. */
+/** A soft haze around the base of a world he hasn't explored yet (the building itself is drawn pale). */
 export function Fog({ x, y, size }: { x: number; y: number; size: number }) {
   const [cx, cy] = P(x + size / 2, y + size / 2);
-  const puffs: [number, number, number][] = [
-    [-28, -16, 21],
-    [0, -30, 24],
-    [27, -14, 21],
-    [-12, 2, 19],
-    [15, 4, 19],
-  ];
+  const rx = (size * 64) / 1.25;
   return (
-    <g style={{ pointerEvents: 'none' }} opacity={0.93}>
-      {puffs.map(([dx, dy, r], i) => (
-        <circle key={i} cx={cx + dx} cy={cy + dy - 20} r={r} fill="#eef2f6" stroke="#b9c3cf" strokeWidth={1.5} />
-      ))}
-      <text x={cx} y={cy - 26} fontSize={22} fontWeight={800} textAnchor="middle" dominantBaseline="central" fill="#7c8a9a" fontFamily="'Baloo 2', sans-serif">
-        ?
-      </text>
+    <g style={{ pointerEvents: 'none' }}>
+      <ellipse cx={cx} cy={cy - 6} rx={rx} ry={rx * 0.45} fill="url(#town-haze)" />
+      <ellipse cx={cx - rx * 0.25} cy={cy - 22} rx={rx * 0.55} ry={rx * 0.22} fill="url(#town-haze)" opacity={0.7} />
     </g>
   );
 }
+
+export const HazeDefs = () => (
+  <>
+    <radialGradient id="town-haze">
+      <stop offset="0" stopColor="#ffffff" stopOpacity="0.75" />
+      <stop offset="0.6" stopColor="#ffffff" stopOpacity="0.35" />
+      <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+    </radialGradient>
+    {/* Pale and washed out: far away, not discovered yet. */}
+    <filter id="town-mist">
+      <feColorMatrix type="saturate" values="0.2" />
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="0.5" intercept="0.45" />
+        <feFuncG type="linear" slope="0.5" intercept="0.46" />
+        <feFuncB type="linear" slope="0.5" intercept="0.5" />
+      </feComponentTransfer>
+    </filter>
+  </>
+);
 
 /** Wear on a building whose topics are due for review: cracks and a wilting flower. */
 export function Wear({ at }: { at: Pt }) {

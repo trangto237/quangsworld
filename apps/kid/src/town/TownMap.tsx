@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Bubble, Emoji, Flag, Ground, INK, NameTag, P, Tree, type Pt } from './iso';
 import { Car, KINDS, Lake, Pitch, RiceField, house } from './buildings';
-import { Builders, Chest, Fog, LampGlowDef, NightContext, PathTrail, SkyTint, StopBadge, StreetLamps, Traffic, Wear, useDayPhase, useReducedMotion, type ChestState } from './life';
+import { Builders, Chest, Fog, HazeDefs, LampGlowDef, NightContext, PathTrail, SkyTint, StopBadge, StreetLamps, Traffic, Wear, useDayPhase, useReducedMotion, type ChestState } from './life';
 
 /**
  * The town: a 14×14-tile neighbourhood split by two roads each way into 3×3 blocks. Each world is a
@@ -248,10 +248,10 @@ function Body({ s, st, active, tap }: { s: Spot; st: SpotState; active: boolean;
     >
       {/* Invisible hit area over the whole lot. */}
       <Ground x={s.x} y={s.y} w={s.lot} d={s.lot} fill="transparent" />
-      <g filter={faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
-      {st.level >= 3 && <Flowers s={s} />}
-      {st.level >= 2 && !st.hidden && !SERVICE.includes(s.kind) && <Flag x={d.top[0]} y={d.top[1]} z={d.top[2]} color={st.color} gold={st.level >= 4} />}
-      {st.level >= 4 && (
+      <g filter={st.unexplored && !st.grew ? 'url(#town-mist)' : faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
+      {st.level >= 3 && !st.unexplored && <Flowers s={s} />}
+      {st.level >= 2 && !st.hidden && !st.unexplored && !SERVICE.includes(s.kind) && <Flag x={d.top[0]} y={d.top[1]} z={d.top[2]} color={st.color} gold={st.level >= 4} />}
+      {st.level >= 4 && !st.unexplored && (
         <Emoji at={[top[0] - 22, top[1] - 18]} size={16}>
           ✨
         </Emoji>
@@ -383,6 +383,7 @@ export function TownMap({
           <feColorMatrix type="saturate" values="0.25" />
         </filter>
         <LampGlowDef />
+        <HazeDefs />
       </defs>
       <GroundAndRoads />
       {spots.map((s) => (
