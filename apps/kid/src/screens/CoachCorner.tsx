@@ -3,12 +3,13 @@ import type { StudentProfile } from '@atlas/db';
 import {
   ED, S, SOUND_GROUPS, SOUND_TIPS, STRATEGIES, STRESS_MEMORY, STRESS_RULES, LESSONS_VI, endingDrill, exceptionDrill, exceptionNote, stressExceptions, getConcept, pairsDrill, soundDrill, stressDrill, wordsForRule, type Bi, type DrillItem,
 } from '@atlas/knowledge';
-import { Button, Marked, cx, useQuery } from '@atlas/ui';
-import { TopBar } from '../components/TopBar';
+import { Marked, cx, useQuery } from '@atlas/ui';
+import { TownScreen } from '../town/Shell';
+import { TownButton } from '../town/ui';
 import { BiText, Drill, SimilarQuestions, StressView } from '../components/Coach';
 import { speak } from '../lib/speech';
 import { T, TB, useLang } from '../i18n';
-import { useKid, type CoachTopic } from '../store';
+import type { CoachTopic } from '../store';
 
 const TOPICS: { id: CoachTopic; icon: string; en: string }[] = [
   { id: 'stress', icon: '🥁', en: 'Word stress' },
@@ -23,7 +24,6 @@ export const topicFor = (conceptId: string): CoachTopic =>
 
 /** Coach Owl's corner: every rule explained with examples, and a practice round for each. */
 export function CoachCorner({ student, topic: initialTopic, conceptId }: { student: StudentProfile; topic?: CoachTopic; conceptId?: string }) {
-  const go = useKid((s) => s.go);
   const [topic, setTopic] = useState<CoachTopic>(initialTopic ?? (conceptId ? topicFor(conceptId) : 'stress'));
   const mistakes = useQuery((r) => r.listMistakes(student.id, { open: true }), [student.id]);
   const weak = useMemo(() => {
@@ -37,79 +37,76 @@ export function CoachCorner({ student, topic: initialTopic, conceptId }: { stude
   }, [focus, topic]);
 
   return (
-    <div className="min-h-dvh bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <TopBar student={student} back={() => go({ name: 'hub' })} />
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="flex items-center gap-3">
-          <span className="text-5xl" aria-hidden>
-            🦉
-          </span>
-          <div>
-            <h1 className="font-display text-3xl font-bold">
-              <T en="Coach Owl's corner" />
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              <T en="The rules behind the answers — with examples you can hear, and practice for each one." />
-            </p>
+    <TownScreen student={student} tab="coach" showPowers={false}>
+      <div className="town-panel flex items-center gap-3 p-4">
+        <span className="text-5xl" aria-hidden>
+          🦉
+        </span>
+        <div>
+          <h1 className="font-display text-3xl font-bold">
+            <T en="Coach Owl's corner" />
+          </h1>
+          <p className="text-ink-soft">
+            <T en="The rules behind the answers — with examples you can hear, and practice for each one." />
+          </p>
+        </div>
+      </div>
+
+      {weak.length > 0 && (
+        <div className="town-panel mt-4 p-4">
+          <p className="text-sm font-bold">
+            <T en="Your weak spots (from the Mistake Book)" />
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {weak.map(([id, n]) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setTopic(topicFor(id));
+                  setFocus(id);
+                }}
+                className="rounded-full border-2 border-ink bg-[#f8c9c2] px-3 py-1 text-sm font-semibold text-[#3b2412] hover:bg-[#f4b4ab]"
+              >
+                {getConcept(id)?.name ?? id} · {n}
+              </button>
+            ))}
           </div>
         </div>
+      )}
 
-        {weak.length > 0 && (
-          <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-            <p className="text-sm font-bold">
-              <T en="Your weak spots (from the Mistake Book)" />
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {weak.map(([id, n]) => (
-                <button
-                  key={id}
-                  onClick={() => {
-                    setTopic(topicFor(id));
-                    setFocus(id);
-                  }}
-                  className="rounded-full bg-rose-100 px-3 py-1 text-sm font-semibold text-rose-900 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-100"
-                >
-                  {getConcept(id)?.name ?? id} · {n}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+      <nav className="-mx-3 mt-4 flex gap-2 overflow-x-auto px-3 pb-2 pt-1 sm:-mx-4 sm:px-4" aria-label="Topics">
+        {TOPICS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              setTopic(t.id);
+              setFocus(undefined);
+            }}
+            aria-pressed={topic === t.id}
+            className={cx(
+              'town-btn shrink-0 rounded-xl px-4 py-2 font-display font-bold',
+              topic === t.id ? 'bg-[#8b5cf6] text-white' : 'bg-paper text-ink-text hover:bg-paper-3',
+            )}
+          >
+            {t.icon} <T en={t.en} />
+          </button>
+        ))}
+      </nav>
 
-        <nav className="sticky top-0 z-10 -mx-4 mt-4 flex gap-2 overflow-x-auto bg-slate-100/95 px-4 py-2 backdrop-blur dark:bg-slate-950/95" aria-label="Topics">
-          {TOPICS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setTopic(t.id);
-                setFocus(undefined);
-              }}
-              aria-pressed={topic === t.id}
-              className={cx(
-                'shrink-0 rounded-xl px-4 py-2 font-semibold ring-1',
-                topic === t.id ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-white ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:ring-slate-700 dark:hover:bg-slate-800',
-              )}
-            >
-              {t.icon} <T en={t.en} />
-            </button>
-          ))}
-        </nav>
-
-        <div className="mt-4 space-y-4">
-          {topic === 'stress' && <StressTopic />}
-          {topic === 'endings' && <EndingsTopic />}
-          {topic === 'sounds' && <SoundsTopic />}
-          {topic === 'twins' && <TwinsTopic />}
-          {topic === 'grammar' && <GrammarTopic focus={focus} />}
-        </div>
-      </main>
-    </div>
+      <div className="mt-4 space-y-4">
+        {topic === 'stress' && <StressTopic />}
+        {topic === 'endings' && <EndingsTopic />}
+        {topic === 'sounds' && <SoundsTopic />}
+        {topic === 'twins' && <TwinsTopic />}
+        {topic === 'grammar' && <GrammarTopic focus={focus} />}
+      </div>
+    </TownScreen>
   );
 }
 
 function Card({ id, title, children }: { id?: string; title: Bi | string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-16 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+    <section id={id} className="town-panel scroll-mt-40 p-5">
       <h2 className="font-display text-lg font-bold">{typeof title === 'string' ? title : <BiText b={title} block />}</h2>
       <div className="mt-2 space-y-3 text-sm">{children}</div>
     </section>
@@ -122,9 +119,9 @@ function PracticeToggle({ make, title }: { make: () => DrillItem[]; title?: Bi }
   return items ? (
     <Drill items={items} regenerate={make} title={title} />
   ) : (
-    <Button variant="game" onClick={() => setItems(make())}>
+    <TownButton tone="green" onClick={() => setItems(make())}>
       <TB en="💪 Practise this" />
-    </Button>
+    </TownButton>
   );
 }
 
@@ -174,13 +171,13 @@ function StressTopic() {
         />
         <div className="space-y-2">
           {STRESS_MEMORY.endings.map((e) => (
-            <div key={e.n} className="flex gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-indigo-600 font-display text-lg font-bold text-white">{e.n}</span>
+            <div key={e.n} className="flex gap-3 rounded-xl border-2 border-ink/25 bg-paper-2 p-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border-2 border-ink bg-[#8b5cf6] font-display text-lg font-bold text-white">{e.n}</span>
               <div className="min-w-0 space-y-1.5">
                 <div className="font-semibold">
                   <BiText b={e.title} />
                 </div>
-                <div className="font-mono text-sm text-indigo-700 dark:text-indigo-300">{e.endings}</div>
+                <div className="font-mono text-sm text-[#5b3fc4] dark:text-[#c4b5fd]">{e.endings}</div>
                 <BiText b={e.tip} className="text-xs" block />
                 <div className="flex flex-wrap gap-2 pt-1">
                   {e.examples.map((d) => (
@@ -222,7 +219,7 @@ function StressTopic() {
         />
         <div className="space-y-2">
           {exceptionGroups().map((g) => (
-            <div key={g.note.en} className="space-y-1.5 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+            <div key={g.note.en} className="space-y-1.5 rounded-xl border-2 border-ink/25 bg-paper-2 p-3">
               <div className="flex flex-wrap gap-2">
                 {g.words.map((d) => (
                   <StressView key={d} display={d} />
@@ -242,7 +239,7 @@ function StressTopic() {
               <button
                 type="button"
                 onClick={() => document.getElementById(`stress-${r.id}`)?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-left underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-300"
+                className="text-left underline decoration-dotted underline-offset-2 hover:text-[#8b5cf6]"
               >
                 <BiText b={r.title} />
               </button>
@@ -259,12 +256,12 @@ function SoundTable<K extends string>({ groups, rule, mark }: { groups: Record<K
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {(Object.keys(groups) as K[]).map((k) => (
-        <div key={k} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <div className="font-mono text-2xl font-bold text-indigo-700 dark:text-indigo-300">{k}</div>
+        <div key={k} className="rounded-xl border-2 border-ink/25 bg-paper-2 p-3">
+          <div className="font-mono text-2xl font-bold text-[#5b3fc4] dark:text-[#c4b5fd]">{k}</div>
           <BiText b={rule(k)} className="text-xs" block />
           <div className="mt-2 flex flex-wrap gap-1">
             {groups[k].slice(0, 8).map((w) => (
-              <button key={w} onClick={() => speak(w, 0.8)} className="rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200 hover:bg-indigo-50 dark:bg-slate-900 dark:ring-slate-700">
+              <button key={w} onClick={() => speak(w, 0.8)} className="rounded-md border border-ink/40 bg-paper px-2 py-0.5 hover:bg-paper-3">
                 <Marked text={mark(w, k)} />
               </button>
             ))}
@@ -333,11 +330,11 @@ function SoundsTopic() {
           {SOUND_TIPS[g.letters] && <BiText b={SOUND_TIPS[g.letters]} block />}
           <div className="grid gap-2 md:grid-cols-3">
             {Object.entries(g.sounds).map(([k, ws]) => (
-              <div key={k} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div className="font-mono text-xl font-bold text-indigo-700 dark:text-indigo-300">{k}</div>
+              <div key={k} className="rounded-xl border-2 border-ink/25 bg-paper-2 p-3">
+                <div className="font-mono text-xl font-bold text-[#5b3fc4] dark:text-[#c4b5fd]">{k}</div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {ws.map((w) => (
-                    <button key={w} onClick={() => speak(w.replace(/[[\]]/g, ''), 0.8)} className="rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200 hover:bg-indigo-50 dark:bg-slate-900 dark:ring-slate-700">
+                    <button key={w} onClick={() => speak(w.replace(/[[\]]/g, ''), 0.8)} className="rounded-md border border-ink/40 bg-paper px-2 py-0.5 hover:bg-paper-3">
                       <Marked text={w} />
                     </button>
                   ))}
@@ -385,7 +382,7 @@ function GrammarTopic({ focus }: { focus?: string }) {
               ))}
             </ol>
             {c.lesson && (
-              <p className="rounded-xl bg-amber-50 p-3 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="rounded-xl border-2 border-ink/25 bg-[#ffe7a8] p-3 text-[#3b2412] dark:bg-amber-950/40 dark:text-amber-100">
                 📖 {c.lesson}
                 {lang !== 'en' && LESSONS_VI[id] && (
                   <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">
@@ -397,9 +394,9 @@ function GrammarTopic({ focus }: { focus?: string }) {
             {practising === id ? (
               <SimilarQuestions conceptId={id} difficulty={2} count={5} />
             ) : (
-              <Button variant="game" onClick={() => setPractising(id)}>
+              <TownButton tone="green" onClick={() => setPractising(id)}>
                 <TB en="💪 Practise with Coach" />
-              </Button>
+              </TownButton>
             )}
           </Card>
         );

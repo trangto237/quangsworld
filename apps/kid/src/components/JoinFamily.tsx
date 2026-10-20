@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { getCloud } from '@atlas/db/cloud';
-import { Button, useRepo } from '@atlas/ui';
+import { useRepo } from '@atlas/ui';
+import { TownButton } from '../town/ui';
 import { T, TB } from '../i18n';
 
 /** The cloud controller and its status, for the kid app. */
@@ -22,7 +23,7 @@ const deviceLabel = () => {
 
 type Mode = 'signin' | 'create' | 'code';
 
-const field = 'mt-1 w-full rounded-xl bg-white px-4 py-3 text-slate-900 ring-2 ring-white/30 outline-none focus:ring-amber-400';
+const field = 'mt-1 w-full rounded-xl border-2 border-ink bg-white px-4 py-3 text-slate-900 outline-none focus:ring-4 focus:ring-amber-300';
 
 /**
  * Kid app: connect this device to the family.
@@ -75,7 +76,7 @@ export function JoinFamily({ onDone, onBusy }: { onDone?: () => void; onBusy?: (
         void submit();
       }}
     >
-      <div className="flex gap-1 rounded-xl bg-black/20 p-1 text-sm font-semibold" role="tablist">
+      <div className="flex gap-1 rounded-xl border-2 border-ink bg-paper-3 p-1 text-sm font-semibold" role="tablist">
         {(
           [
             ['signin', 'Sign in'],
@@ -89,7 +90,7 @@ export function JoinFamily({ onDone, onBusy }: { onDone?: () => void; onBusy?: (
             role="tab"
             aria-selected={mode === m}
             onClick={() => (setMode(m), setError(null))}
-            className={`flex-1 rounded-lg px-2 py-1.5 ${mode === m ? 'bg-white text-slate-900' : 'opacity-80 hover:opacity-100'}`}
+            className={`flex-1 rounded-lg px-2 py-1.5 ${mode === m ? 'bg-paper text-ink-text shadow-[0_2px_0_var(--ink)]' : 'text-ink-soft hover:text-ink-text'}`}
           >
             <T en={label} />
           </button>
@@ -142,9 +143,9 @@ export function JoinFamily({ onDone, onBusy }: { onDone?: () => void; onBusy?: (
       )}
       {note && <p className="rounded-lg bg-emerald-100 p-2 text-sm font-semibold text-emerald-800">{note}</p>}
       {error && <p className="rounded-lg bg-rose-100 p-2 text-sm font-semibold text-rose-800">{error}</p>}
-      <Button type="submit" variant="game" className="w-full py-3" disabled={busy || !ready}>
+      <TownButton type="submit" tone="green" className="w-full py-3" disabled={busy || !ready}>
         {busy ? <T en="Connecting…" /> : <TB en={mode === 'create' ? 'Create my account →' : mode === 'signin' ? 'Sign in →' : 'Connect →'} />}
-      </Button>
+      </TownButton>
     </form>
   );
 }

@@ -183,7 +183,7 @@ export function starsFor(correct: number, total: number, hints: number) {
 export function StarsResult({ correct, total, hints, onAgain }: { correct: number; total: number; hints: number; onAgain: () => void }) {
   const stars = starsFor(correct, total, hints);
   return (
-    <div className="rounded-xl bg-white p-4 text-center ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+    <div className="rounded-xl border-2 border-ink bg-paper-2 p-4 text-center">
       <div className="text-4xl tracking-widest" aria-label={`${stars} of 3 stars`}>
         {[0, 1, 2].map((k) => (
           <span key={k} className={k < stars ? '' : 'opacity-20 grayscale'}>
@@ -253,7 +253,7 @@ export function Drill({ items, regenerate, title }: { items: DrillItem[]; regene
   };
 
   return (
-    <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+    <div className="rounded-xl border-2 border-ink bg-paper-2 p-4">
       <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
         <span>{title ? <BiText b={title} /> : <T en="Practice" />}</span>
         <span>

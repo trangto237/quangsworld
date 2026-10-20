@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, InstallButton, Modal, useQuery, useRepo } from '@atlas/ui';
+import { InstallButton, Modal, useQuery, useRepo } from '@atlas/ui';
+import { TownButton } from '../town/ui';
 import type { StudentProfile } from '@atlas/db';
 import { useKid } from '../store';
 import { T, TB, tr } from '../i18n';
@@ -42,27 +43,26 @@ export function ProfilePicker() {
   };
 
   return (
-    <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-gradient-to-b from-indigo-600 via-violet-700 to-slate-900 p-6 text-white">
-      <Stars />
+    <div className="town-bg relative grid min-h-dvh place-items-center overflow-hidden p-6 text-ink-text">
       <div className="relative w-full max-w-2xl text-center">
         <div className="animate-float text-6xl">🧭</div>
-        <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Atlas</h1>
+        <h1 className="mt-3 font-display text-4xl font-bold [text-shadow:0_3px_0_var(--paper)] sm:text-5xl">Atlas</h1>
         {(!family || students.length === 0) && !joining && cloud.viaCode && cloud.state === 'syncing' ? (
-          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
+          <div className="town-panel mx-auto mt-8 max-w-md p-6">
             <p className="text-lg font-semibold">
               <T en="Downloading your family's adventure…" />
             </p>
           </div>
         ) : (!family || students.length === 0) && (canJoin || joining) ? (
-          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
+          <div className="town-panel mx-auto mt-8 max-w-md p-6">
             <p className="text-lg font-semibold">
               <T en="Connect to my family" />
             </p>
-            <p className="mb-4 mt-1 text-white/80">
+            <p className="mb-4 mt-1 text-ink-soft">
               <T en="Sign in with your own email, or use the family code from your parent." />
             </p>
             <JoinFamily onBusy={setJoining} />
-            <a href="/parent/" className="mt-5 inline-block text-sm text-white/60 underline-offset-4 hover:underline">
+            <a href="/parent/" className="mt-5 inline-block text-sm text-ink-soft underline-offset-4 hover:underline">
               <T en="No code? Set up on this device instead" />
             </a>
             <div className="mt-4">
@@ -70,14 +70,14 @@ export function ProfilePicker() {
             </div>
           </div>
         ) : !family || students.length === 0 ? (
-          <div className="mx-auto mt-8 max-w-md rounded-2xl bg-white/10 p-6 backdrop-blur">
+          <div className="town-panel mx-auto mt-8 max-w-md p-6">
             <p className="text-lg font-semibold">
               <T en="Your adventure is almost ready!" />
             </p>
-            <p className="mt-2 text-white/80">
+            <p className="mt-2 text-ink-soft">
               <T en="Ask a parent to create your hero profile first." />
             </p>
-            <a href="/parent/" className="mt-5 inline-block rounded-xl bg-amber-400 px-5 py-3 font-display font-bold text-amber-950 shadow-[0_4px_0_#b45309]">
+            <a href="/parent/" className="town-btn mt-5 inline-block rounded-xl bg-[#ffc23d] px-5 py-3 font-display font-bold text-[#3b2412]">
               <TB en="Open parent setup →" />
             </a>
             <div className="mt-4">
@@ -86,22 +86,22 @@ export function ProfilePicker() {
           </div>
         ) : (
           <>
-            <p className="mt-2 text-lg text-white/80">
+            <p className="mt-2 text-lg font-semibold text-ink-soft">
               <T en="Who's playing?" />
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-5">
               {students.map((s) => (
-                <button key={s.id} onClick={() => pick(s)} className="group flex w-32 flex-col items-center gap-2 rounded-2xl p-3 transition hover:bg-white/10">
-                  <span className="grid size-24 place-items-center rounded-3xl bg-white/15 text-6xl ring-4 ring-white/20 transition group-hover:scale-105 group-hover:ring-amber-300">{s.avatar}</span>
-                  <span className="font-display text-lg font-semibold">{s.name}</span>
-                  {s.hasPin && <span className="text-xs text-white/60">🔒 PIN</span>}
+                <button key={s.id} onClick={() => pick(s)} className="town-panel group flex w-32 flex-col items-center gap-2 p-3 transition hover:-translate-y-0.5">
+                  <span className="grid size-24 place-items-center rounded-full border-[2.5px] border-ink bg-[#ffd98a] text-6xl transition group-hover:scale-105">{s.avatar}</span>
+                  <span className="font-display text-lg font-bold">{s.name}</span>
+                  {s.hasPin && <span className="text-xs text-ink-soft">🔒 PIN</span>}
                 </button>
               ))}
               {/* The parent uses the same app: their pages open with the parent password. */}
-              <a href="/parent/" className="group flex w-32 flex-col items-center gap-2 rounded-2xl p-3 transition hover:bg-white/10">
-                <span className="grid size-24 place-items-center rounded-3xl bg-slate-900/40 text-5xl ring-4 ring-white/10 transition group-hover:scale-105 group-hover:ring-sky-300">👤</span>
-                <span className="font-display text-lg font-semibold">{family.parentName || tr('help', 'Parent')}</span>
-                <span className="text-xs text-white/60">
+              <a href="/parent/" className="town-panel group flex w-32 flex-col items-center gap-2 p-3 transition hover:-translate-y-0.5">
+                <span className="grid size-24 place-items-center rounded-full border-[2.5px] border-ink bg-[#cfe2f7] text-5xl transition group-hover:scale-105">👤</span>
+                <span className="font-display text-lg font-bold">{family.parentName || tr('help', 'Parent')}</span>
+                <span className="text-xs text-ink-soft">
                   🔒 <T en="Parent" />
                 </span>
               </a>
@@ -116,14 +116,14 @@ export function ProfilePicker() {
                       unsynced: tr('vi', 'Sign out anyway? Progress since the last sync on this device will be lost.'),
                     })
                   }
-                  className="text-sm text-white/60 underline-offset-4 hover:underline"
+                  className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline"
                 >
                   🚪 <T en="Sign out" />
                   {cloud.email ? ` (${cloud.email})` : ''}
                 </button>
               )}
               {canJoin && (
-                <button onClick={() => setJoinOpen(true)} className="text-sm text-white/60 underline-offset-4 hover:underline">
+                <button onClick={() => setJoinOpen(true)} className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline">
                   ☁️ <T en="Connect to my family" />
                 </button>
               )}
@@ -137,7 +137,7 @@ export function ProfilePicker() {
       <Modal open={!!pinFor} onClose={() => setPinFor(null)} title={tr('help', 'Hi {name}! Enter your PIN', { name: pinFor?.name ?? '' })}>
         <div className="flex justify-center gap-3" aria-live="polite">
           {[0, 1, 2, 3].map((i) => (
-            <span key={i} className={`size-4 rounded-full ${i < pin.length ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
+            <span key={i} className={`size-4 rounded-full border-2 border-ink ${i < pin.length ? 'bg-[#5cb85c]' : 'bg-paper-3'}`} />
           ))}
         </div>
         {error && (
@@ -150,9 +150,9 @@ export function ProfilePicker() {
             d === '' ? (
               <span key={i} />
             ) : (
-              <Button key={i} variant="secondary" className="h-14 text-xl" onClick={() => (d === '⌫' ? setPin(pin.slice(0, -1)) : press(d))}>
+              <TownButton key={i} tone="paper" className="h-14 text-xl" onClick={() => (d === '⌫' ? setPin(pin.slice(0, -1)) : press(d))}>
                 {d}
-              </Button>
+              </TownButton>
             ),
           )}
         </div>
@@ -179,7 +179,7 @@ export function Stars() {
 function KidInstall() {
   return (
     <InstallButton
-      className="text-sm font-semibold text-amber-300 underline-offset-4 hover:underline"
+      className="town-btn rounded-xl bg-[#4b8fe2] px-4 py-2 font-display text-sm font-bold text-white"
       labels={{
         install: (
           <>
