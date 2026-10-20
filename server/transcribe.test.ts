@@ -63,3 +63,52 @@ describe('AI scan reading', () => {
     expect(none.status).toBe(503);
   });
 });
+
+describe('Gemini region relay', () => {
+  const LOCATION = { error: { code: 400, message: 'User location is not supported for the API use.', status: 'FAILED_PRECONDITION' } };
+
+  it('goes through the Supabase relay (pinned to a region) when Google refuses the location', async () => {
+    const { forgetChosenModel } = await import('./gemini');
+    forgetChosenModel();
+    const calls: { url: string; headers: Headers }[] = [];
+    const fn = (async (url: string | URL | Request, init?: RequestInit) => {
+      const u = String(url);
+      calls.push({ url: u, headers: new Headers(init?.headers) });
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'parent-1', is_anonymous: false }));
+      if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('parent-1'));
+      if (u.startsWith('https://generativelanguage.googleapis.com/')) return new Response(JSON.stringify(LOCATION), { status: 400 });
+      if (u.includes('/functions/v1/gemini-relay')) {
+        if (u.includes('models%3FpageSize')) return new Response(JSON.stringify({ models: [{ name: 'models/gemini-3-flash', supportedGenerationMethods: ['generateContent'] }] }));
+        return new Response(JSON.stringify(reply(['UNIT 1'])));
+      }
+      return new Response('{}', { status: 500 });
+    }) as unknown as typeof fetch;
+    const res = await handleTranscribe(post({ images: [IMG] }), ENV, { fetch: fn });
+    expect(await res.json()).toEqual({ pages: ['UNIT 1'] });
+    const relayed = calls.filter((c) => c.url.includes('gemini-relay'));
+    expect(relayed.length).toBeGreaterThan(0);
+    expect(relayed.at(-1)!.url).toContain(encodeURIComponent('models/gemini-3-flash:generateContent'));
+    expect(relayed[0].headers.get('x-region')).toBe('us-east-1');
+    expect(relayed[0].headers.get('x-goog-api-key')).toBe('AIza-test');
+    expect(relayed[0].headers.get('apikey')).toBe('anon');
+    // Once refused, later calls skip Google's direct endpoint.
+    const before = calls.filter((c) => c.url.startsWith('https://generativelanguage')).length;
+    await handleTranscribe(post({ images: [IMG] }), ENV, { fetch: fn });
+    expect(calls.filter((c) => c.url.startsWith('https://generativelanguage')).length).toBe(before);
+  });
+
+  it('explains the one-time setup when the relay is not deployed yet', async () => {
+    const { forgetChosenModel } = await import('./gemini');
+    forgetChosenModel();
+    const fn = (async (url: string | URL | Request) => {
+      const u = String(url);
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'parent-1', is_anonymous: false }));
+      if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('parent-1'));
+      if (u.startsWith('https://generativelanguage.googleapis.com/')) return new Response(JSON.stringify(LOCATION), { status: 400 });
+      return new Response(JSON.stringify({ code: 'NOT_FOUND', message: 'Requested function was not found' }), { status: 404 });
+    }) as unknown as typeof fetch;
+    const res = await handleTranscribe(post({ images: [IMG] }), ENV, { fetch: fn });
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/gemini-relay/);
+  });
+});

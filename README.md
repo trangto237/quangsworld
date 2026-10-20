@@ -96,6 +96,13 @@ over time, so nothing is hard-coded; if a model disappears it picks again):
    reused (or set `SUPABASE_URL` / `SUPABASE_ANON_KEY`).
 3. Redeploy. In the parent app, sign in to the family account.
 
+**If Gemini says "User location is not supported"** — Google judges the location of the *server* calling it, and
+Cloudflare runs this app's server code near the user (e.g. Hong Kong for Vietnam, which Gemini doesn't serve). The app
+then goes through a tiny relay on Supabase pinned to a region Gemini serves (`us-east-1`, or set `GEMINI_RELAY_REGION`).
+Deploy it once: Supabase dashboard → **Edge Functions → Deploy a new function → Via editor**, name it `gemini-relay`,
+paste [`supabase/functions/gemini-relay/index.ts`](supabase/functions/gemini-relay/index.ts), **Deploy** (keep
+"Verify JWT" on). It stores nothing; the key stays on the server.
+
 The free tier has per-project limits (requests per minute and per day, shown in AI Studio); when they're used up
 the app says so and it works again after the daily reset — about one unit of pages per request. On the free tier
 Google may use what you send (the book pages, not your child's data) to improve its products; a paid Gemini key

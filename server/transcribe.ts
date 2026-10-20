@@ -3,7 +3,7 @@
  * Used by the Cloudflare Pages Function at functions/api/transcribe.ts. Much better than on-device OCR
  * on textbook pages (columns, coloured boxes, small print). Parent account only, like /api/generate.
  */
-import { ModelMissing, withGeminiModel } from './gemini';
+import { ModelMissing, RELAY_HELP, geminiFetch, withGeminiModel } from './gemini';
 import { GenerateError } from './prompt';
 import { providerOf, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
 
@@ -76,6 +76,8 @@ export async function transcribeWithGemini(apiKey: string, model: string, req: T
   const reply = (await res.json().catch(() => ({}))) as GeminiReply;
   if (!res.ok) {
     const msg = reply.error?.message ?? '';
+    if (msg === RELAY_HELP) throw new GenerateError(503, msg);
+    if (/location is not supported/i.test(msg)) throw new GenerateError(503, "Gemini doesn't serve the region the relay ran in. In Cloudflare, set GEMINI_RELAY_REGION to another Supabase region (e.g. us-west-1) and redeploy.");
     if (res.status === 429) throw new GenerateError(429, /day|daily|per_day/i.test(msg) ? "Gemini's free daily limit is used up — try again tomorrow." : 'Gemini is busy (free-tier speed limit). Waiting a moment…');
     if (res.status === 403 || (res.status === 400 && /api key/i.test(msg))) throw new GenerateError(500, 'The GEMINI_API_KEY on the server is not valid.');
     if (res.status === 404) throw new ModelMissing(model);
@@ -111,7 +113,8 @@ export async function handleTranscribe(request: Request, env: GenerateEnv, deps:
   const parsed = parseTranscribe(await request.json().catch(() => null));
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   try {
-    const pages = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, deps.fetch, (m) => transcribeWithGemini(env.GEMINI_API_KEY!, m, parsed.req, deps.fetch));
+    const gf = geminiFetch(env, deps.fetch);
+    const pages = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, gf, (m) => transcribeWithGemini(env.GEMINI_API_KEY!, m, parsed.req, gf));
     return json({ pages });
   } catch (e) {
     if (e instanceof GenerateError) return json({ error: e.message }, e.status);

@@ -101,7 +101,64 @@ export async function withGeminiModel<T>(apiKey: string, configured: string | un
 }
 
 /** For tests. */
-export const forgetChosenModel = () => (chosen = null);
+export const forgetChosenModel = () => {
+  chosen = null;
+  viaRelay = false;
+};
+
+// ── Region relay ──────────────────────────────────────────────────
+
+/** Remembered once Google has refused this server's location, so later calls go straight to the relay. */
+let viaRelay = false;
+const LOCATION = /location is not supported/i;
+
+export interface RelayEnv {
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+  VITE_SUPABASE_URL?: string;
+  VITE_SUPABASE_ANON_KEY?: string;
+  /** Supabase region the relay runs in (one Gemini serves). Default us-east-1. */
+  GEMINI_RELAY_REGION?: string;
+}
+
+export const RELAY_HELP =
+  "Google's Gemini doesn't accept requests from where Cloudflare runs this app's server. One-time fix: in the Supabase dashboard → Edge Functions → Deploy a new function → Via editor, name it gemini-relay and paste supabase/functions/gemini-relay/index.ts from the app's code, then Deploy. Then try again.";
+
+/**
+ * A fetch for Gemini calls: straight to Google, but if Google refuses this server's location, through the
+ * `gemini-relay` Supabase Edge Function pinned to a region Gemini serves. Other URLs pass through untouched.
+ */
+export function geminiFetch(env: RelayEnv, fetchFn: typeof fetch): typeof fetch {
+  const sbUrl = (env.SUPABASE_URL ?? env.VITE_SUPABASE_URL)?.replace(/\/$/, '');
+  const anon = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY;
+  const root = 'https://generativelanguage.googleapis.com/v1beta/';
+  const relay = async (url: string, init?: RequestInit) => {
+    const region = env.GEMINI_RELAY_REGION?.trim() || 'us-east-1';
+    const headers = new Headers(init?.headers);
+    headers.set('x-region', region);
+    if (anon) {
+      headers.set('authorization', `Bearer ${anon}`);
+      headers.set('apikey', anon);
+    }
+    const res = await fetchFn(`${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${encodeURIComponent(region)}&path=${encodeURIComponent(url.slice(root.length))}`, { ...init, headers });
+    if (res.status === 404 && !(await res.clone().text()).includes('"error"')) {
+      // The relay hasn't been deployed yet.
+      return new Response(JSON.stringify({ error: { message: RELAY_HELP } }), { status: 400 });
+    }
+    return res;
+  };
+  return (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (!url.startsWith(root) || !sbUrl) return fetchFn(input, init);
+    if (viaRelay) return relay(url, init);
+    const res = await fetchFn(input, init);
+    if (res.status !== 400 && res.status !== 403) return res;
+    const text = await res.clone().text();
+    if (!LOCATION.test(text)) return res;
+    viaRelay = true;
+    return relay(url, init);
+  }) as typeof fetch;
+}
 
 /** The generateContent request body: material (PDF / photos / text) first, then the task. */
 export function buildGeminiBody(req: Req) {
@@ -140,6 +197,8 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
   const reply = (await res.json().catch(() => ({}))) as GeminiReply;
   if (!res.ok) {
     const msg = reply.error?.message ?? '';
+    if (msg === RELAY_HELP) throw new GenerateError(503, msg);
+    if (/location is not supported/i.test(msg)) throw new GenerateError(503, "Gemini doesn't serve the region the relay ran in. In Cloudflare, set GEMINI_RELAY_REGION to another Supabase region (e.g. us-west-1) and redeploy.");
     if (res.status === 429) throw new GenerateError(429, "Gemini's free daily limit is used up — try again later (limits reset daily).");
     if (res.status === 403 || reply.error?.status === 'PERMISSION_DENIED' || (res.status === 400 && /api key/i.test(msg)))
       throw new GenerateError(500, 'The GEMINI_API_KEY on the server is not valid.');
