@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { SHOP, canAfford, levelFromXp, type ShopCategory, type ShopItem } from '@atlas/engine';
-import { Button, cx, useQuery, useRepo } from '@atlas/ui';
-import { TopBar } from '../components/TopBar';
+import { cx, useQuery, useRepo } from '@atlas/ui';
+import { TownScreen } from '../town/Shell';
+import { Panel, TownButton } from '../town/ui';
 import { getEquipped, setEquipped } from '../lib/equipped';
-import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
 
 const TABS: { id: ShopCategory; label: string }[] = [
@@ -18,7 +18,6 @@ const TABS: { id: ShopCategory; label: string }[] = [
 /** The Armoury: everything is earned by learning. No real money, no pay-to-win. */
 export function Shop({ student }: { student: StudentProfile }) {
   const repo = useRepo();
-  const go = useKid((s) => s.go);
   const [tab, setTab] = useState<ShopCategory>('tower');
   const [msg, setMsg] = useState<string | null>(null);
   const lang = useLang();
@@ -49,48 +48,48 @@ export function Shop({ student }: { student: StudentProfile }) {
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-slate-900 to-slate-950 text-white">
-      <TopBar student={student} back={() => go({ name: 'hub' })} />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+    <TownScreen student={student} tab="shop">
+      <Panel>
         <h1 className="font-display text-3xl font-bold">
           <T en="🛒 The Armoury" />
         </h1>
-        <p className="text-white/60">
+        <p className="text-ink-soft">
           <T en="Spend the coins and gems you earn in battle." />
         </p>
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+      </Panel>
+        <div className="mt-5 flex gap-2 overflow-x-auto px-0.5 pb-2 pt-0.5">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={cx('shrink-0 rounded-full px-4 py-2 text-sm font-bold', tab === t.id ? 'bg-amber-400 text-amber-950' : 'bg-white/10 hover:bg-white/15')}
+              className={cx('town-btn shrink-0 rounded-full px-4 py-1.5 font-display text-sm font-bold', tab === t.id ? 'bg-[#ffc23d] text-[#3b2412]' : 'bg-paper text-ink-text hover:bg-paper-3')}
             >
               <TB en={t.label} />
             </button>
           ))}
         </div>
-        {msg && <p className="mt-4 rounded-xl bg-white/10 px-4 py-2 text-sm">{msg}</p>}
+        {msg && <p className="town-panel mt-4 px-4 py-2 text-sm font-semibold">{msg}</p>}
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {SHOP.filter((i) => i.category === tab).map((item) => {
             const have = owned.includes(item.id);
             const locked = (item.minLevel ?? 1) > level;
             const equippable = have && item.category !== 'tower' && item.category !== 'chess-set';
             return (
-              <div key={item.id} className={cx('flex flex-col rounded-2xl bg-white/5 p-4 ring-1', isEquipped(item) ? 'ring-amber-400' : 'ring-white/10')}>
+              <div key={item.id} className={cx('town-panel flex flex-col p-4', isEquipped(item) && 'bg-[#ffe7a8]')}>
                 <div className="flex items-center gap-3">
-                  <span className="text-5xl">{item.emoji}</span>
+                  <span className="grid size-16 shrink-0 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-4xl">{item.emoji}</span>
                   <div>
-                    <div className="font-display text-lg font-semibold">
+                    <div className="font-display text-lg font-bold leading-tight">
                       <T en={item.name} />
                     </div>
-                    <div className="text-sm text-white/60">
+                    <div className="text-sm text-ink-soft">
                       <T en={item.description} />
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {have ? (
-                    <span className="text-sm font-bold text-emerald-400">
+                    <span className="text-sm font-bold text-[#2f8a3a]">
                       <T en="✓ Owned" />
                     </span>
                   ) : (
@@ -100,20 +99,19 @@ export function Shop({ student }: { student: StudentProfile }) {
                     </span>
                   )}
                   {equippable ? (
-                    <Button variant={isEquipped(item) ? 'secondary' : 'primary'} onClick={() => equip(item)}>
+                    <TownButton tone={isEquipped(item) ? 'paper' : 'blue'} size="sm" onClick={() => equip(item)}>
                       <TB en={isEquipped(item) ? 'Unequip' : 'Equip'} />
-                    </Button>
+                    </TownButton>
                   ) : !have ? (
-                    <Button variant="game" disabled={locked || !canAfford(wallet, item)} onClick={() => void buy(item)}>
+                    <TownButton tone="amber" size="sm" disabled={locked || !canAfford(wallet, item)} onClick={() => void buy(item)}>
                       {locked ? <TB en="🔒 Level {n}" vars={{ n: item.minLevel ?? 1 }} /> : <TB en="Unlock" />}
-                    </Button>
+                    </TownButton>
                   ) : null}
                 </div>
               </div>
             );
           })}
         </div>
-      </main>
-    </div>
+    </TownScreen>
   );
 }

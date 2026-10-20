@@ -1,7 +1,8 @@
 import type { StudentProfile } from '@atlas/db';
 import { EXAMS } from '@atlas/engine';
-import { Button, cx, useQuery } from '@atlas/ui';
-import { TopBar } from '../components/TopBar';
+import { cx, useQuery } from '@atlas/ui';
+import { TownScreen } from '../town/Shell';
+import { Panel, TownButton } from '../town/ui';
 import { T, TB } from '../i18n';
 import { useKid } from '../store';
 
@@ -16,42 +17,42 @@ export function ExamHall({ student }: { student: StudentProfile }) {
   const inProgress = useQuery((r) => r.getKv<{ examId: string }>(`exam-progress:${student.id}`), [student.id]);
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-slate-900 to-slate-950 text-white">
-      <TopBar student={student} back={() => go({ name: 'hub' })} />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+    <TownScreen student={student} tab="exams">
+      <Panel>
         <h1 className="font-display text-3xl font-bold">
           🏛️ <T en="Exam Hall" />
         </h1>
-        <p className="text-white/70">
+        <p className="text-ink-soft">
           <T en="Real exam format, real timer. No game — just you and the paper. Your mistakes go to the Mistake Book afterwards." />
         </p>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+      </Panel>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
           {EXAMS.map((e) => {
             const mine = results.filter((r) => r.examId === e.id);
             const last = mine.at(-1);
             const resuming = inProgress?.examId === e.id;
             return (
-              <section key={e.id} className={cx('flex flex-col gap-0 rounded-2xl bg-white/5 p-5 ring-1', resuming ? 'ring-amber-400' : 'ring-white/10')}>
-                <div className="text-4xl">{ICON[e.id]}</div>
-                <h2 className="mt-2 font-display text-xl font-semibold">{e.name}</h2>
-                <p className="mt-1 text-sm text-white/70">{e.description}</p>
-                <div className="mb-4 mt-3 text-sm text-white/60">
+              <section key={e.id} className={cx('town-panel flex flex-col gap-0 p-4', resuming && 'bg-[#ffe7a8]')}>
+                <div className="grid size-14 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-3xl">{ICON[e.id]}</div>
+                <h2 className="mt-2 font-display text-xl font-bold leading-tight">{e.name}</h2>
+                <p className="mt-1 text-sm text-ink-soft">{e.description}</p>
+                <div className="mb-4 mt-3 text-sm text-ink-soft">
                   {last ? (
                     <>
-                      <T en="Last result" />: <b className="text-white">{formatScore(last)}</b> · {mine.length}× <T en="taken" />
+                      <T en="Last result" />: <b className="text-ink-text">{formatScore(last)}</b> · {mine.length}× <T en="taken" />
                     </>
                   ) : (
                     <T en="Not taken yet" />
                   )}
                 </div>
-                <Button variant="game" className="mt-auto w-full py-3" onClick={() => go({ name: 'exam', examId: e.id })}>
+                <TownButton tone="green" className="mt-auto w-full py-2.5" onClick={() => go({ name: 'exam', examId: e.id })}>
                   <TB en={resuming ? 'Continue paper →' : 'Start paper →'} />
-                </Button>
+                </TownButton>
               </section>
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-white/50">
+        <p className="mt-4 text-xs text-ink-soft">
           <T en="The Hà Nội paper follows the usual structure of recent entrance exams for regular public schools. Check your school's official sample paper (đề minh họa) for this year's exact format." />
         </p>
 
@@ -60,9 +61,9 @@ export function ExamHall({ student }: { student: StudentProfile }) {
             <h2 className="font-display text-2xl font-bold">
               <T en="Your results" />
             </h2>
-            <div className="mt-3 overflow-x-auto rounded-2xl bg-white/5 ring-1 ring-white/10">
+            <div className="town-panel mt-3 overflow-x-auto p-0">
               <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase text-white/50">
+                <thead className="text-xs uppercase text-ink-soft">
                   <tr>
                     <th className="px-4 py-2">
                       <T en="Date" />
@@ -83,7 +84,7 @@ export function ExamHall({ student }: { student: StudentProfile }) {
                 </thead>
                 <tbody>
                   {[...results].reverse().map((r) => (
-                    <tr key={r.id} className="border-t border-white/10">
+                    <tr key={r.id} className="border-t-2 border-ink/15">
                       <td className="px-4 py-2">{new Date(r.finishedAt).toLocaleDateString()}</td>
                       <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? r.examId}</td>
                       <td className="text-right font-bold tabular-nums">{formatScore(r)}</td>
@@ -98,7 +99,6 @@ export function ExamHall({ student }: { student: StudentProfile }) {
             </div>
           </section>
         )}
-      </main>
-    </div>
+    </TownScreen>
   );
 }

@@ -4,8 +4,9 @@ import { conceptMission, isDue, stars } from '@atlas/engine';
 import { MODES, modeFor, modesFor, type GameMode } from '@atlas/game';
 import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
 import type { ConceptDef } from '@atlas/shared';
-import { Button, Modal, cx, useQuery } from '@atlas/ui';
-import { TopBar } from '../components/TopBar';
+import { Modal, cx, useQuery } from '@atlas/ui';
+import { TownScreen } from '../town/Shell';
+import { TownButton } from '../town/ui';
 import { useKid } from '../store';
 import { LESSONS_VI } from '@atlas/knowledge';
 import { T, TB, useLang } from '../i18n';
@@ -20,48 +21,44 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const lang = useLang();
 
   return (
-    <div className="min-h-dvh text-white" style={{ background: `radial-gradient(circle at 30% 0%, ${world.color}, #020617 70%)` }}>
-      <TopBar student={student} back={() => go({ name: 'hub' })} />
-      <main className="mx-auto max-w-4xl px-4 py-6">
-        <div className="text-center">
-          <div className="text-6xl">{world.emoji}</div>
-          <h1 className="mt-2 font-display text-3xl font-bold">
-            <T en={world.name} />
-          </h1>
-          <p className="text-white/70">
-            <T en={world.blurb} />
-          </p>
+    <TownScreen student={student} tab="map" back={() => go({ name: 'hub' })}>
+      <div className="town-panel mx-auto max-w-md p-4 text-center">
+        <div className="mx-auto grid size-20 place-items-center rounded-2xl border-[2.5px] border-ink text-5xl" style={{ background: `${world.color}55` }}>
+          {world.emoji}
         </div>
-        {/* A winding path of mission nodes */}
-        <ol className="relative mx-auto mt-8 max-w-md">
-          <div className="absolute bottom-6 left-1/2 top-6 w-1 -translate-x-1/2 rounded bg-white/15" aria-hidden />
-          {concepts.map((c, i) => {
-            const s = states[c.id];
-            const st = stars(s);
-            const due = s && s.attempts > 0 && isDue(s);
-            return (
-              <li key={c.id} className={cx('relative mb-6 flex', i % 2 ? 'justify-end' : 'justify-start')}>
-                <button
-                  onClick={() => setOpen(c)}
-                  className="relative w-[70%] rounded-2xl bg-slate-950/70 p-4 text-left ring-2 ring-white/10 backdrop-blur transition hover:ring-amber-300"
-                >
-                  {due && (
-                    <span className="absolute -right-2 -top-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold">
-                      <T en="Review" />
-                    </span>
-                  )}
-                  <div className="font-display text-lg font-semibold">{c.missionName}</div>
-                  <div className="text-xs text-white/60">{c.name}</div>
-                  <div className="mt-1 text-lg tracking-widest" aria-label={`${st} of 3 stars`}>
-                    {'★'.repeat(st)}
-                    <span className="text-white/20">{'★'.repeat(3 - st)}</span>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </main>
+        <h1 className="mt-2 font-display text-3xl font-bold leading-tight">
+          <T en={world.name} />
+        </h1>
+        <p className="text-ink-soft">
+          <T en={world.blurb} />
+        </p>
+      </div>
+      {/* A winding path of mission nodes */}
+      <ol className="relative mx-auto mt-6 max-w-md">
+        <div className="absolute bottom-6 left-1/2 top-6 w-1.5 -translate-x-1/2 rounded border-x-2 border-ink" style={{ background: `${world.color}88` }} aria-hidden />
+        {concepts.map((c, i) => {
+          const s = states[c.id];
+          const st = stars(s);
+          const due = s && s.attempts > 0 && isDue(s);
+          return (
+            <li key={c.id} className={cx('relative mb-5 flex', i % 2 ? 'justify-end' : 'justify-start')}>
+              <button onClick={() => setOpen(c)} className="town-btn relative w-[72%] rounded-2xl bg-paper p-3 text-left hover:bg-paper-3">
+                {due && (
+                  <span className="absolute -right-2 -top-2 rounded-full border-2 border-ink bg-[#8b5cf6] px-2 py-0.5 text-xs font-bold text-white">
+                    <T en="Review" />
+                  </span>
+                )}
+                <div className="font-display text-lg font-bold leading-tight">{c.missionName}</div>
+                <div className="text-xs font-semibold text-ink-soft">{c.name}</div>
+                <div className="mt-1 text-lg tracking-widest" aria-label={`${st} of 3 stars`}>
+                  <span className="text-[#f5a623]">{'★'.repeat(st)}</span>
+                  <span className="text-ink/20">{'★'.repeat(3 - st)}</span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
       <Modal
         open={!!open}
         onClose={() => {
@@ -137,16 +134,16 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
               })}
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 3), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
+              <TownButton tone="paper" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 3), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
                 <TB en="⚡ Quick (3 min)" />
-              </Button>
-              <Button variant="game" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 6), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
+              </TownButton>
+              <TownButton tone="green" onClick={() => go({ name: 'battle', mission: { ...conceptMission(open.id, 6), mode: mode ?? modeFor([open.id]) }, fromPlan: false })}>
                 <TB en="⚔️ Play (6 min)" />
-              </Button>
+              </TownButton>
             </div>
           </div>
         )}
       </Modal>
-    </div>
+    </TownScreen>
   );
 }
