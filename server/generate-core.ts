@@ -64,6 +64,16 @@ export type Provider = 'gemini' | 'claude' | 'openrouter';
 /** Gemini if its key is set, else Claude if its key is set, else none. */
 export const providerOf = (env: GenerateEnv): Provider | null =>
   env.GEMINI_API_KEY ? 'gemini' : env.ANTHROPIC_API_KEY ? 'claude' : env.OPENROUTER_API_KEY ? 'openrouter' : null;
+/**
+ * After the main AI fails and the backup works, the backup goes first for a while, so each request
+ * doesn't wait on a route that's known to be down (e.g. Gemini refused from this data centre).
+ */
+let mainDownUntil = 0;
+export const mainResting = () => Date.now() < mainDownUntil;
+export const restMain = () => void (mainDownUntil = Date.now() + 10 * 60_000);
+/** For tests. */
+export const forgetRest = () => void (mainDownUntil = 0);
+
 /** OpenRouter backs up the main AI when its key is set too. */
 export const backupOf = (env: GenerateEnv): 'openrouter' | null => (env.OPENROUTER_API_KEY && providerOf(env) !== 'openrouter' ? 'openrouter' : null);
 const modelOf = (env: GenerateEnv, p: Provider | null) =>
@@ -232,6 +242,7 @@ export async function handleGenerate(request: Request, env: GenerateEnv, deps: G
   try {
     let result: { drafts: DraftQuestion[]; dropped: number };
     try {
+      if (backupOf(env) && mainResting()) throw new GenerateError(503, 'The main AI failed a moment ago.');
       result =
         provider === 'gemini'
           ? await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, geminiFetch(env, deps.fetch), (m) => ((model = m), generateWithGemini(env.GEMINI_API_KEY!, m, parsed.req, geminiFetch(env, deps.fetch))))
@@ -243,6 +254,7 @@ export async function handleGenerate(request: Request, env: GenerateEnv, deps: G
       if (!backupOf(env)) throw first;
       try {
         result = await viaOpenRouter();
+        if (!mainResting()) restMain();
       } catch (second) {
         const m = (e: unknown) => (e instanceof Error ? e.message : 'failed');
         throw new GenerateError(second instanceof GenerateError ? second.status : 502, `${m(first)} The backup (OpenRouter) failed too: ${m(second)}`);

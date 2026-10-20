@@ -90,6 +90,8 @@ export function ImportWizard() {
   const [readDone, setReadDone] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(() => loadDraft());
   const [checks, setChecks] = useState<Check[] | null>(null);
+  const [perUnit, setPerUnit] = useState(15);
+  const aiStop = useRef<AbortController | null>(null);
 
   useEffect(() => {
     void aiStatus().then(setAi);
@@ -224,6 +226,51 @@ export function ImportWizard() {
       setOcr(null);
       setOcrNote(null);
       ocrStop.current = null;
+    }
+  };
+
+  /** Whole book: AI questions for every unit, one unit at a time (answers and explanations included). */
+  const makeBookWithAi = async () => {
+    setError(null);
+    const stop = new AbortController();
+    aiStop.current = stop;
+    const all: (DraftQuestion & { unitId: string })[] = [];
+    const notes: ImportIssue[] = [];
+    try {
+      const token = await cloud.parentAccessToken();
+      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      for (const [i, b] of book.entries()) {
+        if (stop.signal.aborted) break;
+        const name = b.unit.title.split(' · ')[0];
+        let got: { drafts: DraftQuestion[]; dropped: number } | null = null;
+        for (let attempt = 0; !got && !stop.signal.aborted; attempt++) {
+          setBusy(`✨ The AI is writing questions for ${name} (${i + 1} of ${book.length})…`);
+          try {
+            got = await generateWithAI(token, { name: b.unit.title, kind: 'text', size: b.text.length, text: b.text.slice(0, 59_000) }, { unitTitle: b.unit.title, focus, count: perUnit });
+          } catch (e) {
+            if (e instanceof BusyError && attempt < 5) {
+              for (let s = 20; s > 0 && !stop.signal.aborted; s--) {
+                setBusy(`The AI's free tier needs a short break — carrying on with ${name} in ${s} s…`);
+                await new Promise((r) => setTimeout(r, 1000));
+              }
+              continue;
+            }
+            notes.push({ line: 0, message: `${name}: skipped — ${(e as Error).message}` });
+            break;
+          }
+        }
+        if (got) {
+          all.push(...got.drafts.map((d) => ({ ...d, unitId: b.unit.id })));
+          if (got.dropped) notes.push({ line: 0, message: `${name}: ${got.dropped} question(s) were not usable and were left out.` });
+        }
+      }
+      if (!all.length) throw new Error(notes[0]?.message ?? 'No questions came back.');
+      review(all, 'ai', notes);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+      aiStop.current = null;
     }
   };
 
@@ -487,7 +534,7 @@ export function ImportWizard() {
             )}
 
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
-              <p className="font-semibold">Make questions on this device</p>
+              <p className="font-semibold">Make questions on this device (no AI)</p>
               <p className="mt-1 text-sm text-slate-500">
                 {bookMode ? (
                   !text.trim() ? (
@@ -517,9 +564,46 @@ export function ImportWizard() {
             </div>
 
             <div className="rounded-xl bg-violet-50 p-4 dark:bg-violet-950/30">
-              <p className="font-semibold">✨ Make questions with AI ({providerName(ai?.provider)})</p>
-              {bookMode ? (
-                <p className="mt-1 text-sm text-slate-500">AI works one unit at a time — choose a unit above (it can read that unit's pages, including scans).</p>
+              <p className="font-semibold">
+                ✨ Make questions with AI ({providerName(ai?.provider)}
+                {ai?.backup ? ', OpenRouter as backup' : ''})
+              </p>
+              {bookMode && ai?.ai && signedInParent ? (
+                book.length ? (
+                  <>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Goes through all <b>{book.length} units</b> one by one: answers the book's exercises and writes new questions, with explanations in English and Vietnamese. About a minute per unit
+                      — keep this tab open. You check everything before saving.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                      {(['vocabulary', 'grammar', 'reading'] as const).map((f) => (
+                        <label key={f} className="flex items-center gap-1.5">
+                          <input type="checkbox" checked={focus.includes(f)} onChange={(e) => setFocus(e.target.checked ? [...focus, f] : focus.filter((x) => x !== f))} />
+                          {PART_LABEL[f].en}
+                        </label>
+                      ))}
+                    </div>
+                    <label className="mt-2 flex items-center gap-2 text-sm">
+                      About <input type="number" min={5} max={40} value={perUnit} onChange={(e) => setPerUnit(Number(e.target.value))} className={`${inputClass} w-20`} /> questions per unit
+                    </label>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button disabled={!focus.length || !!busy} onClick={() => void makeBookWithAi()}>
+                        ✨ Make AI questions for all {book.length} units
+                      </Button>
+                      {aiStop.current && busy && (
+                        <Button variant="ghost" onClick={() => aiStop.current?.abort()}>
+                          Stop (keep what's done)
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-500">Add the book first — the units are found from its “UNIT 1 … UNIT 12” headings.</p>
+                )
+              ) : bookMode && !ai?.ai ? (
+                <p className="mt-1 text-sm text-slate-500">AI isn't set up on the server yet (see the README).</p>
+              ) : bookMode ? (
+                <p className="mt-1 text-sm text-slate-500">Sign in to your family cloud account (Settings → Cloud sync) to use it.</p>
               ) : ai?.ai ? (
                 signedInParent ? (
                   <>

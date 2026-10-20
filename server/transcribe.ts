@@ -5,7 +5,7 @@
  */
 import { ModelMissing, RELAY_HELP, RELAY_JWT_HELP, RELAY_KEY_HELP, geminiFetch, withGeminiModel } from './gemini';
 import { GenerateError } from './prompt';
-import { backupOf, providerOf, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
+import { backupOf, mainResting, providerOf, restMain, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
 import { transcribeWithOpenRouter } from './openrouter';
 
 export const TRANSCRIBE_LIMITS = { images: 6, imageBase64: 4_000_000 };
@@ -120,12 +120,14 @@ export async function handleTranscribe(request: Request, env: GenerateEnv, deps:
     if (main === 'openrouter') pages = await viaOpenRouter();
     else {
       try {
+        if (backupOf(env) && mainResting()) throw new GenerateError(503, 'Gemini failed a moment ago.');
         const gf = geminiFetch(env, deps.fetch);
         pages = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, gf, (m) => transcribeWithGemini(env.GEMINI_API_KEY!, m, parsed.req, gf));
       } catch (first) {
         if (!backupOf(env)) throw first;
         try {
           pages = await viaOpenRouter();
+          if (!mainResting()) restMain();
         } catch (second) {
           const m = (e: unknown) => (e instanceof Error ? e.message : 'failed');
           throw new GenerateError(second instanceof GenerateError ? second.status : 502, `${m(first)} The backup (OpenRouter) failed too: ${m(second)}`);

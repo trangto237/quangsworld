@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { forgetOpenRouterModels, pickFree, pickPaid, transcribeWithOpenRouter } from './openrouter';
 import { forgetChosenModel } from './gemini';
 import { handleTranscribe } from './transcribe';
-import { handleGenerate, health, type GenerateEnv } from './generate-core';
+import { forgetRest, handleGenerate, health, type GenerateEnv } from './generate-core';
 
 const MODELS = [
   { id: 'google/gemini-2.5-flash', architecture: { input_modalities: ['text', 'image'] }, pricing: { prompt: '0.0000003', completion: '0.0000025' } },
@@ -35,6 +35,7 @@ function fake(opts: { chat: (model: string) => Response; gemini?: () => Response
 }
 
 beforeEach(() => {
+  forgetRest();
   forgetOpenRouterModels();
   forgetChosenModel();
 });
@@ -97,5 +98,21 @@ describe('OpenRouter', () => {
     });
     const res = await handleTranscribe(post('transcribe', { images: [IMG] }), { ...ENV, GEMINI_API_KEY: 'AIza' }, { fetch: fn });
     expect((await res.json()).error).toMatch(/backup \(OpenRouter\) failed too/);
+  });
+});
+
+describe('after the main AI fails', () => {
+  it('goes straight to the backup for a while', async () => {
+    let geminiCalls = 0;
+    const { fn } = fake({
+      gemini: () => (geminiCalls++, new Response(JSON.stringify({ error: { message: 'User location is not supported for the API use.' } }), { status: 400 })),
+      chat: () => new Response(JSON.stringify(pagesReply(['p']))),
+    });
+    const env = { ...ENV, GEMINI_API_KEY: 'AIza' };
+    await handleTranscribe(post('transcribe', { images: [IMG] }), env, { fetch: fn });
+    const after = geminiCalls;
+    expect(after).toBeGreaterThan(0);
+    await handleTranscribe(post('transcribe', { images: [IMG] }), env, { fetch: fn });
+    expect(geminiCalls).toBe(after);
   });
 });

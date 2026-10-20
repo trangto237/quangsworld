@@ -1,6 +1,9 @@
 import { validateDrafts, type DraftQuestion } from '@atlas/knowledge';
 import type { Extracted } from './extract';
 
+/** Thrown when the AI's free tier asks us to slow down (try again in a moment). */
+export class BusyError extends Error {}
+
 export interface AiStatus {
   /** The app's server function answered (not available in local preview / static hosting). */
   reachable: boolean;
@@ -39,13 +42,11 @@ export async function generateWithAI(
     body: JSON.stringify({ text: src.text || undefined, pdfBase64: src.pdfBase64, images: src.images, ...opts }),
   });
   const body = (await res.json().catch(() => ({}))) as { drafts?: unknown; dropped?: number; error?: string };
+  if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
   if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
   const { drafts, dropped } = validateDrafts(body.drafts);
   return { drafts, dropped: (body.dropped ?? 0) + dropped.length };
 }
-
-/** Thrown when Gemini's free tier asks us to slow down (try again in a moment). */
-export class BusyError extends Error {}
 
 /** Reads up to 6 scanned page images with the server's AI (Gemini): the text of each page. */
 export async function transcribeWithAI(token: string, images: { mediaType: string; data: string }[]): Promise<string[]> {
