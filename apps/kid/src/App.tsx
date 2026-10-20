@@ -4,7 +4,9 @@ import { useKid } from './store';
 import { LangContext, type LangMode } from './i18n';
 import { ProfilePicker } from './screens/ProfilePicker';
 import { Placement } from './screens/Placement';
-import { Hub } from './screens/Hub';
+import { Town } from './screens/Town';
+import { Quests } from './screens/Quests';
+import { Hero } from './screens/Hero';
 import { WorldScreen } from './screens/World';
 import { Battle } from './screens/Battle';
 import { Results } from './screens/Results';
@@ -61,9 +63,13 @@ function Screens() {
       return <ExamHall student={student} />;
     case 'coach':
       return <CoachCorner student={student} topic={screen.topic} conceptId={screen.conceptId} />;
+    case 'quests':
+      return <Quests student={student} />;
+    case 'hero':
+      return <Hero student={student} />;
     case 'exam':
       return <Exam key={screen.examId} student={student} examId={screen.examId} />;
     default:
-      return <Hub student={student} />;
+      return <Town student={student} />;
   }
 }

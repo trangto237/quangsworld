@@ -6,6 +6,8 @@ export type Screen =
   | { name: 'profiles' }
   | { name: 'placement' }
   | { name: 'hub' }
+  | { name: 'quests' }
+  | { name: 'hero' }
   | { name: 'world'; worldId: string }
   | { name: 'battle'; mission: Mission; fromPlan: boolean }
   | { name: 'results'; result: BattleResult }

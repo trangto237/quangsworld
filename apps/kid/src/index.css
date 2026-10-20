@@ -3,7 +3,74 @@
 @source "../../../packages/ui/src";
 
 /* Behind the safe-area padding and overscroll on phones. */
-html { background: #1e1b4b; }
+html { background: var(--paper-2); }
+
+/*
+ * Town style (menus, map, hero): cream paper, dark-brown outlines, flat colours.
+ * Day by default; "night town" in dark mode. Games keep their own look.
+ */
+:root {
+  --paper: #fff5e1;
+  --paper-2: #f6e3bd;
+  --paper-3: #ecd3a2;
+  --ink: #4a2e18;
+  --ink-text: #3b2412;
+  --ink-soft: #85623f;
+  --grass: #a9d36e;
+  --grass-2: #9ccb62;
+  --plot: #b9dc84;
+}
+.dark {
+  --paper: #34283f;
+  --paper-2: #261d30;
+  --paper-3: #44354f;
+  --ink: #0e0913;
+  --ink-text: #fbecd2;
+  --ink-soft: #c9b293;
+  --grass: #3e5b3a;
+  --grass-2: #375233;
+  --plot: #4f7246;
+}
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-text: var(--ink-text);
+  --color-ink-soft: var(--ink-soft);
+  --color-grass: var(--grass);
+}
+
+/* A soft diamond pattern, like fields seen from above. */
+.town-bg {
+  background-color: var(--paper-2);
+  background-image:
+    linear-gradient(30deg, transparent 48%, color-mix(in srgb, var(--ink) 7%, transparent) 49% 51%, transparent 52%),
+    linear-gradient(150deg, transparent 48%, color-mix(in srgb, var(--ink) 7%, transparent) 49% 51%, transparent 52%);
+  background-size: 56px 32px;
+}
+.town-panel {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 var(--ink);
+  color: var(--ink-text);
+}
+.town-btn {
+  border: 2.5px solid var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.town-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.town-btn:disabled { opacity: 0.55; }
+@keyframes town-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+.town-bob { animation: town-bob 0.8s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) {
+  .town-bob { animation: none; }
+}
 
 /* Word Runner */
 .runner-stripes {

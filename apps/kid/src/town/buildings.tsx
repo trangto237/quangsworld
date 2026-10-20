@@ -1,0 +1,498 @@
+import type { ReactNode } from 'react';
+import { Box, Cylinder, Door, Emoji, Flag, GableRoof, Ground, INK, P, Poly, PyramidRoof, Tree, Windows, shade, type Pt } from './iso';
+
+/**
+ * One drawing per world, each on a 2×2-tile lot (the Exam Hall on 4×4). `lv` (0–4) is how far the
+ * world has grown: more floors, tiers or pieces as the hero earns stars there.
+ * Each returns the drawing and the point a flag or tag should sit on.
+ */
+export interface Drawn {
+  el: ReactNode;
+  /** Top of the building (tile x, tile y, height px). */
+  top: [number, number, number];
+}
+export type Kind = (x: number, y: number, lv: number, color: string) => Drawn;
+
+const FH = 18; // floor height
+
+const school: Kind = (x, y, lv, color) => {
+  const floors = 1 + Math.min(2, Math.ceil(lv / 2));
+  const [bx, by, w, d] = [x + 0.25, y + 0.45, 1.5, 1.15];
+  const h = floors * FH;
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#f2d38a" />
+        <Windows x={bx} y={by} w={w} d={d} floors={floors} floorH={FH} cols={3} />
+        <Door x={bx} y={by} w={w} d={d} />
+        <GableRoof x={bx} y={by} w={w} d={d} z={h} h={16} color={color} />
+        <Emoji at={P(bx + w / 2, by + d, h + 9)} size={13}>
+          🕰️
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 16],
+  };
+};
+
+const forge: Kind = (x, y, lv, color) => {
+  const h = FH + (lv >= 3 ? 10 : 0);
+  const [bx, by, w, d] = [x + 0.3, y + 0.35, 1.4, 1.3];
+  return {
+    el: (
+      <g>
+        <Box x={bx + 0.15} y={by + 0.1} w={0.3} d={0.3} h={h + 26} color="#8d5b3b" />
+        <circle cx={P(bx + 0.3, by + 0.25, h + 34)[0]} cy={P(bx + 0.3, by + 0.25, h + 34)[1]} r={6} fill="#d8d0c8" stroke={INK} strokeWidth={1.2} opacity={0.9} />
+        <circle cx={P(bx + 0.3, by + 0.25, h + 44)[0] + 5} cy={P(bx + 0.3, by + 0.25, h + 44)[1]} r={4.5} fill="#e6dfd8" stroke={INK} strokeWidth={1.2} opacity={0.8} />
+        <Box x={bx} y={by} w={w} d={d} h={h} color={shade(color, -0.1)} top="#6b4a3a" />
+        <Windows x={bx} y={by} w={w} d={d} floors={1} floorH={h} cols={2} lit />
+        <Door x={bx} y={by} w={w} d={d} h={13} />
+        <Emoji at={P(bx + w + 0.25, by + d + 0.15, 6)} size={16}>
+          ⚒️
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h],
+  };
+};
+
+const pagoda: Kind = (x, y, lv, color) => {
+  const tiers = 2 + (lv >= 2 ? 1 : 0) + (lv >= 4 ? 1 : 0);
+  const cx = x + 1;
+  const cy = y + 1;
+  const parts: ReactNode[] = [<Box key="base" x={cx - 0.7} y={cy - 0.7} w={1.4} d={1.4} h={8} color="#cbb89a" />];
+  let z = 8;
+  for (let t = 0; t < tiers; t++) {
+    const s = 0.55 - t * 0.09;
+    parts.push(<Box key={`b${t}`} x={cx - s} y={cy - s} w={s * 2} d={s * 2} h={13} z={z} color="#fff1d0" />);
+    z += 13;
+    parts.push(<PyramidRoof key={`r${t}`} x={cx - s} y={cy - s} w={s * 2} d={s * 2} z={z} h={10} color={color} o={0.22} />);
+    z += 6;
+  }
+  return {
+    el: (
+      <g>
+        {parts}
+        <Emoji at={P(cx + 0.75, cy + 0.55, 10)} size={14}>
+          🔔
+        </Emoji>
+      </g>
+    ),
+    top: [cx, cy, z + 4],
+  };
+};
+
+const tower: Kind = (x, y, lv, color) => {
+  const floors = 3 + lv;
+  const [bx, by, w, d] = [x + 0.55, y + 0.55, 0.9, 0.9];
+  const h = floors * 14;
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color={color} />
+        <Windows x={bx} y={by} w={w} d={d} floors={floors} floorH={14} cols={2} />
+        <Box x={bx + 0.25} y={by + 0.25} w={0.4} d={0.4} h={8} z={h} color={shade(color, 0.3)} />
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 8],
+  };
+};
+
+const caves: Kind = (x, y, lv) => {
+  const [cx, cy] = P(x + 1, y + 1);
+  const hgt = 46 + lv * 6;
+  const crystals = ['💎', '🔮', '✨', '💎'].slice(0, lv);
+  return {
+    el: (
+      <g>
+        <path
+          d={`M${cx - 62},${cy} C${cx - 58},${cy - hgt * 0.7} ${cx - 25},${cy - hgt} ${cx},${cy - hgt} C${cx + 30},${cy - hgt} ${cx + 55},${cy - hgt * 0.6} ${cx + 62},${cy} Q${cx},${cy + 26} ${cx - 62},${cy} Z`}
+          fill="#8a7aa8"
+          stroke={INK}
+          strokeWidth={1.8}
+        />
+        <path d={`M${cx + 10},${cy - hgt * 0.95} C${cx + 35},${cy - hgt * 0.85} ${cx + 52},${cy - hgt * 0.5} ${cx + 60},${cy - 4}`} fill="none" stroke={shade('#8a7aa8', -0.3)} strokeWidth={6} opacity={0.35} />
+        <path d={`M${cx - 20},${cy + 10} L${cx - 20},${cy - 8} A18,18 0 0 1 ${cx + 16},${cy - 8} L${cx + 16},${cy + 12} Z`} fill="#2a1f3a" stroke={INK} strokeWidth={1.8} />
+        <Emoji at={[cx + 30, cy - hgt * 0.75]} size={15}>
+          🦇
+        </Emoji>
+        {crystals.map((c, i) => (
+          <Emoji key={i} at={[cx - 44 + i * 26, cy - 6 - (i % 2) * 10]} size={12}>
+            {c}
+          </Emoji>
+        ))}
+      </g>
+    ),
+    top: [x + 1, y + 1, hgt],
+  };
+};
+
+const ruins: Kind = (x, y, lv) => {
+  const n = Math.min(6, 2 + lv);
+  const spots: [number, number][] = [
+    [0.4, 1.5],
+    [1.0, 1.5],
+    [1.6, 1.5],
+    [1.6, 0.9],
+    [1.6, 0.35],
+    [0.4, 0.9],
+  ];
+  const cols = spots.slice(0, n).sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+  return {
+    el: (
+      <g>
+        <Box x={x + 0.15} y={y + 0.15} w={1.75} d={1.7} h={6} color="#d9c8a6" />
+        {cols.map(([cx, cy], i) => (
+          <Box key={i} x={x + cx - 0.1} y={y + cy - 0.1} w={0.2} d={0.2} h={i % 3 === 2 && lv < 4 ? 18 : 34} z={6} color="#efe3c8" />
+        ))}
+        {lv >= 3 && <Box x={x + 0.3} y={y + 1.38} w={1.42} d={0.24} h={6} z={40} color="#efe3c8" />}
+        <Emoji at={P(x + 0.7, y + 0.6, 14)} size={13}>
+          📜
+        </Emoji>
+      </g>
+    ),
+    top: [x + 1, y + 1, 46],
+  };
+};
+
+const bookshop: Kind = (x, y, lv, color) => {
+  const floors = 1 + (lv >= 2 ? 1 : 0);
+  const [bx, by, w, d] = [x + 0.3, y + 0.4, 1.4, 1.2];
+  const h = floors * FH;
+  const stripes = [0, 1, 2, 3, 4, 5];
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#f5e9d6" top={shade(color, 0.4)} />
+        <Windows x={bx} y={by} w={w} d={d} floors={floors} floorH={FH} cols={2} />
+        {stripes.map((i) => (
+          <Poly
+            key={i}
+            p={[P(bx + (i * w) / 6, by + d, FH - 2), P(bx + ((i + 1) * w) / 6, by + d, FH - 2), P(bx + ((i + 1) * w) / 6, by + d + 0.25, FH - 10), P(bx + (i * w) / 6, by + d + 0.25, FH - 10)]}
+            fill={i % 2 ? '#fff' : color}
+            sw={1}
+          />
+        ))}
+        <Emoji at={P(bx + w / 2, by + d / 2, h + 10)} size={16}>
+          📘
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 14],
+  };
+};
+
+const citadel: Kind = (x, y, lv, color) => {
+  const wall = '#c9c2b4';
+  const keep = lv >= 2;
+  const towerH = 30 + lv * 4;
+  return {
+    el: (
+      <g>
+        <Box x={x + 0.25} y={y + 0.25} w={1.5} d={0.18} h={16} color={wall} />
+        <Box x={x + 0.25} y={y + 0.25} w={0.18} d={1.5} h={16} color={wall} />
+        <Cylinder cx={x + 0.3} cy={y + 0.3} r={0.24} h={towerH} color={wall} />
+        <PyramidRoof x={x + 0.08} y={y + 0.08} w={0.44} d={0.44} z={towerH + 2} h={14} color={color} o={0.04} />
+        {keep && (
+          <>
+            <Box x={x + 0.7} y={y + 0.7} w={0.6} d={0.6} h={36 + lv * 4} color={shade(wall, -0.05)} />
+            <PyramidRoof x={x + 0.7} y={y + 0.7} w={0.6} d={0.6} z={36 + lv * 4} h={14} color={color} />
+          </>
+        )}
+        <Cylinder cx={x + 1.7} cy={y + 0.3} r={0.24} h={towerH} color={wall} />
+        <Cylinder cx={x + 0.3} cy={y + 1.7} r={0.24} h={towerH} color={wall} />
+        <Box x={x + 0.25} y={y + 1.57} w={1.5} d={0.18} h={16} color={wall} />
+        <Box x={x + 1.57} y={y + 0.25} w={0.18} d={1.5} h={16} color={wall} />
+        <Cylinder cx={x + 1.7} cy={y + 1.7} r={0.24} h={towerH} color={wall} />
+        <Poly p={[P(x + 0.85, y + 1.75, 0), P(x + 1.15, y + 1.75, 0), P(x + 1.15, y + 1.75, 12), P(x + 0.85, y + 1.75, 12)]} fill="#6b4a2a" />
+      </g>
+    ),
+    top: keep ? [x + 1, y + 1, 50 + lv * 4] : [x + 1.7, y + 1.7, towerH],
+  };
+};
+
+const peaks: Kind = (x, y, lv) => {
+  const [cx, cy] = P(x + 1, y + 1);
+  const h1 = 58 + lv * 8;
+  const h2 = 38 + lv * 5;
+  return {
+    el: (
+      <g>
+        <polygon points={`${cx - 64},${cy} ${cx - 22},${cy - h2} ${cx + 12},${cy}`} fill="#7c8fa6" stroke={INK} strokeWidth={1.8} strokeLinejoin="round" />
+        <polygon points={`${cx - 44},${cy + 8} ${cx + 8},${cy - h1} ${cx + 62},${cy + 4}`} fill="#93a6bd" stroke={INK} strokeWidth={1.8} strokeLinejoin="round" />
+        <polygon points={`${cx + 8},${cy - h1} ${cx + 62},${cy + 4} ${cx + 22},${cy + 6}`} fill="#6f8299" stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+        <polygon points={`${cx - 6},${cy - h1 + 17} ${cx + 8},${cy - h1} ${cx + 21},${cy - h1 + 16} ${cx + 12},${cy - h1 + 12} ${cx + 4},${cy - h1 + 19}`} fill="#fff" stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+        <text x={cx - 24} y={cy - 12} fontSize={13} fontWeight={800} fill="#fff" textAnchor="middle" fontFamily="'Baloo 2', sans-serif">
+          x²
+        </text>
+      </g>
+    ),
+    top: [x + 1, y + 1, h1 - 16],
+  };
+};
+
+const isles: Kind = (x, y, lv, color) => ({
+  el: (
+    <g>
+      <Ground x={x + 0.05} y={y + 0.05} w={1.9} d={1.9} fill="#7cc4e8" stroke={INK} sw={1.6} />
+      <Ground x={x + 0.45} y={y + 0.45} w={1.15} d={1.15} fill="#f1d99a" stroke={INK} sw={1.4} />
+      <PyramidRoof x={x + 0.55} y={y + 0.55} w={0.5} d={0.5} z={0} h={30} color={color} o={0} />
+      {lv >= 1 && <Box x={x + 1.1} y={y + 0.6} w={0.35} d={0.35} h={20} color="#f59e0b" />}
+      {lv >= 2 && <Cylinder cx={x + 0.75} cy={y + 1.3} r={0.17} h={22} color="#e8584a" />}
+      {lv >= 3 && <Cylinder cx={x + 1.3} cy={y + 1.3} r={0.17} h={0} color="#4b8fe2" dome="#4b8fe2" />}
+      <Emoji at={P(x + 0.3, y + 1.75, 4)} size={12}>
+        ⛵
+      </Emoji>
+    </g>
+  ),
+  top: [x + 0.8, y + 0.8, 30],
+});
+
+const maze: Kind = (x, y, lv) => {
+  const hedge = '#4f9a3c';
+  const h = 8 + lv * 2;
+  const walls: [number, number, number, number][] = [
+    [0.2, 0.2, 1.6, 0.16],
+    [0.2, 0.2, 0.16, 1.6],
+    [0.6, 0.6, 0.9, 0.16],
+    [1.64, 0.2, 0.16, 1.1],
+    [0.6, 0.6, 0.16, 0.9],
+    [0.2, 1.64, 1.1, 0.16],
+    [1.0, 1.0, 0.16, 0.8],
+  ];
+  return {
+    el: (
+      <g>
+        <Ground x={x + 0.1} y={y + 0.1} w={1.8} d={1.8} fill="#c7e59a" stroke={INK} sw={1.2} />
+        {walls.map(([wx, wy, w, d], i) => (
+          <Box key={i} x={x + wx} y={y + wy} w={w} d={d} h={h} color={hedge} />
+        ))}
+        <Emoji at={P(x + 1.3, y + 1.3, 14)} size={22}>
+          ♞
+        </Emoji>
+      </g>
+    ),
+    top: [x + 1.3, y + 1.3, 30],
+  };
+};
+
+const library: Kind = (x, y, lv, color) => {
+  const [bx, by, w, d] = [x + 0.25, y + 0.3, 1.5, 1.1];
+  const h = 26 + (lv >= 3 ? 12 : 0);
+  const n = 4;
+  return {
+    el: (
+      <g>
+        <Box x={bx - 0.05} y={by - 0.05} w={w + 0.1} d={d + 0.4} h={5} color="#e5dccb" />
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#f3ead8" />
+        <Windows x={bx} y={by} w={w} d={d} floors={lv >= 3 ? 2 : 1} floorH={h / (lv >= 3 ? 2 : 1)} cols={2} />
+        {Array.from({ length: n }, (_, i) => (
+          <Cylinder key={i} cx={bx + 0.15 + (i * (w - 0.3)) / (n - 1)} cy={by + d + 0.2} r={0.07} h={h - 5} z={5} color="#fffaf0" />
+        ))}
+        <GableRoof x={bx} y={by} w={w} d={d + 0.35} z={h} h={14} color={color} />
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 14],
+  };
+};
+
+const examHall: Kind = (x, y, lv, color) => {
+  const floors = 2 + Math.min(2, Math.floor(lv / 2));
+  const h = floors * FH;
+  const [bx, by, w, d] = [x + 0.3, y + 0.9, 3.4, 1.9];
+  const th = h + 34;
+  return {
+    el: (
+      <g>
+        <Ground x={x + 0.1} y={y + 0.1} w={3.8} d={3.8} fill="#e3d5b8" stroke={INK} sw={1.2} />
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#f2c14e" />
+        <Windows x={bx} y={by} w={w} d={d} floors={floors} floorH={FH} cols={6} />
+        <GableRoof x={bx} y={by} w={w} d={d} z={h} h={22} color={color} />
+        <Box x={bx + 1.3} y={by + 0.5} w={0.8} d={0.8} h={th} color="#f6cf6a" />
+        <Windows x={bx + 1.3} y={by + 0.5} w={0.8} d={0.8} z={h} floors={1} floorH={th - h} cols={1} />
+        <PyramidRoof x={bx + 1.3} y={by + 0.5} w={0.8} d={0.8} z={th} h={22} color={color} />
+        <Door x={bx} y={by} w={w} d={d} h={20} />
+        <Tree x={x + 0.4} y={y + 3.4} s={1.1} />
+        <Tree x={x + 3.5} y={y + 3.4} s={1.1} />
+      </g>
+    ),
+    top: [bx + 1.7, by + 0.9, th + 22],
+  };
+};
+
+const owlTree: Kind = (x, y, lv) => {
+  const [cx, cy] = P(x + 1, y + 1);
+  const r = 34 + lv * 2;
+  return {
+    el: (
+      <g>
+        <rect x={cx - 7} y={cy - 40} width={14} height={40} fill="#8a5a33" stroke={INK} strokeWidth={1.6} />
+        <circle cx={cx - 22} cy={cy - 58} r={r * 0.7} fill="#4f9a3c" stroke={INK} strokeWidth={1.8} />
+        <circle cx={cx + 22} cy={cy - 56} r={r * 0.7} fill="#4f9a3c" stroke={INK} strokeWidth={1.8} />
+        <circle cx={cx} cy={cy - 78} r={r} fill="#5aa845" stroke={INK} strokeWidth={1.8} />
+        <rect x={cx - 16} y={cy - 74} width={32} height={20} rx={3} fill="#c98b4f" stroke={INK} strokeWidth={1.6} />
+        <polygon points={`${cx - 20},${cy - 74} ${cx},${cy - 88} ${cx + 20},${cy - 74}`} fill="#a4643a" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
+        <Emoji at={[cx, cy - 64]} size={16}>
+          🦉
+        </Emoji>
+      </g>
+    ),
+    top: [x + 1, y + 1, 110],
+  };
+};
+
+const market: Kind = (x, y, lv) => {
+  const stalls: [number, number, string][] = [
+    [0.2, 0.3, '#e8584a'],
+    [1.05, 0.3, '#4b8fe2'],
+    [0.2, 1.1, '#5cb85c'],
+    [1.05, 1.1, '#f59e0b'],
+  ];
+  const n = Math.min(4, 2 + Math.floor(lv / 2));
+  return {
+    el: (
+      <g>
+        {stalls.slice(0, n).map(([sx, sy, c], i) => (
+          <g key={i}>
+            <Box x={x + sx} y={y + sy} w={0.7} d={0.55} h={10} color="#c98b4f" />
+            <GableRoof x={x + sx} y={y + sy} w={0.7} d={0.55} z={20} h={8} color={c} />
+            <line x1={P(x + sx + 0.7, y + sy + 0.55, 10)[0]} y1={P(x + sx + 0.7, y + sy + 0.55, 10)[1]} x2={P(x + sx + 0.7, y + sy + 0.55, 20)[0]} y2={P(x + sx + 0.7, y + sy + 0.55, 20)[1]} stroke={INK} strokeWidth={1.5} />
+          </g>
+        ))}
+        <Emoji at={P(x + 1.6, y + 1.85, 4)} size={14}>
+          🛒
+        </Emoji>
+      </g>
+    ),
+    top: [x + 1, y + 1, 34],
+  };
+};
+
+/** A plain house (decoration and the hero's home). */
+export const house =
+  (wall: string, roof: string, floors = 1): Kind =>
+  (x, y) => {
+    const [bx, by, w, d] = [x + 0.35, y + 0.45, 1.2, 1.0];
+    const h = floors * FH;
+    return {
+      el: (
+        <g>
+          <Box x={bx} y={by} w={w} d={d} h={h} color={wall} />
+          <Windows x={bx} y={by} w={w} d={d} floors={floors} floorH={FH} cols={2} />
+          <Door x={bx} y={by} w={w} d={d} />
+          <GableRoof x={bx} y={by} w={w} d={d} z={h} h={14} color={roof} />
+        </g>
+      ),
+      top: [bx + w / 2, by + d / 2, h + 14],
+    };
+  };
+
+export const KINDS: Record<string, Kind> = {
+  'scholars-academy': school,
+  'grammar-forge': forge,
+  'sound-temple': pagoda,
+  'ielts-tower': tower,
+  'echo-caves': caves,
+  'reading-ruins': ruins,
+  'my-textbook': bookshop,
+  'number-citadel': citadel,
+  'algebra-peaks': peaks,
+  'geometry-isles': isles,
+  'logic-labyrinth': maze,
+  'story-library': library,
+  'exam-hall': examHall,
+  coach: owlTree,
+  shop: market,
+};
+
+/** Word Forest is a park: more trees as it grows. */
+export const forest: Kind = (x, y, lv) => {
+  const spots: [number, number, 'round' | 'pine'][] = [
+    [0.5, 0.5, 'pine'],
+    [1.4, 0.45, 'round'],
+    [0.45, 1.35, 'round'],
+    [1.0, 1.0, 'pine'],
+    [1.5, 1.5, 'pine'],
+    [1.55, 1.0, 'round'],
+    [1.0, 1.6, 'round'],
+  ];
+  const n = Math.min(spots.length, 3 + lv);
+  const trees = spots.slice(0, n).sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+  return {
+    el: (
+      <g>
+        <Ground x={x + 0.1} y={y + 0.1} w={1.8} d={1.8} fill="#8cc75a" stroke={INK} sw={1.2} />
+        {trees.map(([tx, ty, k], i) => (
+          <Tree key={i} x={x + tx} y={y + ty} s={1.15} kind={k} color={k === 'pine' ? '#3f8f3a' : '#5aa845'} />
+        ))}
+      </g>
+    ),
+    top: [x + 1, y + 1, 48],
+  };
+};
+KINDS['word-forest'] = forest;
+
+// ── Decorations ────────────────────────────────────────────────
+
+export function RiceField({ x, y, w, d }: { x: number; y: number; w: number; d: number }) {
+  const rows = Math.round(d * 3);
+  return (
+    <g>
+      <Ground x={x} y={y} w={w} d={d} fill="#8fcfe0" stroke={INK} sw={1.2} />
+      {Array.from({ length: rows }, (_, i) => (
+        <Ground key={i} x={x + 0.1} y={y + 0.1 + (i * (d - 0.2)) / rows} w={w - 0.2} d={(d - 0.2) / rows - 0.08} fill={i % 2 ? '#9fd36a' : '#b4dd77'} />
+      ))}
+    </g>
+  );
+}
+
+export function Pitch({ x, y, w, d }: { x: number; y: number; w: number; d: number }) {
+  const line = (a: Pt, b: Pt) => <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#fff" strokeWidth={1.6} />;
+  const [cx, cy] = P(x + w / 2, y + d / 2);
+  return (
+    <g>
+      <Ground x={x} y={y} w={w} d={d} fill="#5fb54a" stroke={INK} sw={1.4} />
+      <Ground x={x + 0.2} y={y + 0.2} w={w - 0.4} d={d - 0.4} fill="none" stroke="#fff" sw={1.6} />
+      {line(P(x + w / 2, y + 0.2), P(x + w / 2, y + d - 0.2))}
+      <ellipse cx={cx} cy={cy} rx={20} ry={10} fill="none" stroke="#fff" strokeWidth={1.6} />
+      <Box x={x + 0.05} y={y + d / 2 - 0.3} w={0.12} d={0.6} h={12} color="#ffffff" />
+      <Box x={x + w - 0.17} y={y + d / 2 - 0.3} w={0.12} d={0.6} h={12} color="#ffffff" />
+      <Emoji at={P(x + w / 2 + 0.5, y + d / 2 + 0.3, 3)} size={12}>
+        ⚽
+      </Emoji>
+    </g>
+  );
+}
+
+export function Lake({ x, y, w, d }: { x: number; y: number; w: number; d: number }) {
+  const [cx, cy] = P(x + w / 2, y + d / 2);
+  const rx = ((w + d) * 32) / 2.3;
+  const ry = rx / 2;
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#7cc4e8" stroke={INK} strokeWidth={1.8} />
+      <ellipse cx={cx - rx * 0.25} cy={cy - ry * 0.2} rx={rx * 0.35} ry={ry * 0.25} fill="#a5d8f0" />
+      <Emoji at={[cx + rx * 0.3, cy + ry * 0.2]} size={13}>
+        🪷
+      </Emoji>
+      <Emoji at={[cx - rx * 0.4, cy + ry * 0.35]} size={11}>
+        🪷
+      </Emoji>
+      <Emoji at={[cx + rx * 0.05, cy - ry * 0.35]} size={12}>
+        🦆
+      </Emoji>
+    </g>
+  );
+}
+
+export function Car({ x, y, color, along }: { x: number; y: number; color: string; along: 'x' | 'y' }) {
+  const [w, d] = along === 'x' ? [0.55, 0.3] : [0.3, 0.55];
+  return (
+    <g>
+      <Box x={x} y={y} w={w} d={d} h={7} color={color} />
+      <Box x={x + (along === 'x' ? 0.12 : 0.04)} y={y + (along === 'x' ? 0.04 : 0.12)} w={along === 'x' ? 0.28 : 0.22} d={along === 'x' ? 0.22 : 0.28} h={6} z={7} color="#cfe8f5" />
+    </g>
+  );
+}
+
+export { Flag };
