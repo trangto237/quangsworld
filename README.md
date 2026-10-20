@@ -100,8 +100,9 @@ over time, so nothing is hard-coded; if a model disappears it picks again):
 Cloudflare runs this app's server code near the user (e.g. Hong Kong for Vietnam, which Gemini doesn't serve). The app
 then goes through a tiny relay on Supabase pinned to a region Gemini serves (`us-east-1`, or set `GEMINI_RELAY_REGION`).
 Deploy it once: Supabase dashboard → **Edge Functions → Deploy a new function → Via editor**, name it `gemini-relay`,
-paste [`supabase/functions/gemini-relay/index.ts`](supabase/functions/gemini-relay/index.ts), **Deploy** (keep
-"Verify JWT" on). It stores nothing; the key stays on the server.
+paste [`supabase/functions/gemini-relay/index.ts`](supabase/functions/gemini-relay/index.ts), **Deploy**, then in the
+function's settings turn **Verify JWT off** (newer projects' publishable keys aren't JWTs; the relay is useless without
+your Gemini key anyway). It stores nothing; the key stays on the server.
 
 **OpenRouter (backup, optional)** — `server/openrouter.ts`. Add a secret `OPENROUTER_API_KEY` (from
 <https://openrouter.ai/keys>) in Cloudflare and redeploy. When Gemini fails (blocked location, daily limit, retired

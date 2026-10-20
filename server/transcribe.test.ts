@@ -112,3 +112,21 @@ describe('Gemini region relay', () => {
     expect((await res.json()).error).toMatch(/gemini-relay/);
   });
 });
+
+describe('Gemini relay sign-in check', () => {
+  it('explains how to turn off "Verify JWT" when Supabase refuses the relay call', async () => {
+    const { forgetChosenModel } = await import('./gemini');
+    forgetChosenModel();
+    const fn = (async (url: string | URL | Request) => {
+      const u = String(url);
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'parent-1', is_anonymous: false }));
+      if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('parent-1'));
+      if (u.startsWith('https://generativelanguage.googleapis.com/'))
+        return new Response(JSON.stringify({ error: { message: 'User location is not supported for the API use.' } }), { status: 400 });
+      return new Response(JSON.stringify({ code: 401, message: 'Invalid JWT' }), { status: 401 });
+    }) as unknown as typeof fetch;
+    const res = await handleTranscribe(post({ images: [IMG] }), ENV, { fetch: fn });
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/Verify JWT/);
+  });
+});

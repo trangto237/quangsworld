@@ -6,8 +6,8 @@
  * relay with the `x-region` header so it runs in a region Gemini serves (us-east-1 by default).
  *
  * It stores nothing and has no secrets of its own: the app's server sends its Gemini key in the
- * `x-goog-api-key` header, and only Gemini model requests are passed on. Keep "Verify JWT" on (the app
- * sends the project's anon key).
+ * `x-goog-api-key` header, and only Gemini model requests are passed on. Turn "Verify JWT" OFF: newer
+ * Supabase projects use publishable keys that aren't JWTs, and the relay is useless without a Gemini key.
  *
  * Deploy: Supabase dashboard → Edge Functions → Deploy a new function → Via editor → name it
  * `gemini-relay`, paste this file, Deploy. (Or: `supabase functions deploy gemini-relay`.)

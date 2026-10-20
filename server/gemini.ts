@@ -124,6 +124,9 @@ export interface RelayEnv {
 export const RELAY_HELP =
   "Google's Gemini doesn't accept requests from where Cloudflare runs this app's server. One-time fix: in the Supabase dashboard → Edge Functions → Deploy a new function → Via editor, name it gemini-relay and paste supabase/functions/gemini-relay/index.ts from the app's code, then Deploy. Then try again.";
 
+export const RELAY_JWT_HELP =
+  'The gemini-relay function on Supabase refused the request (401). Fix: Supabase dashboard → Edge Functions → gemini-relay → Settings (Details) → turn OFF "Verify JWT" (also called "Enforce JWT verification"), save, and try again. It is safe: the relay only works for whoever already holds your Gemini key.';
+
 /**
  * A fetch for Gemini calls: straight to Google, but if Google refuses this server's location, through the
  * `gemini-relay` Supabase Edge Function pinned to a region Gemini serves. Other URLs pass through untouched.
@@ -144,6 +147,10 @@ export function geminiFetch(env: RelayEnv, fetchFn: typeof fetch): typeof fetch 
     if (res.status === 404 && !(await res.clone().text()).includes('"error"')) {
       // The relay hasn't been deployed yet.
       return new Response(JSON.stringify({ error: { message: RELAY_HELP } }), { status: 400 });
+    }
+    if (res.status === 401 && !(await res.clone().text()).includes('x-goog-api-key')) {
+      // Supabase's "Verify JWT" check refused us (new projects use non-JWT publishable keys).
+      return new Response(JSON.stringify({ error: { message: RELAY_JWT_HELP } }), { status: 400 });
     }
     return res;
   };
@@ -197,7 +204,7 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
   const reply = (await res.json().catch(() => ({}))) as GeminiReply;
   if (!res.ok) {
     const msg = reply.error?.message ?? '';
-    if (msg === RELAY_HELP) throw new GenerateError(503, msg);
+    if (msg === RELAY_HELP || msg === RELAY_JWT_HELP) throw new GenerateError(503, msg);
     if (/location is not supported/i.test(msg)) throw new GenerateError(503, "Gemini doesn't serve the region the relay ran in. In Cloudflare, set GEMINI_RELAY_REGION to another Supabase region (e.g. us-west-1) and redeploy.");
     if (res.status === 429) throw new GenerateError(429, "Gemini's free daily limit is used up — try again later (limits reset daily).");
     if (res.status === 403 || reply.error?.status === 'PERMISSION_DENIED' || (res.status === 400 && /api key/i.test(msg)))

@@ -3,7 +3,7 @@
  * Used by the Cloudflare Pages Function at functions/api/transcribe.ts. Much better than on-device OCR
  * on textbook pages (columns, coloured boxes, small print). Parent account only, like /api/generate.
  */
-import { ModelMissing, RELAY_HELP, geminiFetch, withGeminiModel } from './gemini';
+import { ModelMissing, RELAY_HELP, RELAY_JWT_HELP, geminiFetch, withGeminiModel } from './gemini';
 import { GenerateError } from './prompt';
 import { backupOf, providerOf, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
 import { transcribeWithOpenRouter } from './openrouter';
@@ -77,7 +77,7 @@ export async function transcribeWithGemini(apiKey: string, model: string, req: T
   const reply = (await res.json().catch(() => ({}))) as GeminiReply;
   if (!res.ok) {
     const msg = reply.error?.message ?? '';
-    if (msg === RELAY_HELP) throw new GenerateError(503, msg);
+    if (msg === RELAY_HELP || msg === RELAY_JWT_HELP) throw new GenerateError(503, msg);
     if (/location is not supported/i.test(msg)) throw new GenerateError(503, "Gemini doesn't serve the region the relay ran in. In Cloudflare, set GEMINI_RELAY_REGION to another Supabase region (e.g. us-west-1) and redeploy.");
     if (res.status === 429) throw new GenerateError(429, /day|daily|per_day/i.test(msg) ? "Gemini's free daily limit is used up — try again tomorrow." : 'Gemini is busy (free-tier speed limit). Waiting a moment…');
     if (res.status === 403 || (res.status === 400 && /api key/i.test(msg))) throw new GenerateError(500, 'The GEMINI_API_KEY on the server is not valid.');
