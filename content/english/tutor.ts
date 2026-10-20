@@ -239,6 +239,8 @@ export const stressWord = (word: string) => STRESS.find((w) => w.word === unmark
 /** All words that follow a rule (no exceptions) — for practice. */
 export const wordsForRule = (ruleId: string) => STRESS.map(analyseStress).filter((a) => a.rule.id === ruleId && !a.exception);
 
+const withDetail = (b: Bi, d: Bi): Bi => ({ en: `${b.en}. ${d.en}`, vi: `${b.vi}. ${d.vi}` });
+
 function stressNote(a: StressAnalysis): Bi {
   const pos = a.word.stress;
   const where = bi(`${ORD_EN[pos]} syllable`, `âm tiết ${ORD_VI[pos]}`);
@@ -260,7 +262,8 @@ export function stressDrill(ruleId: string | null, r: () => number = Math.random
     .map((a) => ({
       kind: 'stress',
       display: a.word.display,
-      why: stressNote(a),
+      // Mixed practice: also teach the rule on the spot (its examples), since it may be new.
+      why: ruleId || a.exception || a.root ? stressNote(a) : withDetail(stressNote(a), a.rule.detail),
       hint: a.exception
         ? bi('This one breaks the usual rule — tap 🥁 and trust your ears.', 'Từ này không theo quy tắc thường gặp — chạm 🥁 và tin vào tai mình.')
         : a.root

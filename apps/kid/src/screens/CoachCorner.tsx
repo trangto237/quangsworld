@@ -147,14 +147,13 @@ function StressTopic() {
         <BiText
           block
           b={{
-            en: 'How to solve exam questions: 1) count the syllables, 2) look for a special ending (-tion, -ic, -ity, -ee…), 3) no special ending? Ask: noun/adjective (front) or verb (back)?',
-            vi: 'Cách làm bài thi: 1) đếm số âm tiết, 2) tìm đuôi đặc biệt (-tion, -ic, -ity, -ee…), 3) không có đuôi đặc biệt? Hỏi: danh từ/tính từ (nhấn đầu) hay động từ (nhấn sau)?',
+            en: 'How to solve exam questions: 1) count the syllables, 2) look for a special ending (-tion, -ic, -ity, -ee…), 3) no special ending? Ask: noun/adjective (front) or verb (back)? Each rule below has its own practice; the mixed practice is at the end.',
+            vi: 'Cách làm bài thi: 1) đếm số âm tiết, 2) tìm đuôi đặc biệt (-tion, -ic, -ity, -ee…), 3) không có đuôi đặc biệt? Hỏi: danh từ/tính từ (nhấn đầu) hay động từ (nhấn sau)? Mỗi quy tắc bên dưới có phần luyện riêng; phần luyện tổng hợp ở cuối.',
           }}
         />
-        <PracticeToggle make={() => stressDrill(null, Math.random, 10)} title={{ en: 'Mixed practice', vi: 'Luyện tập tổng hợp' }} />
       </Card>
       {STRESS_RULES.map((r) => (
-        <Card key={r.id} title={r.title}>
+        <Card key={r.id} id={`stress-${r.id}`} title={r.title}>
           <BiText b={r.detail} block />
           <div className="flex flex-wrap gap-3">
             {wordsForRule(r.id)
@@ -166,6 +165,23 @@ function StressTopic() {
           <PracticeToggle make={() => stressDrill(r.id, Math.random, 5)} title={r.title} />
         </Card>
       ))}
+      <Card title={{ en: 'Mixed practice: all the rules', vi: 'Luyện tập tổng hợp: tất cả quy tắc' }}>
+        <BiText block b={{ en: 'Words from every rule, mixed up. Check the rules here if you get stuck:', vi: 'Từ của mọi quy tắc, trộn lẫn. Xem lại các quy tắc ở đây nếu bí:' }} />
+        <ol className="list-decimal space-y-1 pl-5">
+          {STRESS_RULES.map((r) => (
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => document.getElementById(`stress-${r.id}`)?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-left underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-300"
+              >
+                <BiText b={r.title} />
+              </button>
+            </li>
+          ))}
+        </ol>
+        <PracticeToggle make={() => stressDrill(null, Math.random, 10)} title={{ en: 'Mixed practice', vi: 'Luyện tập tổng hợp' }} />
+      </Card>
     </>
   );
 }
