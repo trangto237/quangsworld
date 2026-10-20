@@ -80,6 +80,11 @@ The **Make questions with AI** button calls a Cloudflare Pages Function, `functi
 uploaded material. Each question is checked again on the server and in the browser before it can reach the game.
 Without AI the app still makes questions offline from word lists, reading passages and marked exercises.
 
+With the same Gemini key, **Read the scanned pages with AI** (`functions/api/transcribe.ts`, logic and tests in
+`server/transcribe.ts`) turns a scanned book into text: the browser renders the pages to images and sends them three
+at a time, so a book of any size works; when the free tier asks it to slow down it waits and carries on. It is far
+more accurate than on-device OCR on textbook pages. Parent account only, like question making.
+
 **Google Gemini (free, recommended)** — `server/gemini.ts`, REST API, model `gemini-2.5-flash` by default:
 
 1. Get a free API key at <https://aistudio.google.com> → **Get API key** (a Google account is enough).

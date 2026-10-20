@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GLOBAL_SUCCESS_9, PART_LABEL, autoImport, customUnit, splitByUnit, validateDrafts, type DraftPart, type DraftQuestion, type ImportIssue } from '@atlas/knowledge';
+import { GLOBAL_SUCCESS_9, PAGE_BREAK, PART_LABEL, autoImport, customUnit, splitByUnit, validateDrafts, type DraftPart, type DraftQuestion, type ImportIssue } from '@atlas/knowledge';
 import { Button, Card, Field, cx, inputClass, useRepo } from '@atlas/ui';
 import { ACCEPT, extractFile, mergePhotos, type Extracted } from '../lib/extract';
-import { aiStatus, generateWithAI, providerName, type AiStatus } from '../lib/ai';
+import { BusyError, aiStatus, generateWithAI, providerName, transcribeWithAI, type AiStatus } from '../lib/ai';
 import type { OcrProgress } from '../lib/ocr';
 import { useCloud } from './Cloud';
 
@@ -56,6 +56,9 @@ export function ImportWizard() {
   const [count, setCount] = useState(20);
   const [ocr, setOcr] = useState<OcrProgress | null>(null);
   const ocrStop = useRef<AbortController | null>(null);
+  /** Who is reading the scan, and any note ("Gemini is busy, waiting…"). */
+  const [ocrBy, setOcrBy] = useState<'device' | 'ai'>('device');
+  const [ocrNote, setOcrNote] = useState<string | null>(null);
 
   useEffect(() => {
     void aiStatus().then(setAi);
@@ -74,6 +77,8 @@ export function ImportWizard() {
   const detected = useMemo(() => (text.trim() && !bookMode ? autoImport(text) : null), [text, bookMode]);
   const signedInParent = !!status.email && !status.viaCode;
   const needsAi = !!src && !text.trim() && (src.scanned || src.kind === 'image');
+  /** The AI can read scans (Gemini on the server, and the parent is signed in to the cloud). */
+  const aiReads = !!ai?.ai && ai.provider === 'gemini' && !!cloud.config();
 
   const reset = () => {
     setStep('source');
@@ -109,6 +114,7 @@ export function ImportWizard() {
     setError(null);
     const stop = new AbortController();
     ocrStop.current = stop;
+    setOcrBy('device');
     setOcr({ done: 0, total: src.pages ?? src.images?.length ?? 1 });
     try {
       const { ocrPdf, ocrImages } = await import('../lib/ocr');
@@ -124,6 +130,63 @@ export function ImportWizard() {
       setError((e as Error).message);
     } finally {
       setOcr(null);
+      ocrStop.current = null;
+    }
+  };
+
+  /**
+   * Scanned PDF or photos read by the AI (Gemini, on the server): far more accurate on textbook pages.
+   * Four pages per request; when the free tier says "slow down", wait and try again.
+   */
+  const readScanWithAI = async () => {
+    if (!src) return;
+    setError(null);
+    const stop = new AbortController();
+    ocrStop.current = stop;
+    setOcrBy('ai');
+    const pages: string[] = [];
+    try {
+      const token = await cloud.parentAccessToken();
+      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      const { openPdf, pageJpeg, photoJpeg } = await import('../lib/ocr');
+      const pdf = src.kind === 'pdf' && src.bytes ? await openPdf(src.bytes) : null;
+      const total = pdf ? pdf.numPages : (src.images ?? []).length;
+      setOcr({ done: 0, total });
+      const BATCH = 3;
+      for (let from = 0; from < total; from += BATCH) {
+        if (stop.signal.aborted) break;
+        const idx = Array.from({ length: Math.min(BATCH, total - from) }, (_, i) => from + i);
+        const images = await Promise.all(
+          idx.map((i) => (pdf ? pageJpeg(pdf, i + 1) : photoJpeg(`data:${src.images![i].mediaType};base64,${src.images![i].data}`))),
+        );
+        let got: string[] | null = null;
+        for (let attempt = 0; !got; attempt++) {
+          try {
+            got = await transcribeWithAI(token, images);
+          } catch (e) {
+            if (!(e instanceof BusyError) || attempt >= 5 || stop.signal.aborted) throw e;
+            // Free tier: a few requests a minute. Wait, then carry on.
+            for (let s = 20; s > 0 && !stop.signal.aborted; s--) {
+              setOcrNote(`Gemini's free tier needs a short break — carrying on in ${s} s…`);
+              await new Promise((r) => setTimeout(r, 1000));
+            }
+            setOcrNote(null);
+          }
+        }
+        pages.push(...got);
+        setOcr({ done: pages.length, total });
+      }
+      if (!pages.join('').trim()) throw new Error('No text came back from these pages.');
+    } catch (e) {
+      setError(pages.length ? `Stopped after ${pages.length} pages: ${(e as Error).message} The pages read so far are below — you can carry on with them.` : (e as Error).message);
+    } finally {
+      if (pages.length) {
+        const all = pages.map((p) => p.trim()).join(PAGE_BREAK);
+        setText(all);
+        if (splitByUnit(all).length > 1) setUnitId('book');
+      }
+      setOcr(null);
+      setOcrNote(null);
       ocrStop.current = null;
     }
   };
@@ -247,20 +310,33 @@ export function ImportWizard() {
               </p>
             )}
             {needsAi && !ocr && (
-              <div className="rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/40">
-                <Button onClick={() => void readScan()} disabled={!!busy}>
-                  🔍 Read the scanned pages on this device
-                </Button>
-                <p className="mt-2 text-slate-600 dark:text-slate-300">
-                  Free, and the book never leaves this device. About 3–8 seconds per page{src?.pages ? ` (≈ ${Math.max(1, Math.round((src.pages * 5) / 60))} min for ${src.pages} pages)` : ''} — keep this tab open. Works best on a laptop.
-                </p>
+              <div className="space-y-3 rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/40">
+                {aiReads && (
+                  <div>
+                    <Button onClick={() => void readScanWithAI()} disabled={!!busy}>
+                      ✨ Read the scanned pages with AI (recommended)
+                    </Button>
+                    <p className="mt-1 text-slate-600 dark:text-slate-300">
+                      Much more accurate on textbook pages (columns, coloured boxes, small print). Uses the free Gemini tier: about {src?.pages ? `${Math.max(1, Math.round(src.pages / 3 / 8))}–${Math.max(2, Math.round(src.pages / 3 / 4))} min for ${src.pages} pages` : 'a few seconds per page'}, and the pages are sent to Google.
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <Button variant={aiReads ? 'secondary' : 'primary'} onClick={() => void readScan()} disabled={!!busy}>
+                    🔍 Read the scanned pages on this device
+                  </Button>
+                  <p className="mt-1 text-slate-600 dark:text-slate-300">
+                    Free, and the book never leaves this device{aiReads ? ', but it makes more mistakes on busy pages' : ''}. About 3–8 seconds per page{src?.pages ? ` (≈ ${Math.max(1, Math.round((src.pages * 5) / 60))} min for ${src.pages} pages)` : ''} — keep this tab open. Works best on a laptop.
+                  </p>
+                </div>
               </div>
             )}
             {ocr && (
               <div className="rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/40" aria-live="polite">
                 <p className="font-semibold">
-                  Reading page {Math.min(ocr.done + 1, ocr.total)} of {ocr.total}…
+                  {ocrBy === 'ai' ? 'Gemini is reading' : 'Reading'} page {Math.min(ocr.done + 1, ocr.total)} of {ocr.total}…
                 </p>
+                {ocrNote && <p className="text-slate-600 dark:text-slate-300">{ocrNote}</p>}
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-100 dark:bg-sky-900">
                   <div className="h-full bg-sky-500 transition-all" style={{ width: `${(ocr.done / Math.max(1, ocr.total)) * 100}%` }} />
                 </div>

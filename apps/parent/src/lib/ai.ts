@@ -41,3 +41,19 @@ export async function generateWithAI(
   const { drafts, dropped } = validateDrafts(body.drafts);
   return { drafts, dropped: (body.dropped ?? 0) + dropped.length };
 }
+
+/** Thrown when Gemini's free tier asks us to slow down (try again in a moment). */
+export class BusyError extends Error {}
+
+/** Reads up to 6 scanned page images with the server's AI (Gemini): the text of each page. */
+export async function transcribeWithAI(token: string, images: { mediaType: string; data: string }[]): Promise<string[]> {
+  const res = await fetch('/api/transcribe', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ images }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { pages?: unknown; error?: string };
+  if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
+  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  return Array.isArray(body.pages) ? body.pages.map((p) => (typeof p === 'string' ? p : '')) : [];
+}

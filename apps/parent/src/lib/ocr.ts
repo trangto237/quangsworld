@@ -32,6 +32,66 @@ async function makeScheduler(workers: number) {
 
 const workerCount = () => Math.max(1, Math.min(3, Math.floor((navigator.hardwareConcurrency || 2) / 2)));
 
+/** Opens a PDF with pdf.js (loaded only when needed). */
+export async function openPdf(bytes: Uint8Array) {
+  const pdfjs = await import('pdfjs-dist');
+  const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+  return pdfjs.getDocument({ data: bytes.slice() }).promise;
+}
+
+/** One page as a JPEG for the AI reader (base64, no data: prefix). */
+export async function pageJpeg(pdf: import('pdfjs-dist').PDFDocumentProxy, n: number, width = 1500): Promise<{ mediaType: 'image/jpeg'; data: string }> {
+  const canvas = await renderPage(pdf, n, width);
+  const data = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+  canvas.width = canvas.height = 0;
+  return { mediaType: 'image/jpeg', data };
+}
+
+/** A photo (any format the browser can show) as a JPEG no wider than `width`, for the AI reader. */
+export async function photoJpeg(src: string, width = 1600): Promise<{ mediaType: 'image/jpeg'; data: string }> {
+  const img = new Image();
+  img.src = src;
+  await img.decode();
+  const scale = Math.min(1, width / img.naturalWidth);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const data = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+  canvas.width = canvas.height = 0;
+  return { mediaType: 'image/jpeg', data };
+}
+
+/**
+ * Helps the on-device reader with textbook pages: grey, then stretch the contrast so text on tinted
+ * boxes comes out dark on white.
+ */
+function clean(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d')!;
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < d.length; i += 4) {
+    const g = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+    d[i] = g;
+    hist[g | 0]++;
+  }
+  // Ignore the darkest and lightest 2% when finding the range.
+  const n = d.length / 4;
+  let lo = 0;
+  let hi = 255;
+  for (let acc = 0; lo < 255 && (acc += hist[lo]) < n * 0.02; lo++);
+  for (let acc = 0; hi > 0 && (acc += hist[hi]) < n * 0.02; hi--);
+  const span = Math.max(1, hi - lo);
+  for (let i = 0; i < d.length; i += 4) {
+    const v = Math.max(0, Math.min(255, ((d[i] - lo) * 255) / span));
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
 /** Renders one PDF page to a canvas about `width` pixels wide (enough for small print). */
 async function renderPage(pdf: import('pdfjs-dist').PDFDocumentProxy, n: number, width = 1700): Promise<HTMLCanvasElement> {
   const page = await pdf.getPage(n);
@@ -47,10 +107,7 @@ async function renderPage(pdf: import('pdfjs-dist').PDFDocumentProxy, n: number,
 
 /** OCR every page of a scanned PDF. Pages are read in parallel; `signal` stops early. */
 export async function ocrPdf(bytes: Uint8Array, onProgress: (p: OcrProgress) => void, signal?: AbortSignal): Promise<OcrResult> {
-  const pdfjs = await import('pdfjs-dist');
-  const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
-  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-  const pdf = await pdfjs.getDocument({ data: bytes.slice() }).promise;
+  const pdf = await openPdf(bytes);
   const total = pdf.numPages;
   const scheduler = await makeScheduler(workerCount());
   const pages: string[] = new Array(total).fill('');
@@ -61,7 +118,8 @@ export async function ocrPdf(bytes: Uint8Array, onProgress: (p: OcrProgress) => 
     const queue: Promise<void>[] = [];
     for (let n = 1; n <= total; n++) {
       if (signal?.aborted) break;
-      const canvas = await renderPage(pdf, n);
+      // Higher resolution and stronger contrast read small textbook print much better.
+      const canvas = clean(await renderPage(pdf, n, 2200));
       queue.push(
         scheduler.addJob('recognize', canvas).then((r) => {
           pages[n - 1] = r.data.text;
