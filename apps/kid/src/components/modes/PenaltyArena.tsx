@@ -7,6 +7,7 @@ import { QuestionCard } from '../QuestionCard';
 import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { useLook } from './look';
 import { PromptPanel } from './PromptPanel';
 import type { ModeProps } from './types';
 
@@ -23,6 +24,7 @@ const RIVALS = ['Glitch United', 'Rook Rovers', 'Pawn Pirates', 'Bishop Bandits'
  * score. Their kick: pick the right answer to dive the right way and save it. Best of N, then sudden death.
  */
 export function PenaltyArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new PenaltySim({ ...penaltyConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
   const rival = useMemo(() => RIVALS[Math.floor(Math.random() * RIVALS.length)], []);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
@@ -97,6 +99,8 @@ export function PenaltyArena(p: ModeProps) {
   const keeperZone = shot ? (shot.kick.team === 'you' ? (shot.kick.scored ? (shot.picked + 1) % zones.length : ballZone) : shot.picked >= 0 ? shot.picked : (shot.correctZone + 1) % zones.length) : null;
   const dots = (team: 'you' | 'rival') => sim.kicks.filter((k) => k.team === team).map((k, i) => <span key={i}>{k.scored ? '⚽' : '❌'}</span>);
 
+  const ball = look.gear('penalty.ball')?.id;
+  const night = look.gear('penalty.scene')?.id === 'penalty.night';
   return (
     <GameShell
       title={p.title}
@@ -104,13 +108,13 @@ export function PenaltyArena(p: ModeProps) {
       progress={p.progress}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-emerald-950 via-emerald-900 to-slate-950"
+      className={night ? 'bg-gradient-to-b from-slate-950 via-indigo-950 to-emerald-950' : 'bg-gradient-to-b from-emerald-950 via-emerald-900 to-slate-950'}
       stats={<Pill title="Answer streak">🔥 {streak}</Pill>}
     >
       {/* Scoreboard */}
       <div className="mx-auto mt-3 flex w-full max-w-3xl items-center justify-between gap-2 rounded-2xl bg-black/40 px-4 py-2 font-display">
         <div className="min-w-0">
-          <div className="truncate font-bold">{p.avatar ?? '🦊'} <T en="Your team" /></div>
+          <div className="truncate font-bold">{look.avatar} <T en="Your team" /></div>
           <div className="text-xs">{dots('you')}</div>
         </div>
         <div className="text-center">
@@ -201,7 +205,8 @@ export function PenaltyArena(p: ModeProps) {
               }
               aria-hidden
             >
-              ⚽
+              {ball === 'penalty.star' ? '🌟' : '⚽'}
+              {ball === 'penalty.fire' && <span className="absolute -bottom-1 left-1/2 -z-10 -translate-x-1/2 text-2xl">🔥</span>}
             </span>
             {shot && (
               <div className={cx('pointer-events-none absolute inset-x-0 top-[35%] animate-pop text-center font-display text-5xl font-black drop-shadow-[0_3px_0_rgba(0,0,0,0.6)]', shot.kick.scored === (shot.kick.team === 'you') ? 'text-amber-300' : 'text-rose-300')}>

@@ -6,6 +6,7 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { useLook } from './look';
 import type { ModeProps } from './types';
 
 const PLACE = ['', '1st', '2nd', '3rd', '4th', '5th'];
@@ -17,6 +18,7 @@ const LABEL: Record<RaceEvent, string> = { boost: 'Boost!', nitro: '🔥 NITRO!'
  * behind and the slipstream pulls you back into the race. Finish on the podium to win.
  */
 export function RaceArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new RaceSim({ ...raceConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [streak, setStreak] = useState(0);
@@ -72,6 +74,7 @@ export function RaceArena(p: ModeProps) {
   const x = (pos: number) => 4 + Math.min(1, pos / len) * 86; // % along the track
   const place = sim.place;
 
+  const vehicle = look.gear('race.vehicle');
   return (
     <GameShell
       title={p.title}
@@ -112,18 +115,18 @@ export function RaceArena(p: ModeProps) {
                 <div key={i} className={cx('relative h-14 border-b border-dashed border-white/15 last:border-0 sm:h-16', me && 'bg-amber-400/10')}>
                   <span className="absolute left-2 top-1 text-[10px] font-bold uppercase tracking-wide text-white/40">{me ? (
                       <>
-                        {p.avatar ?? '🦊'} <T en="You" />
+                        {look.avatar} <T en="You" />
                       </>
                     ) : (
                       r.name
                     )}
                   </span>
                   <span
-                    className={cx('absolute top-1/2 -translate-y-1/2 -scale-x-100 text-4xl transition-[left] duration-700 ease-out sm:text-5xl', me && spin && 'animate-spin')}
+                    className={cx('absolute top-1/2 -translate-y-1/2 text-4xl', me && vehicle?.id === 'race.rocket' ? 'rotate-45' : '-scale-x-100', 'transition-[left] duration-700 ease-out sm:text-5xl', me && spin && 'animate-spin')}
                     style={{ left: `${x(r.pos)}%` }}
                     aria-label={me ? 'Your car' : r.name}
                   >
-                    {r.car}
+                    {me && vehicle ? vehicle.emoji : r.car}
                   </span>
                   {r.finished > 0 && <span className="absolute right-1 top-1/2 -translate-y-1/2 text-xl">{MEDAL[r.finished]}</span>}
                 </div>

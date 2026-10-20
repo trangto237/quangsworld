@@ -5,6 +5,7 @@ import { DAY_MS } from '@atlas/shared';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { useQuery, useRepo } from '@atlas/ui';
 import { todayPlan } from '../lib/plan';
+import { getSlots, inSlot } from '../lib/equipped';
 import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
 import { BottomNav, HeroBar, rankFor } from '../town/Shell';
@@ -23,6 +24,8 @@ export function Town({ student }: { student: StudentProfile }) {
   const played = useQuery((r) => new Set(r.listAttempts(student.id).filter((a) => a.context !== 'placement').map((a) => a.conceptId)), [student.id]);
   const chestOpened = useQuery((r) => !!r.getKv(`chest:${student.id}:${plan.date}`), [student.id, plan.date]);
   const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
+  const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
+  const hero = `${inSlot(slots, 'hat')?.emoji ?? ''}${student.avatar}${inSlot(slots, 'pet')?.emoji ?? ''}`;
   const next = plan.missions.find((m) => !m.done);
   const doneCount = plan.missions.filter((m) => m.done).length;
 
@@ -63,7 +66,7 @@ export function Town({ student }: { student: StudentProfile }) {
       blurb: tr(lang, 'Practice papers for the grade-10 entrance exam.'),
     };
     out.coach = { level: 2, title: tr(lang, 'Coach Owl'), sub: tr(lang, 'Rules & tips'), icon: '🦉', color: '#8b5cf6', blurb: tr(lang, 'Every rule explained, with practice.') };
-    out.shop = { level: 2, title: tr(lang, 'Armoury'), sub: `🪙 ${wallet.coins}`, icon: '🛒', color: '#e8584a', blurb: tr(lang, 'Spend the coins and gems you earn in battle.') };
+    out.shop = { level: 2, title: tr(lang, 'Shop'), sub: `🪙 ${wallet.coins}`, icon: '🛒', color: '#e8584a', blurb: tr(lang, 'Hats, pets, effects and game items — earned by learning.') };
     out.home = {
       level: 2,
       title: student.name,
@@ -156,7 +159,7 @@ export function Town({ student }: { student: StudentProfile }) {
         onSelect={setSelected}
         selected={selected?.id ?? null}
         focus={grew?.id ?? spots.questWorld ?? 'exam-hall'}
-        hero={student.avatar}
+        hero={hero}
       />
       {(grew || chestNote) && (
         <div className="pointer-events-none fixed inset-x-0 top-40 z-30 flex justify-center px-3">

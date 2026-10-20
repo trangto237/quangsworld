@@ -7,6 +7,7 @@ import { QuestionCard } from '../QuestionCard';
 import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { useLook } from './look';
 import { PromptPanel } from './PromptPanel';
 import type { ModeProps } from './types';
 
@@ -20,6 +21,7 @@ const short = (s: string) => (s.length > 18 ? s.slice(0, 16) + '…' : s);
  * 3 in a row raise a shield over the city.
  */
 export function MeteorArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new MeteorSim({ ...meteorConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial, pace: p.trial ? 1.35 : 1 }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [fall, setFall] = useState(0);
@@ -114,6 +116,7 @@ export function MeteorArena(p: ModeProps) {
   const n = question?.shown.length ?? 4;
   const free = !!question && isFreeAnswer(question);
 
+  const ship = look.gear('meteor.ship')?.emoji;
   return (
     <GameShell
       title={p.title}
@@ -196,6 +199,10 @@ export function MeteorArena(p: ModeProps) {
         )}
         {/* City */}
         <div className="absolute inset-x-0 bottom-0">
+          {/* The cannon (a ship from the shop, or the standard rocket). */}
+          <span className={cx('absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-4xl leading-none sm:text-5xl', !ship && '-rotate-45', outcome?.correct && 'animate-pop')} aria-hidden>
+            {ship ?? '🚀'}
+          </span>
           {sim.shield && <div className="absolute inset-x-[4%] bottom-0 h-28 rounded-t-[100%] border-t-4 border-cyan-300/70 bg-cyan-300/10" />}
           <div className="flex items-end justify-around border-t-4 border-slate-600 bg-slate-800/80 px-2 pb-2 pt-1">
             {sim.buildings.map((up, i) => (

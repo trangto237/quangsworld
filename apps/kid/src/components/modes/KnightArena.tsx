@@ -6,13 +6,22 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Hearts, Pill } from './GameShell';
+import { useLook } from './look';
 import type { ModeProps } from './types';
 
 /**
  * Knight's Quest: a chess puzzle. Each correct answer earns a knight move (bank up to 3);
  * capture every Glitch pawn, then the Glitch king. Wrong answers let the nearest Glitch close in.
  */
+const SETS: Record<string, { dark: string; light: string; ring: string; knight: string }> = {
+  default: { dark: 'bg-amber-800', light: 'bg-amber-200', ring: 'ring-amber-900/60', knight: 'text-white' },
+  'chess.marble': { dark: 'bg-stone-400', light: 'bg-stone-50', ring: 'ring-stone-300', knight: 'text-stone-800' },
+  'chess.jade': { dark: 'bg-emerald-700', light: 'bg-emerald-200', ring: 'ring-emerald-900/70', knight: 'text-emerald-50' },
+  'chess.gold': { dark: 'bg-yellow-700', light: 'bg-yellow-200', ring: 'ring-yellow-400', knight: 'text-yellow-300' },
+};
+
 export function KnightArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new KnightSim({ ...knightConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [streak, setStreak] = useState(0);
@@ -78,6 +87,8 @@ export function KnightArena(p: ModeProps) {
   const isLegal = (r: number, c: number) => legal.some((s) => s.r === r && s.c === c);
   const cells = Array.from({ length: sim.size * sim.size }, (_, i) => ({ r: Math.floor(i / sim.size), c: i % sim.size }));
 
+  // Chess sets from the shop: board squares, frame and the knight's colour.
+  const set = SETS[look.gear('knight.set')?.id ?? ''] ?? SETS.default;
   return (
     <GameShell
       title={p.title}
@@ -100,7 +111,7 @@ export function KnightArena(p: ModeProps) {
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
           <div
-            className={cx('grid aspect-square w-full max-w-[min(520px,calc(100dvh-10rem))] overflow-hidden rounded-xl shadow-2xl ring-4 ring-amber-900/60', hurt && 'animate-shake')}
+            className={cx('grid aspect-square w-full max-w-[min(520px,calc(100dvh-10rem))] overflow-hidden rounded-xl shadow-2xl ring-4', set.ring, hurt && 'animate-shake')}
             style={{ gridTemplateColumns: `repeat(${sim.size}, 1fr)`, gridTemplateRows: `repeat(${sim.size}, 1fr)` }}
           >
             {cells.map(({ r, c }) => {
@@ -117,13 +128,13 @@ export function KnightArena(p: ModeProps) {
                   }}
                   className={cx(
                     'relative grid place-items-center text-[min(9vw,56px)] leading-none transition',
-                    (r + c) % 2 ? 'bg-amber-800' : 'bg-amber-200',
+                    (r + c) % 2 ? set.dark : set.light,
                     legalHere && 'cursor-pointer after:absolute after:inset-[30%] after:rounded-full after:bg-emerald-400/70 hover:brightness-110',
                     legalHere && piece && 'after:inset-[6%] after:bg-transparent after:ring-4 after:ring-rose-500',
                   )}
                   aria-label={`${String.fromCharCode(97 + c)}${sim.size - r}${knight ? ' knight' : piece ? ` ${piece.kind}` : ''}${legalHere ? ' (move here)' : ''}`}
                 >
-                  {knight && <span className="relative z-10 text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">♞</span>}
+                  {knight && <span className={cx('relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]', set.knight)}>♞</span>}
                   {piece && (
                     <span className={cx('relative z-10 drop-shadow', piece.kind === 'king' ? 'text-rose-700' : 'text-violet-700')}>
                       {piece.kind === 'king' ? '♚' : '♟'}

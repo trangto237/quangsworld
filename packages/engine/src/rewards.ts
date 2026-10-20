@@ -1,7 +1,16 @@
 import type { Mission, Reward, Wallet } from '@atlas/shared';
 
-/** Shop catalogue. Everything is cosmetic or earned by learning — no pay-to-win. */
-export type ShopCategory = 'tower' | 'skin' | 'world-theme' | 'chess-set' | 'avatar';
+/**
+ * Shop catalogue. Everything is cosmetic or earned by learning — no pay-to-win.
+ * - look: a hat and a pet on his hero — in every game, on the map and on his hero card.
+ * - effect: what bursts out when he answers right — in every game.
+ * - game: items for one game (its scene, or its gear: car, ball, chess set, rocket…).
+ * Each equippable item fills one `slot`; towers are simply owned (all owned towers can be built).
+ */
+export type ShopCategory = 'look' | 'effect' | 'game';
+
+/** The game modes that have their own items (ids match @atlas/game modes). */
+export type ShopMode = 'defense' | 'runner' | 'duel' | 'knight' | 'penalty' | 'race' | 'meteor' | 'sprint' | 'detective';
 
 export interface ShopItem {
   id: string;
@@ -11,25 +20,88 @@ export interface ShopItem {
   coins: number;
   gems: number;
   description: string;
+  /** What it fills: 'hat', 'pet', 'effect', or '<mode>.<thing>' (e.g. 'race.vehicle'). Towers have none. */
+  slot?: string;
+  /** For game items: which game. */
+  mode?: ShopMode;
   /** Items unlocked by default. */
   starter?: boolean;
   minLevel?: number;
 }
 
+const look = (id: string, slot: 'hat' | 'pet', emoji: string, name: string, coins: number, gems: number, description: string): ShopItem => ({ id, slot, emoji, name, coins, gems, description, category: 'look' });
+const fx = (id: string, emoji: string, name: string, coins: number, gems: number, description: string): ShopItem => ({ id, slot: 'effect', emoji, name, coins, gems, description, category: 'effect' });
+const game = (mode: ShopMode, id: string, slot: string, emoji: string, name: string, coins: number, gems: number, description: string, extra: Partial<ShopItem> = {}): ShopItem => ({
+  id,
+  mode,
+  slot: `${mode}.${slot}`,
+  emoji,
+  name,
+  coins,
+  gems,
+  description,
+  category: 'game',
+  ...extra,
+});
+
 export const SHOP: ShopItem[] = [
-  { id: 'tower.pawn', name: 'Pawn Archer', category: 'tower', emoji: '♟', coins: 0, gems: 0, description: 'Cheap and steady. Shoots straight down its lane.', starter: true },
-  { id: 'tower.rook', name: 'Rook Wall', category: 'tower', emoji: '♜', coins: 0, gems: 0, description: 'A sturdy wall that blocks enemies and fires slowly.', starter: true },
-  { id: 'tower.knight', name: 'Knight Lancer', category: 'tower', emoji: '♞', coins: 150, gems: 0, description: 'Hits its own lane and both neighbouring lanes.' },
-  { id: 'tower.bishop', name: 'Bishop Frost', category: 'tower', emoji: '♝', coins: 250, gems: 0, description: 'Slows every enemy it hits.', minLevel: 2 },
-  { id: 'tower.queen', name: 'Queen Storm', category: 'tower', emoji: '♛', coins: 500, gems: 5, description: 'Rapid fire. The most powerful piece on the board.', minLevel: 4 },
-  { id: 'skin.neon', name: 'Neon Towers', category: 'skin', emoji: '💡', coins: 200, gems: 0, description: 'Glowing neon tower skins.' },
-  { id: 'skin.gold', name: 'Golden Towers', category: 'skin', emoji: '🏆', coins: 400, gems: 3, description: 'Solid gold. Very shiny.' },
-  { id: 'theme.night', name: 'Night Battlefield', category: 'world-theme', emoji: '🌙', coins: 150, gems: 0, description: 'Battle under the stars.' },
-  { id: 'theme.snow', name: 'Snow Battlefield', category: 'world-theme', emoji: '❄️', coins: 150, gems: 0, description: 'A frozen battlefield.' },
-  { id: 'chess.marble', name: 'Marble Chess Set', category: 'chess-set', emoji: '♔', coins: 300, gems: 2, description: 'Show off in the Logic Labyrinth.' },
-  { id: 'avatar.crown', name: 'Crown', category: 'avatar', emoji: '👑', coins: 250, gems: 1, description: 'For true champions.' },
-  { id: 'avatar.wizard', name: 'Wizard Hat', category: 'avatar', emoji: '🧙', coins: 120, gems: 0, description: 'Knowledge is magic.' },
-  { id: 'avatar.robot', name: 'Robot Visor', category: 'avatar', emoji: '🤖', coins: 120, gems: 0, description: 'Beep boop, correct answer.' },
+  // ── Your look: everywhere ──
+  look('avatar.cap', 'hat', '🧢', 'Cap', 80, 0, 'A cool everyday cap.'),
+  look('avatar.wizard', 'hat', '🎩', 'Magician Hat', 120, 0, 'Knowledge is magic.'),
+  look('avatar.robot', 'hat', '🤖', 'Robot Visor', 120, 0, 'Beep boop, correct answer.'),
+  look('avatar.grad', 'hat', '🎓', 'Graduation Cap', 200, 0, 'Ready for grade 10.'),
+  look('avatar.crown', 'hat', '👑', 'Crown', 250, 1, 'For true champions.'),
+  look('pet.turtle', 'pet', '🐢', 'Turtle', 100, 0, 'Slow and steady wins the race.'),
+  look('pet.cat', 'pet', '🐱', 'Cat', 150, 0, 'Curious about every word.'),
+  look('pet.dog', 'pet', '🐶', 'Dog', 150, 0, 'Always happy to see you study.'),
+  look('pet.owl', 'pet', '🦉', 'Little Owl', 200, 0, "Coach Owl's little cousin."),
+  look('pet.panda', 'pet', '🐼', 'Panda', 250, 1, 'Calm under exam pressure.'),
+  look('pet.dragon', 'pet', '🐉', 'Baby Dragon', 400, 3, 'Grows fiercer with every streak.'),
+  // ── Right-answer effects: every game ──
+  fx('fx.sparkle', '✨', 'Sparkles', 100, 0, 'A shower of sparkles for every right answer.'),
+  fx('fx.blossom', '🌸', 'Peach Blossoms', 150, 0, 'Tết flowers drift up when you get it right.'),
+  fx('fx.fire', '🔥', 'On Fire', 200, 0, 'Flames for a right answer.'),
+  fx('fx.rainbow', '🌈', 'Rainbow', 250, 0, 'A rainbow burst.'),
+  fx('fx.fireworks', '🎆', 'Fireworks', 300, 1, 'Fireworks, like New Year on Hồ Gươm.'),
+  // ── Castle Defense ──
+  game('defense', 'tower.pawn', '', '♟', 'Pawn Archer', 0, 0, 'Cheap and steady. Shoots straight down its lane.', { starter: true, slot: undefined }),
+  game('defense', 'tower.rook', '', '♜', 'Rook Wall', 0, 0, 'A sturdy wall that blocks enemies and fires slowly.', { starter: true, slot: undefined }),
+  game('defense', 'tower.knight', '', '♞', 'Knight Lancer', 150, 0, 'Hits its own lane and both neighbouring lanes.', { slot: undefined }),
+  game('defense', 'tower.bishop', '', '♝', 'Bishop Frost', 250, 0, 'Slows every enemy it hits.', { minLevel: 2, slot: undefined }),
+  game('defense', 'tower.queen', '', '♛', 'Queen Storm', 500, 5, 'Rapid fire. The most powerful piece on the board.', { minLevel: 4, slot: undefined }),
+  game('defense', 'skin.neon', 'skin', '💡', 'Neon Towers', 200, 0, 'Glowing neon tower skins.'),
+  game('defense', 'skin.gold', 'skin', '🏆', 'Golden Towers', 400, 3, 'Solid gold. Very shiny.'),
+  game('defense', 'theme.night', 'theme', '🌙', 'Night Battlefield', 150, 0, 'Battle under the stars.'),
+  game('defense', 'theme.snow', 'theme', '❄️', 'Snow Battlefield', 150, 0, 'A frozen battlefield.'),
+  // ── Word Runner ──
+  game('runner', 'runner.beach', 'scene', '🏖️', 'Beach Road', 150, 0, 'Run along the sea at sunset.'),
+  game('runner', 'runner.hanoi', 'scene', '🏮', 'Hà Nội Lanterns', 200, 0, 'Old Quarter streets under red lanterns.'),
+  game('runner', 'runner.space', 'scene', '🌌', 'Space Track', 250, 1, 'A road through the galaxy.'),
+  // ── Boss Duel ──
+  game('duel', 'duel.sword', 'weapon', '⚔️', 'Twin Swords', 150, 0, 'Strike with steel.'),
+  game('duel', 'duel.wand', 'weapon', '🪄', 'Magic Wand', 200, 0, 'Every right answer is a spell.'),
+  game('duel', 'duel.lightning', 'weapon', '⚡', 'Lightning', 300, 1, 'Thunder from the sky.'),
+  // ── Knight's Quest ──
+  game('knight', 'chess.marble', 'set', '♔', 'Marble Chess Set', 300, 2, 'A white marble board and pieces.'),
+  game('knight', 'chess.jade', 'set', '🀄', 'Jade Set (cờ tướng)', 300, 2, 'Green jade, like a Vietnamese cờ tướng board.'),
+  game('knight', 'chess.gold', 'set', '🥇', 'Golden Set', 450, 3, 'A gold board for a grandmaster.'),
+  // ── Penalty Shootout ──
+  game('penalty', 'penalty.fire', 'ball', '🔥', 'Fire Ball', 150, 0, 'Your shots leave flames.'),
+  game('penalty', 'penalty.star', 'ball', '🌟', 'Star Ball', 200, 0, 'A golden star ball.'),
+  game('penalty', 'penalty.night', 'scene', '🏟️', 'Floodlit Stadium', 200, 0, 'Play the shootout under the lights.'),
+  // ── Race ──
+  game('race', 'race.motorbike', 'vehicle', '🛵', 'Motorbike', 120, 0, 'The way Hà Nội gets around.'),
+  game('race', 'race.car', 'vehicle', '🏎️', 'Race Car', 200, 0, 'Built for speed.'),
+  game('race', 'race.rocket', 'vehicle', '🚀', 'Rocket Kart', 350, 2, 'Not exactly road-legal.'),
+  // ── Meteor ──
+  game('meteor', 'meteor.ufo', 'ship', '🛸', 'Flying Saucer', 200, 0, 'Defend the planet in style.'),
+  game('meteor', 'meteor.satellite', 'ship', '🛰️', 'Satellite Cannon', 250, 1, 'Precision from orbit.'),
+  // ── Sprint ──
+  game('sprint', 'sprint.ufo', 'rocket', '🛸', 'UFO', 200, 0, 'Launch a flying saucer instead of a rocket.'),
+  game('sprint', 'sprint.balloon', 'rocket', '🎈', 'Hot-air Balloon', 150, 0, 'Up, up and away.'),
+  // ── Detective ──
+  game('detective', 'detective.tophat', 'gear', '🎩', 'Top Hat', 150, 0, 'A classic detective look.'),
+  game('detective', 'detective.cat', 'gear', '🐈‍⬛', 'Black Cat Sidekick', 250, 1, 'Spots clues you miss.'),
 ];
 
 export const STARTER_ITEMS = SHOP.filter((i) => i.starter).map((i) => i.id);

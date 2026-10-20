@@ -10,6 +10,7 @@ import { PLACEMENT_SECTIONS, present } from '@atlas/knowledge';
 import type { PlacementScores } from '@atlas/shared';
 import { Button, Progress, cx, useRepo } from '@atlas/ui';
 import { GameArena } from '../components/modes/GameArena';
+import { getSlots } from '../lib/equipped';
 import type { GameMode } from '@atlas/game';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
@@ -167,6 +168,7 @@ export function Placement({ student }: { student: StudentProfile }) {
         trial
         minutes={Math.ceil(def.questionCount / 4)}
         avatar={student.avatar}
+        slots={getSlots(repo, student.id)}
         bossName={`Guardian of ${def.title}`}
         title={`${REALMS[def.id].art} ${def.title}`}
         subtitle="Trial of Five Realms"

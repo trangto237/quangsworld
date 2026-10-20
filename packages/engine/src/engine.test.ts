@@ -9,7 +9,7 @@ import { applyAnswer, newConceptState, scheduleReview } from './mastery';
 import { planDay, scoreConcepts } from './planner';
 import { MissionSession, historyFromAttempts } from './session';
 import { computeInsights, ieltsBand, studyStreak } from './insights';
-import { battleReward, levelFromXp } from './rewards';
+import { SHOP, battleReward, levelFromXp } from './rewards';
 
 function runPlacement(answerFn: (difficulty: number, conceptId: string) => boolean, seed = 1) {
   const r = rng(seed);
@@ -270,5 +270,23 @@ describe('placement variety', () => {
         s = recordPlacementAnswer(s, { questionId: q.id, conceptId: q.conceptId, difficulty: q.difficulty, correct: true, msSpent: 1000 });
       }
     }
+  });
+});
+
+describe('shop catalogue', () => {
+  it('has unique ids, and every wearable item says where it goes', () => {
+    const ids = SHOP.map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const i of SHOP) {
+      if (i.category === 'look') expect(['hat', 'pet']).toContain(i.slot);
+      if (i.category === 'effect') expect(i.slot).toBe('effect');
+      if (i.category === 'game') {
+        expect(i.mode).toBeTruthy();
+        if (!i.id.startsWith('tower.')) expect(i.slot?.startsWith(`${i.mode}.`)).toBe(true);
+      }
+    }
+  });
+  it('gives every game its own items', () => {
+    for (const m of ['defense', 'runner', 'duel', 'knight', 'penalty', 'race', 'meteor', 'sprint', 'detective']) expect(SHOP.some((i) => i.mode === m && i.slot)).toBe(true);
   });
 });

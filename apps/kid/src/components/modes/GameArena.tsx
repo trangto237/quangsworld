@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { BattleConfig, GameMode, Skin, Theme } from '@atlas/game';
 import { BattleArena } from '../BattleArena';
 import { DetectiveArena } from './DetectiveArena';
@@ -11,13 +11,20 @@ import { RunnerArena } from './RunnerArena';
 import { SprintArena } from './SprintArena';
 import type { ModeProps } from './types';
 import { reportError } from '../../lib/errors';
+import { inSlot, type Slots } from '../../lib/equipped';
+import { EffectBurst, LookProvider } from './look';
 
 /** Lets the shared Leave button get the player out even when the game itself has already stopped. */
 const EscapeCtx = createContext<(() => void) | null>(null);
 export const useEscape = () => useContext(EscapeCtx);
 
 /** Picks the game for a mission. All modes share the same question/answer contract. */
-export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMode; defense: { config: BattleConfig; theme?: Theme; skin?: Skin; hint?: string } }) {
+export function GameArena({
+  mode,
+  defense,
+  slots,
+  ...raw
+}: ModeProps & { mode: GameMode; defense: { config: BattleConfig; theme?: Theme; skin?: Skin; hint?: string }; slots?: Slots }) {
   const ended = useRef<{ victory: boolean } | null>(null);
   const mounted = useRef(true);
   const timers = useRef<number[]>([]);
@@ -28,6 +35,9 @@ export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMod
       timers.current.forEach(clearTimeout);
     };
   }, []);
+  // The equipped right-answer effect, in every game.
+  const effect = slots?.effect ? inSlot(slots, 'effect')?.emoji : undefined;
+  const [burst, setBurst] = useState<number | null>(null);
   const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(() => mounted.current && fn(), ms));
 
   const finish = (victory: boolean, retreated: boolean) => {
@@ -55,6 +65,11 @@ export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMod
       return q;
     },
     onAnswered: (q, correct, ms, picked) => {
+      if (correct && effect) {
+        const id = Date.now();
+        setBurst(id);
+        later(() => setBurst((b) => (b === id ? null : b)), 1300);
+      }
       try {
         return raw.onAnswered(q, correct, ms, picked);
       } catch (e) {
@@ -70,7 +85,14 @@ export function GameArena({ mode, defense, ...raw }: ModeProps & { mode: GameMod
   // Leave pressed: if the game already ended but this screen is still showing, try ending again.
   const escape = () => later(() => finish(ended.current?.victory ?? false, true), 800);
   const arena = pick(mode, p, defense);
-  return <EscapeCtx.Provider value={escape}>{arena}</EscapeCtx.Provider>;
+  return (
+    <EscapeCtx.Provider value={escape}>
+      <LookProvider slots={slots} avatar={raw.avatar}>
+        {arena}
+        {burst != null && effect && <EffectBurst key={burst} id={burst} emoji={effect} />}
+      </LookProvider>
+    </EscapeCtx.Provider>
+  );
 }
 
 function pick(mode: GameMode, p: ModeProps, defense: { config: BattleConfig; theme?: Theme; skin?: Skin; hint?: string }) {

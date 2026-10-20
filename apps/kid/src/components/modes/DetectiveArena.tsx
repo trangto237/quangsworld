@@ -8,6 +8,7 @@ import { GlossText } from '../GlossText';
 import { speak, stopSpeaking } from '../../lib/speech';
 import { T, TB, useLang } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { useLook } from './look';
 import type { ModeProps } from './types';
 
 const Stars = ({ n }: { n: number }) => (
@@ -25,6 +26,7 @@ const Stars = ({ n }: { n: number }) => (
  * accuse them. Wrong answers and hints are slips — the fewer slips, the more stars for the case.
  */
 export function DetectiveArena(p: ModeProps) {
+  const look = useLook();
   const lang = useLang();
   const sim = useMemo(() => new DetectiveSim({ ...detectiveConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
@@ -128,7 +130,7 @@ export function DetectiveArena(p: ModeProps) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
                   <T en="Case file" /> #{sim.current + 1}
                 </p>
-                <h2 className="font-display text-xl font-bold">🕵️ {c.title}</h2>
+                <h2 className="font-display text-xl font-bold">🕵️{look.gear('detective.gear')?.emoji ?? ''} {c.title}</h2>
               </div>
               <button onClick={() => speak(c.crime, 0.85)} className="rounded-lg px-2 py-1 text-lg hover:bg-amber-200" aria-label="Read the case aloud">
                 🔊

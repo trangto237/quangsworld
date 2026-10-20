@@ -8,6 +8,14 @@ import { isFreeAnswer } from '@atlas/shared';
 import { T, useLang } from '../../i18n';
 import { GlossText } from '../GlossText';
 import { GameShell, Hearts, Pill } from './GameShell';
+import { HeroSprite, useLook } from './look';
+
+/** Word Runner scenes from the shop. */
+const SCENES: Record<string, { bg: string; road: string; decor: string }> = {
+  'runner.beach': { bg: 'bg-gradient-to-b from-orange-400 via-rose-600 to-sky-950', road: 'linear-gradient(#c8a46b, #8a6a3d)', decor: '🌴 🌊 🌴 🐚 🌴' },
+  'runner.hanoi': { bg: 'bg-gradient-to-b from-red-950 via-rose-950 to-stone-950', road: 'linear-gradient(#3f3a36, #5b524a)', decor: '🏮 🏮 🏮 🏮 🏮' },
+  'runner.space': { bg: 'bg-gradient-to-b from-black via-indigo-950 to-purple-950', road: 'linear-gradient(#312e81, #6d28d9)', decor: '✨ 🪐 ✨ ☄️ ✨' },
+};
 import type { ModeProps } from './types';
 
 const LANE_COLORS = ['#f97316', '#22c55e', '#3b82f6', '#a855f7'];
@@ -18,6 +26,7 @@ const LONG = 22;
  * the right one (← → / A D, keys 1–4, or tap a gate). Gate speed adapts to how much there is to read.
  */
 export function RunnerArena(p: ModeProps) {
+  const look = useLook();
   const lang = useLang();
   const [revived, setRevived] = useState(false);
   const sim = useMemo(() => new RunnerSim({ ...runnerConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial, pace: p.trial ? 1.35 : 1 }), [p.minutes, p.trial]);
@@ -133,6 +142,7 @@ export function RunnerArena(p: ModeProps) {
   const vi = question && lang !== 'en' ? translatePrompt(question.prompt, question.conceptId) : null;
   const gloss = !!question && lang !== 'en' && (p.glossary ? p.glossary(question) : true) && !question.conceptId.startsWith('en.vocab') && !question.conceptId.startsWith('custom.');
 
+  const scene = SCENES[look.gear('runner.scene')?.id ?? ''];
   return (
     <GameShell
       title={p.title}
@@ -140,7 +150,7 @@ export function RunnerArena(p: ModeProps) {
       progress={p.progress ?? { value: sim.passed, max: sim.cfg.gates, label: 'Finish line' }}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-sky-900 via-indigo-950 to-slate-950"
+      className={scene?.bg ?? 'bg-gradient-to-b from-sky-900 via-indigo-950 to-slate-950'}
       stats={
         <>
           <Hearts n={sim.hearts} max={sim.maxHearts} />
@@ -204,10 +214,17 @@ export function RunnerArena(p: ModeProps) {
       <div className="relative mx-auto mt-3 w-full max-w-3xl flex-1 select-none overflow-hidden" style={{ minHeight: 320 }}>
         <div
           className="absolute inset-x-0 bottom-0 top-[8%]"
-          style={{ clipPath: 'polygon(36% 0, 64% 0, 100% 100%, 0 100%)', background: 'linear-gradient(#1e293b, #334155)' }}
+          style={{ clipPath: 'polygon(36% 0, 64% 0, 100% 100%, 0 100%)', background: scene?.road ?? 'linear-gradient(#1e293b, #334155)' }}
         >
           <div className="runner-stripes absolute inset-0 opacity-40" />
         </div>
+        {scene && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between px-3 text-2xl opacity-90 sm:text-3xl" aria-hidden>
+            {scene.decor.split(' ').map((d, i) => (
+              <span key={i}>{d}</span>
+            ))}
+          </div>
+        )}
         {/* Lane taps */}
         {question &&
           !isFreeAnswer(question) &&
@@ -258,7 +275,7 @@ export function RunnerArena(p: ModeProps) {
           style={{ left: `${laneX(lane, 1)}%` }}
           aria-hidden
         >
-          {p.avatar ?? '🦊'}
+          <HeroSprite />
         </div>
         {outcome && (
           <div className={cx('absolute left-1/2 top-[30%] -translate-x-1/2 animate-pop font-display text-4xl font-bold drop-shadow', outcome.correct ? 'text-emerald-300' : 'text-rose-400')}>

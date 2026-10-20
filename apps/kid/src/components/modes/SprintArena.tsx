@@ -7,6 +7,7 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T, TB } from '../../i18n';
 import { GameShell, Hearts, Pill } from './GameShell';
+import { useLook } from './look';
 import { PromptPanel } from './PromptPanel';
 import type { ModeProps } from './types';
 
@@ -19,6 +20,7 @@ const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
  * Other kinds of questions that arrive here are answered on a normal card (no clock).
  */
 export function SprintArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new SprintSim({ ...sprintConfigFor(p.minutes), noDefeat: p.trial, endless: p.trial }), [p.minutes, p.trial]);
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [built, setBuilt] = useState<number[]>([]);
@@ -158,7 +160,7 @@ export function SprintArena(p: ModeProps) {
               />
             ))}
             <div className={cx('text-5xl leading-none transition-transform', launching && 'animate-pulse')} aria-hidden>
-              🚀
+              {look.gear('sprint.rocket')?.emoji ?? '🚀'}
             </div>
             {launching && <div className="mt-[-4px] text-4xl">🔥</div>}
           </div>

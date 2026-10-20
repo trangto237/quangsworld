@@ -7,6 +7,7 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T, tr, useLang } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
+import { HeroSprite, useLook } from './look';
 import { ComebackCardButton } from './ComebackCard';
 import type { ModeProps } from './types';
 
@@ -19,6 +20,7 @@ type Fx = { id: number; text: string; kind: 'hit' | 'crit' | 'ult' | 'hurt' | 'd
  * A correct answer is an attack (harder questions and streaks hit harder); a wrong one lets the boss strike.
  */
 export function DuelArena(p: ModeProps) {
+  const look = useLook();
   const sim = useMemo(() => new DuelSim({ ...duelConfigFor(p.minutes), noDefeat: p.trial, paced: p.trial }), [p.minutes, p.trial]);
   const lang = useLang();
   const boss = BOSSES[hashString(p.bossName ?? p.title) % BOSSES.length];
@@ -55,11 +57,12 @@ export function DuelArena(p: ModeProps) {
     };
   }, []);
 
+  const weapon = look.gear('duel.weapon')?.emoji;
   const show = (events: DuelEvent[]) => {
     for (const e of events) {
       const id = ++fxId.current;
       if (e.type === 'attack') {
-        setFx((f) => [...f, { id, text: `${e.ultimate ? '♛ CHECKMATE! ' : e.crit ? 'CRITICAL! ' : ''}−${e.damage}`, kind: e.ultimate ? 'ult' : e.crit ? 'crit' : 'hit' }]);
+        setFx((f) => [...f, { id, text: `${weapon ? `${weapon} ` : ''}${e.ultimate ? '♛ CHECKMATE! ' : e.crit ? 'CRITICAL! ' : ''}−${e.damage}`, kind: e.ultimate ? 'ult' : e.crit ? 'crit' : 'hit' }]);
         setAnim('attack');
       }
       if (e.type === 'hurt') {
@@ -166,8 +169,9 @@ export function DuelArena(p: ModeProps) {
           )}
           {/* Hero */}
           <div className="relative mt-6 flex items-end gap-4">
-            <div className={cx('text-6xl transition-transform duration-300 sm:text-7xl', anim === 'attack' && '-translate-y-6 translate-x-6 scale-110', anim === 'hurt' && 'translate-y-1 opacity-60')}>
-              {p.avatar ?? '🦊'}
+            <div className={cx('relative text-6xl transition-transform duration-300 sm:text-7xl', anim === 'attack' && '-translate-y-6 translate-x-6 scale-110', anim === 'hurt' && 'translate-y-1 opacity-60')}>
+              <HeroSprite />
+              {weapon && <span className={cx('absolute -right-10 top-0 text-4xl transition-transform', anim === 'attack' && 'rotate-45 scale-125')}>{weapon}</span>}
             </div>
             <div className="w-48">
               <div className="mb-1 flex justify-between text-xs font-bold text-white/70">

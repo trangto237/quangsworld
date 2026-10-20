@@ -87,6 +87,7 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
       title={mission.title}
       minutes={mission.duration}
       avatar={student.avatar}
+      slots={setup.eq.slots}
       bossName={mission.title}
       defense={{
         config: setup.config,
