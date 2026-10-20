@@ -9,7 +9,8 @@ import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/im
 import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
 import type { GenerateRequest } from './generate-core';
 
-export const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash';
+/** Used only if the model list can't be fetched: Google's alias for its current Flash model. */
+export const GEMINI_DEFAULT_MODEL = 'gemini-flash-latest';
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** Gemini accepts about 20 MB of inline data per request; stay a little under. */
 export const GEMINI_MAX_REQUEST = 19_000_000;
@@ -44,6 +45,63 @@ export const GEMINI_SCHEMA = {
 } as const;
 
 type Req = GenerateRequest & { count: number; focus: string[] };
+
+/** The chosen Gemini model no longer exists (Google retires model names over time). */
+export class ModelMissing extends GenerateError {
+  constructor(readonly model: string) {
+    super(500, `The Gemini model "${model}" is not available.`);
+  }
+}
+
+/**
+ * The newest stable "gemini-X.Y-flash" model this key can use for generateContent (no previews, lite,
+ * image, audio or live variants), or Google's "gemini-flash-latest" alias, or null.
+ */
+export function pickFlash(models: { name?: string; supportedGenerationMethods?: string[] }[]): string | null {
+  const usable = models.filter((m) => m.supportedGenerationMethods?.includes('generateContent')).map((m) => (m.name ?? '').replace(/^models\//, ''));
+  const versioned = usable
+    .map((name) => ({ name, v: name.match(/^gemini-(\d+(?:\.\d+)?)-flash$/)?.[1] }))
+    .filter((m): m is { name: string; v: string } => !!m.v)
+    .sort((a, b) => Number(b.v) - Number(a.v));
+  if (versioned.length) return versioned[0].name;
+  if (usable.includes('gemini-flash-latest')) return 'gemini-flash-latest';
+  return usable.find((n) => /^gemini-[\d.]+-flash(-\d+)?$/.test(n)) ?? null;
+}
+
+let chosen: { model: string; at: number } | null = null;
+const KEEP_MS = 6 * 3600_000;
+
+/** GEMINI_MODEL if set; otherwise the newest Flash model for this key (asked once every few hours). */
+export async function chooseGeminiModel(apiKey: string, configured: string | undefined, fetchFn: typeof fetch = fetch, refresh = false): Promise<string> {
+  if (configured?.trim()) return configured.trim();
+  if (!refresh && chosen && Date.now() - chosen.at < KEEP_MS) return chosen.model;
+  let model = GEMINI_DEFAULT_MODEL;
+  try {
+    const res = await fetchFn(`${API}?pageSize=1000`, { headers: { 'x-goog-api-key': apiKey } });
+    if (res.ok) model = pickFlash(((await res.json()) as { models?: { name?: string; supportedGenerationMethods?: string[] }[] }).models ?? []) ?? model;
+  } catch {
+    /* fall back to the alias */
+  }
+  chosen = { model, at: Date.now() };
+  return model;
+}
+
+/** Runs `call` with the chosen model; if that model has gone, picks again once and retries. */
+export async function withGeminiModel<T>(apiKey: string, configured: string | undefined, fetchFn: typeof fetch, call: (model: string) => Promise<T>): Promise<T> {
+  const model = await chooseGeminiModel(apiKey, configured, fetchFn);
+  try {
+    return await call(model);
+  } catch (e) {
+    if (!(e instanceof ModelMissing)) throw e;
+    if (configured?.trim()) throw new GenerateError(500, `The Gemini model "${model}" set in GEMINI_MODEL is not available any more. Remove GEMINI_MODEL in Cloudflare to pick the newest model automatically.`);
+    const again = await chooseGeminiModel(apiKey, undefined, fetchFn, true);
+    if (again === model) throw new GenerateError(500, `No Gemini Flash model is available for this API key right now (tried "${model}").`);
+    return call(again);
+  }
+}
+
+/** For tests. */
+export const forgetChosenModel = () => (chosen = null);
 
 /** The generateContent request body: material (PDF / photos / text) first, then the task. */
 export function buildGeminiBody(req: Req) {
@@ -85,7 +143,7 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
     if (res.status === 429) throw new GenerateError(429, "Gemini's free daily limit is used up — try again later (limits reset daily).");
     if (res.status === 403 || reply.error?.status === 'PERMISSION_DENIED' || (res.status === 400 && /api key/i.test(msg)))
       throw new GenerateError(500, 'The GEMINI_API_KEY on the server is not valid.');
-    if (res.status === 404) throw new GenerateError(500, `The Gemini model "${model}" is not available. Check GEMINI_MODEL, or remove it to use ${GEMINI_DEFAULT_MODEL}.`);
+    if (res.status === 404) throw new ModelMissing(model);
     if (res.status === 400 || res.status === 413) throw new GenerateError(400, `Gemini could not read this material: ${msg || 'bad request'}`);
     throw new GenerateError(502, `Gemini is unavailable (${res.status}). Try again later.`);
   }

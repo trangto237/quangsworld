@@ -85,11 +85,13 @@ With the same Gemini key, **Read the scanned pages with AI** (`functions/api/tra
 at a time, so a book of any size works; when the free tier asks it to slow down it waits and carries on. It is far
 more accurate than on-device OCR on textbook pages. Parent account only, like question making.
 
-**Google Gemini (free, recommended)** — `server/gemini.ts`, REST API, model `gemini-2.5-flash` by default:
+**Google Gemini (free, recommended)** — `server/gemini.ts`, REST API. The model is picked automatically: the server
+asks Google which models the key can use and takes the newest stable *Gemini Flash* (Google retires model names
+over time, so nothing is hard-coded; if a model disappears it picks again):
 
 1. Get a free API key at <https://aistudio.google.com> → **Get API key** (a Google account is enough).
 2. Cloudflare Pages → your project → **Settings → Variables and Secrets** → add a **secret** `GEMINI_API_KEY`.
-   Optionally set `GEMINI_MODEL` to another Gemini model (e.g. a newer Flash). The function also needs the
+   Leave `GEMINI_MODEL` unset (only set it to force one specific model). The function also needs the
    Supabase URL and anon key: the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` variables from cloud sync are
    reused (or set `SUPABASE_URL` / `SUPABASE_ANON_KEY`).
 3. Redeploy. In the parent app, sign in to the family account.

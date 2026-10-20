@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GEMINI_DEFAULT_MODEL, GEMINI_SCHEMA, buildGeminiBody, generateWithGemini } from './gemini';
+import { GEMINI_DEFAULT_MODEL, GEMINI_SCHEMA, ModelMissing, buildGeminiBody, chooseGeminiModel, forgetChosenModel, generateWithGemini, pickFlash, withGeminiModel } from './gemini';
 import { handleGenerate, health, providerOf, type GenerateDeps, type GenerateEnv } from './generate-core';
 import { SYSTEM_PROMPT } from './prompt';
 
+const MODELS = ['gemini-2.5-flash', 'gemini-3-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3-pro', 'text-embedding-004'].map((n) => ({
+  name: `models/${n}`,
+  supportedGenerationMethods: n.startsWith('text-') ? ['embedContent'] : ['generateContent'],
+}));
 const ENV: GenerateEnv = { GEMINI_API_KEY: 'AIza-test', SUPABASE_URL: 'https://proj.supabase.co', SUPABASE_ANON_KEY: 'anon' };
 
 const QUESTIONS = {
@@ -23,6 +27,7 @@ function fakeFetch(gemini: { status?: number; body?: unknown } = { body: ok() })
     calls.push({ url: u, init });
     if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'parent-1', is_anonymous: false }));
     if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('parent-1'));
+    if (u.includes('/models?')) return new Response(JSON.stringify({ models: MODELS }));
     return new Response(JSON.stringify(gemini.body ?? {}), { status: gemini.status ?? 200 });
   }) as unknown as typeof fetch;
   return { fn, calls };
@@ -34,7 +39,7 @@ describe('Gemini provider', () => {
     expect(providerOf({ ...ENV, ANTHROPIC_API_KEY: 'sk' })).toBe('gemini');
     expect(providerOf({ ANTHROPIC_API_KEY: 'sk' })).toBe('claude');
     expect(providerOf({})).toBeNull();
-    expect(health(ENV)).toEqual({ ai: true, provider: 'gemini', model: GEMINI_DEFAULT_MODEL, missing: [] });
+    expect(health(ENV)).toEqual({ ai: true, provider: 'gemini', model: 'newest Gemini Flash', missing: [] });
     expect(health({ ...ENV, GEMINI_MODEL: 'gemini-3.5-flash' }).model).toBe('gemini-3.5-flash');
   });
 
@@ -42,7 +47,7 @@ describe('Gemini provider', () => {
     const { fn, calls } = fakeFetch();
     const req = { ...REQ, pdfBase64: 'JVBERi0=', images: [{ mediaType: 'image/jpeg', data: '/9j/' }] };
     await generateWithGemini('AIza-secret', GEMINI_DEFAULT_MODEL, req, fn);
-    expect(calls[0].url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(calls[0].url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent');
     expect(calls[0].url).not.toContain('AIza');
     expect(new Headers(calls[0].init?.headers).get('x-goog-api-key')).toBe('AIza-secret');
     const body = JSON.parse(String(calls[0].init?.body));
@@ -98,6 +103,7 @@ describe('Gemini provider', () => {
   });
 
   it('runs end to end through the Pages Function handler', async () => {
+    forgetChosenModel();
     const { fn, calls } = fakeFetch();
     const d: GenerateDeps = {
       fetch: fn,
@@ -112,8 +118,47 @@ describe('Gemini provider', () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ provider: 'gemini', model: GEMINI_DEFAULT_MODEL, dropped: 1 });
+    expect(body).toMatchObject({ provider: 'gemini', model: 'gemini-3-flash', dropped: 1 });
     expect(body.drafts).toHaveLength(2);
-    expect(calls.map((c) => new URL(c.url).host)).toEqual(['proj.supabase.co', 'proj.supabase.co', 'generativelanguage.googleapis.com']);
+    expect(calls.map((c) => new URL(c.url).host)).toEqual(['proj.supabase.co', 'proj.supabase.co', 'generativelanguage.googleapis.com', 'generativelanguage.googleapis.com']);
+  });
+});
+
+describe('Gemini model choice', () => {
+  it('picks the newest stable Flash model (no previews, lite or pro)', () => {
+    expect(pickFlash(MODELS)).toBe('gemini-3-flash');
+    expect(pickFlash([{ name: 'models/gemini-flash-latest', supportedGenerationMethods: ['generateContent'] }])).toBe('gemini-flash-latest');
+    expect(pickFlash([])).toBeNull();
+  });
+
+  it('uses GEMINI_MODEL when set, and asks Google otherwise', async () => {
+    forgetChosenModel();
+    const { fn } = fakeFetch();
+    expect(await chooseGeminiModel('k', 'my-model', fn)).toBe('my-model');
+    expect(await chooseGeminiModel('k', undefined, fn)).toBe('gemini-3-flash');
+  });
+
+  it('when the model has gone, picks again and retries once', async () => {
+    forgetChosenModel();
+    let list = ['gemini-2.5-flash'];
+    const fn = (async (url: string) =>
+      new Response(JSON.stringify({ models: list.map((n) => ({ name: `models/${n}`, supportedGenerationMethods: ['generateContent'] })) }))) as unknown as typeof fetch;
+    await chooseGeminiModel('k', undefined, fn);
+    list = ['gemini-3-flash'];
+    const tried: string[] = [];
+    const out = await withGeminiModel('k', undefined, fn, async (m) => {
+      tried.push(m);
+      if (m === 'gemini-2.5-flash') throw new ModelMissing(m);
+      return 'ok';
+    });
+    expect(out).toBe('ok');
+    expect(tried).toEqual(['gemini-2.5-flash', 'gemini-3-flash']);
+  });
+
+  it('a retired GEMINI_MODEL says how to fix it', async () => {
+    const e = await withGeminiModel('k', 'gemini-2.5-flash', fetch, async (m) => {
+      throw new ModelMissing(m);
+    }).catch((x: Error) => x);
+    expect((e as Error).message).toMatch(/Remove GEMINI_MODEL/);
   });
 });

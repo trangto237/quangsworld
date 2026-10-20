@@ -10,7 +10,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/import-validate';
-import { GEMINI_DEFAULT_MODEL, generateWithGemini } from './gemini';
+import { generateWithGemini, withGeminiModel } from './gemini';
 import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
 
 export { GenerateError, SYSTEM_PROMPT } from './prompt';
@@ -53,7 +53,7 @@ export type Provider = 'gemini' | 'claude';
 
 /** Gemini if its key is set, else Claude if its key is set, else none. */
 export const providerOf = (env: GenerateEnv): Provider | null => (env.GEMINI_API_KEY ? 'gemini' : env.ANTHROPIC_API_KEY ? 'claude' : null);
-const modelOf = (env: GenerateEnv, p: Provider | null) => (p === 'gemini' ? env.GEMINI_MODEL?.trim() || GEMINI_DEFAULT_MODEL : p === 'claude' ? MODEL : null);
+const modelOf = (env: GenerateEnv, p: Provider | null) => (p === 'gemini' ? env.GEMINI_MODEL?.trim() || 'newest Gemini Flash' : p === 'claude' ? MODEL : null);
 
 /** What the parent app shows: is AI generation available, with which provider, and if not, what's missing. */
 export function health(env: GenerateEnv): { ai: boolean; provider: Provider | null; model: string | null; missing: string[] } {
@@ -207,10 +207,12 @@ export async function handleGenerate(request: Request, env: GenerateEnv, deps: G
   const parsed = parseRequest(body);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const provider = providerOf(env)!;
-  const model = modelOf(env, provider)!;
+  let model = modelOf(env, provider)!;
   try {
     const { drafts, dropped } =
-      provider === 'gemini' ? await generateWithGemini(env.GEMINI_API_KEY!, model, parsed.req, deps.fetch) : await generateQuestions(deps.makeClient(env.ANTHROPIC_API_KEY!), parsed.req);
+      provider === 'gemini'
+        ? await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, deps.fetch, (m) => ((model = m), generateWithGemini(env.GEMINI_API_KEY!, m, parsed.req, deps.fetch)))
+        : await generateQuestions(deps.makeClient(env.ANTHROPIC_API_KEY!), parsed.req);
     if (!drafts.length) return json({ error: 'No usable questions came back. Try a clearer page or more text.' }, 422);
     return json({ drafts, dropped, provider, model });
   } catch (e) {
