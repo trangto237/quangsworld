@@ -338,6 +338,24 @@ export class Repo {
     });
   }
 
+  /**
+   * Today's treasure chest (after all of today's quests): pays out once per day. Returns false if it was
+   * already opened today.
+   */
+  async openDailyChest(studentId: string, date: string, reward: Reward): Promise<boolean> {
+    const key = `chest:${studentId}:${date}`;
+    return this.db.write((o) => {
+      if (o.select().from(t.kv).where(eq(t.kv.key, key)).get()) return false;
+      o.insert(t.kv).values({ key, value: { openedAt: Date.now(), reward } }).run();
+      const w = this.getWallet(studentId);
+      o.insert(t.wallets)
+        .values({ studentId, coins: w.coins + reward.coins, gems: w.gems + reward.gems, xp: w.xp + reward.xp })
+        .onConflictDoUpdate({ target: t.wallets.studentId, set: { coins: w.coins + reward.coins, gems: w.gems + reward.gems, xp: w.xp + reward.xp } })
+        .run();
+      return true;
+    });
+  }
+
   async purchase(studentId: string, itemId: string) {
     const item = SHOP.find((i) => i.id === itemId);
     if (!item) throw new Error('Unknown item');

@@ -95,8 +95,29 @@ html { background: var(--paper-2); }
   to { transform: translateY(-6px); }
 }
 .town-bob { animation: town-bob 0.8s ease-in-out infinite alternate; }
+@keyframes town-smoke {
+  from { transform: translateY(0); opacity: 0.9; }
+  to { transform: translateY(-18px); opacity: 0; }
+}
+.town-smoke { animation: town-smoke 2.6s ease-out infinite; transform-box: fill-box; }
+.town-smoke-2 { animation: town-smoke 2.6s ease-out 1.3s infinite; transform-box: fill-box; }
+@keyframes town-flag {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  50% { transform: skewY(-6deg) scaleX(0.9); }
+}
+.town-flag { animation: town-flag 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: left center; }
+@keyframes town-hammer {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-35deg); }
+}
+.town-hammer { animation: town-hammer 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom right; }
+@keyframes town-ripple {
+  from { transform: scale(0.4); opacity: 0.8; }
+  to { transform: scale(1.4); opacity: 0; }
+}
+.town-ripple { animation: town-ripple 3s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: reduce) {
-  .town-bob { animation: none; }
+  .town-bob, .town-smoke, .town-smoke-2, .town-flag, .town-hammer, .town-ripple { animation: none; }
 }
 
 /* Word Runner */

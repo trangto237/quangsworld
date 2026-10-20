@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
-import { isDue, levelFromXp, stars } from '@atlas/engine';
+import { isDue, levelFromXp, stars, studyStreak } from '@atlas/engine';
+import { DAY_MS } from '@atlas/shared';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
-import { useQuery } from '@atlas/ui';
+import { useQuery, useRepo } from '@atlas/ui';
 import { todayPlan } from '../lib/plan';
 import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
@@ -18,6 +19,10 @@ export function Town({ student }: { student: StudentProfile }) {
   const states = useQuery((r) => r.getStates(student.id), [student.id]);
   const exams = useQuery((r) => r.listExamResults(student.id).length, [student.id]);
   const wallet = useQuery((r) => r.getWallet(student.id), [student.id]);
+  const repo = useRepo();
+  const played = useQuery((r) => new Set(r.listAttempts(student.id).filter((a) => a.context !== 'placement').map((a) => a.conceptId)), [student.id]);
+  const chestOpened = useQuery((r) => !!r.getKv(`chest:${student.id}:${plan.date}`), [student.id, plan.date]);
+  const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
   const next = plan.missions.find((m) => !m.done);
   const doneCount = plan.missions.filter((m) => m.done).length;
 
@@ -26,6 +31,9 @@ export function Town({ student }: { student: StudentProfile }) {
     const worldOf = new Map<string, string>();
     for (const w of worlds) for (const c of conceptsInWorld(w)) worldOf.set(c.id, w.id);
     const questWorld = next ? next.concepts.map((c) => worldOf.get(c)).find(Boolean) : undefined;
+    // Today's path: each quest's building, in order.
+    const path = plan.missions.map((m) => m.concepts.map((c) => worldOf.get(c)).find(Boolean) ?? 'exam-hall');
+    const stopsAt = (id: string) => plan.missions.flatMap((m, i) => (path[i] === id ? [{ n: i + 1, done: !!m.done }] : []));
     const out: Record<string, SpotState> = {};
     for (const w of worlds) {
       const cs = conceptsInWorld(w);
@@ -40,7 +48,10 @@ export function Town({ student }: { student: StudentProfile }) {
         due,
         quest: w.id === questWorld,
         blurb: tr(lang, w.blurb),
+        unexplored: !cs.some((c) => played.has(c.id)),
+        stops: stopsAt(w.id),
       };
+      if (out[w.id].unexplored) out[w.id].sub = tr(lang, '❔ Unexplored');
     }
     if (!out['my-textbook']) out['my-textbook'] = { level: 0, title: '', icon: '', color: '#888', hidden: true };
     out['exam-hall'] = {
@@ -61,8 +72,68 @@ export function Town({ student }: { student: StudentProfile }) {
       color: '#ffc23d',
       blurb: tr(lang, 'Your hero: powers, badges and settings.'),
     };
-    return { out, questWorld };
-  }, [states, next, lang, exams, wallet, student.name, student.avatar]);
+    out['exam-hall'].stops = stopsAt('exam-hall');
+    return { out, questWorld, path };
+  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played]);
+
+  // Level-up moments: compare with what this device last showed; celebrate one building that grew.
+  const seenKey = `atlas-town-seen:${student.id}`;
+  const [grew, setGrew] = useState<{ id: string; text: string; title: string } | null>(null);
+  const checked = useRef(false);
+  useEffect(() => {
+    if (checked.current) return;
+    checked.current = true;
+    const now: Record<string, { level: number; explored: boolean }> = {};
+    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !['exam-hall', 'coach', 'shop', 'home'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
+    let before: typeof now | null = null;
+    try {
+      before = JSON.parse(localStorage.getItem(seenKey) ?? 'null');
+    } catch {
+      /* first time on this device */
+    }
+    if (before) {
+      for (const [id, n] of Object.entries(now)) {
+        const b = before[id];
+        if (!b) continue;
+        const st = spots.out[id];
+        if (n.level > b.level) {
+          setGrew({ id, text: tr(lang, '🎉 Level {n}!', { n: n.level }), title: tr(lang, '{place} grew to level {n}!', { place: st.title, n: n.level }) });
+          break;
+        }
+        if (n.explored && !b.explored) {
+          setGrew({ id, text: tr(lang, '🎉 Explored!'), title: tr(lang, 'The fog has lifted over {place}!', { place: st.title }) });
+          break;
+        }
+      }
+    }
+    try {
+      localStorage.setItem(seenKey, JSON.stringify(now));
+    } catch {
+      /* storage blocked */
+    }
+  }, [spots.out, seenKey, lang]);
+  useEffect(() => {
+    if (!grew) return;
+    const t = setTimeout(() => setGrew(null), 7000);
+    return () => clearTimeout(t);
+  }, [grew]);
+  const shown = useMemo(() => (grew && spots.out[grew.id] ? { ...spots.out, [grew.id]: { ...spots.out[grew.id], grew: grew.text } } : spots.out), [spots.out, grew]);
+
+  // Today's treasure chest: opens once every quest is done.
+  const allDone = plan.missions.length > 0 && doneCount === plan.missions.length;
+  const chestReward = { coins: 50 + 10 * Math.min(streak, 5), gems: 1, xp: 30 };
+  const [chestNote, setChestNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!chestNote) return;
+    const t = setTimeout(() => setChestNote(null), 6000);
+    return () => clearTimeout(t);
+  }, [chestNote]);
+  const openChest = async () => {
+    if (chestOpened) return setChestNote(tr(lang, "You've opened today's chest. A new one appears tomorrow!"));
+    if (!allDone) return setChestNote(tr(lang, "Finish all of today's quests ({a}/{b}) to open the chest.", { a: doneCount, b: plan.missions.length }));
+    if (await repo.openDailyChest(student.id, plan.date, chestReward))
+      setChestNote(tr(lang, '🎁 +{c} coins, +{g} 💎, +{x} XP! See you tomorrow.', { c: chestReward.coins, g: chestReward.gems, x: chestReward.xp }));
+  };
 
   const [selected, setSelected] = useState<Spot | null>(null);
   const picked = selected ? spots.out[selected.id] : undefined;
@@ -77,7 +148,27 @@ export function Town({ student }: { student: StudentProfile }) {
 
   return (
     <div className="text-ink-text">
-      <TownMap states={spots.out} onOpen={open} onSelect={setSelected} selected={selected?.id ?? null} focus={spots.questWorld ?? 'exam-hall'} hero={student.avatar} />
+      <TownMap
+        states={shown}
+        path={spots.path}
+        chest={{ state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
+        onOpen={open}
+        onSelect={setSelected}
+        selected={selected?.id ?? null}
+        focus={grew?.id ?? spots.questWorld ?? 'exam-hall'}
+        hero={student.avatar}
+      />
+      {(grew || chestNote) && (
+        <div className="pointer-events-none fixed inset-x-0 top-40 z-30 flex justify-center px-3">
+          <div className="town-panel pointer-events-auto flex max-w-md items-center gap-3 px-4 py-3 animate-pop">
+            <span className="text-3xl">{grew ? '🏗️' : '🎁'}</span>
+            <p className="font-display text-lg font-bold leading-tight">{grew ? grew.title : chestNote}</p>
+            <button onClick={() => (setGrew(null), setChestNote(null))} className="ml-auto text-sm font-bold text-ink-soft" aria-label={tr(lang, 'Close')}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-30 [&>*]:pointer-events-auto">
         <HeroBar student={student} />
       </div>

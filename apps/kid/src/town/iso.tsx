@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { NightContext } from './night';
 
 /**
  * A tiny isometric drawing kit for the town map. Ground coordinates are in tiles (x runs down-right,
@@ -47,6 +48,7 @@ export function Box({ x, y, w, d, h, z = 0, color, top }: { x: number; y: number
 /** Rows of windows on the two visible walls of a box. */
 export function Windows({ x, y, w, d, z = 0, floors, floorH, cols = 2, color = '#bfe3f2', lit = false }: { x: number; y: number; w: number; d: number; z?: number; floors: number; floorH: number; cols?: number; color?: string; lit?: boolean }) {
   const out: ReactNode[] = [];
+  const night = useContext(NightContext);
   const fill = lit ? '#ffe28a' : color;
   for (let f = 0; f < floors; f++) {
     const z1 = z + f * floorH + floorH * 0.3;
@@ -54,10 +56,12 @@ export function Windows({ x, y, w, d, z = 0, floors, floorH, cols = 2, color = '
     for (let c = 0; c < cols; c++) {
       const u1 = (c + 0.25) / cols;
       const u2 = (c + 0.75) / cols;
+      // At night about two windows in three are lit.
+      const on = (k: number) => (night && (f * 3 + c + k) % 3 !== 0 ? '#ffd76a' : fill);
       // Left wall (along x at y + d).
-      out.push(<Poly key={`l${f}${c}`} p={[P(x + u1 * w, y + d, z1), P(x + u2 * w, y + d, z1), P(x + u2 * w, y + d, z2), P(x + u1 * w, y + d, z2)]} fill={fill} sw={1.1} />);
+      out.push(<Poly key={`l${f}${c}`} p={[P(x + u1 * w, y + d, z1), P(x + u2 * w, y + d, z1), P(x + u2 * w, y + d, z2), P(x + u1 * w, y + d, z2)]} fill={on(0)} sw={1.1} />);
       // Right wall (along y at x + w).
-      out.push(<Poly key={`r${f}${c}`} p={[P(x + w, y + u1 * d, z1), P(x + w, y + u2 * d, z1), P(x + w, y + u2 * d, z2), P(x + w, y + u1 * d, z2)]} fill={shade(fill, -0.15)} sw={1.1} />);
+      out.push(<Poly key={`r${f}${c}`} p={[P(x + w, y + u1 * d, z1), P(x + w, y + u2 * d, z1), P(x + w, y + u2 * d, z2), P(x + w, y + u1 * d, z2)]} fill={shade(on(1), -0.15)} sw={1.1} />);
     }
   }
   return <g>{out}</g>;
@@ -135,7 +139,7 @@ export function Flag({ x, y, z, color, gold }: { x: number; y: number; z: number
   return (
     <g>
       <line x1={sx} y1={sy} x2={sx} y2={sy - 26} stroke={INK} strokeWidth={2} />
-      <polygon points={pts([[sx, sy - 26], [sx + 16, sy - 21], [sx, sy - 16]])} fill={gold ? '#ffc23d' : color} stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+      <polygon className="town-flag" points={pts([[sx, sy - 26], [sx + 16, sy - 21], [sx, sy - 16]])} fill={gold ? '#ffc23d' : color} stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
     </g>
   );
 }

@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Bubble, Emoji, Flag, Ground, INK, NameTag, P, Tree, type Pt } from './iso';
 import { Car, KINDS, Lake, Pitch, RiceField, house } from './buildings';
+import { Builders, Chest, Fog, LampGlowDef, NightContext, PathTrail, SkyTint, StopBadge, StreetLamps, Traffic, Wear, useDayPhase, useReducedMotion, type ChestState } from './life';
 
 /**
  * The town: a 14×14-tile neighbourhood split by two roads each way into 3×3 blocks. Each world is a
@@ -61,11 +62,21 @@ export interface SpotState {
   hidden?: boolean;
   /** One line about the place, for its card. */
   blurb?: string;
+  /** Never played here yet: fog covers it. */
+  unexplored?: boolean;
+  /** Today's path stops at this building (quest numbers, and whether each is done). */
+  stops?: { n: number; done: boolean }[];
+  /** Just grew a level (or was explored): builders and a celebration bubble. */
+  grew?: string;
 }
 
 const N = 20;
 const MARGIN = 2;
 const ROADS = [6, 13];
+/** Today's treasure chest: the crossroads south-east of the Exam Hall. */
+const CHEST: [number, number] = [13.5, 13.5];
+/** Street lamps along the roads. */
+const LAMPS: [number, number][] = ROADS.flatMap((r) => [2.5, 10, 17.5].flatMap((t): [number, number][] => [[r - 0.15, t], [t, r - 0.15]]));
 const VIEW = { x: -790, y: -230, w: 1580, h: 1000 };
 
 /** Screen point (in map pixels) of a spot's centre, for centring the view. */
@@ -225,6 +236,7 @@ interface Pointing {
 
 function Body({ s, st, active, tap }: { s: Spot; st: SpotState; active: boolean; tap: Pointing }) {
   const d = drawingFor(s, st);
+  const fp = footprint(s);
   const top = P(...d.top);
   const faded = st.level === 0 && !st.hidden && !SERVICE.includes(s.kind);
   return (
@@ -236,7 +248,7 @@ function Body({ s, st, active, tap }: { s: Spot; st: SpotState; active: boolean;
     >
       {/* Invisible hit area over the whole lot. */}
       <Ground x={s.x} y={s.y} w={s.lot} d={s.lot} fill="transparent" />
-      <g filter={faded ? 'url(#town-faded)' : undefined}>{d.el}</g>
+      <g filter={faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
       {st.level >= 3 && <Flowers s={s} />}
       {st.level >= 2 && !st.hidden && !SERVICE.includes(s.kind) && <Flag x={d.top[0]} y={d.top[1]} z={d.top[2]} color={st.color} gold={st.level >= 4} />}
       {st.level >= 4 && (
@@ -244,11 +256,14 @@ function Body({ s, st, active, tap }: { s: Spot; st: SpotState; active: boolean;
           ✨
         </Emoji>
       )}
-      {faded && (
+      {faded && !st.unexplored && (
         <Emoji at={[top[0] + 20, top[1] + 4]} size={18}>
           🏗️
         </Emoji>
       )}
+      {!!st.due && !st.unexplored && !st.grew && st.level > 0 && <Wear at={P(fp.bx + fp.size * 0.55, fp.by + fp.size, 18)} />}
+      {st.unexplored && !st.grew && <Fog x={fp.bx} y={fp.by} size={fp.size} />}
+      {st.grew && <Builders at={P(fp.bx + fp.size, fp.by + fp.size, 0)} />}
     </g>
   );
 }
@@ -276,6 +291,13 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
     >
       {/* The hero rides in the quest bubble (or on home when today's quests are done), never over a name. */}
       <Tags top={[top[0], top[1] - lift]} st={st} hero={hero} />
+      {!!st.stops?.length && (
+        <StopBadge
+          at={[top[0], top[1] - lift - (st.quest || st.due || hero || st.grew ? 50 : 14)]}
+          label={st.stops.map((x) => x.n).join('·')}
+          done={st.stops.every((x) => x.done)}
+        />
+      )}
       <g style={{ transform: active ? 'scale(1.18)' : undefined, transformOrigin: `${front[0]}px ${front[1] + 15}px`, transition: 'transform 0.15s' }}>
         <NameTag at={[front[0], front[1] + 4]} icon={st.icon} title={st.title} sub={st.sub} color={active ? '#ffc23d' : st.color} />
       </g>
@@ -285,9 +307,10 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
 
 function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: string }) {
   const at: Pt = [top[0], top[1] - 4];
+  if (st.grew) return <Bubble at={at} text={st.grew} color="#f59e0b" bob />;
   if (st.quest) return <Bubble at={at} text={`${hero ?? '⚔️'} Quest${st.due ? ` · 🔁 ${st.due}` : ''}`} color="#e8584a" bob />;
   if (hero) return <Bubble at={at} text={`${hero} Home`} color="#f59e0b" />;
-  if (st.due) return <Bubble at={at} text={`🔁 ${st.due}`} color="#8b5cf6" />;
+  if (st.due) return <Bubble at={at} text={`🔁 ${st.due} fading`} color="#8b5cf6" />;
   return null;
 }
 
@@ -298,6 +321,8 @@ export function TownMap({
   selected,
   focus,
   hero,
+  path = [],
+  chest,
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
@@ -308,7 +333,12 @@ export function TownMap({
   focus?: string;
   /** Hero emoji, drawn next to the quest building (or home). */
   hero?: string;
+  /** Today's path, in order (spot ids). */
+  path?: string[];
+  chest?: { state: ChestState; progress: string; onOpen: () => void };
 }) {
+  const phase = useDayPhase();
+  const reduced = useReducedMotion();
   const [hover, setHover] = useState<string | null>(null);
   const lastPointer = useRef<string>('mouse');
   const active = hover ?? selected;
@@ -331,6 +361,14 @@ export function TownMap({
       return { key: s.id, depth: bx + by + size, node: <Body s={s} st={states[s.id]} active={active === s.id} tap={tapFor(s)} /> };
     }),
   ].sort((a, b) => a.depth - b.depth);
+  // Today's path: from home, through each quest building in order, to the chest.
+  const front = (id: string): Pt | null => {
+    const sp = spots.find((x) => x.id === id);
+    if (!sp) return null;
+    const { bx, by, size } = footprint(sp);
+    return P(bx + size, by + size);
+  };
+  const trail = [front('home'), ...path.map(front), chest ? P(CHEST[0], CHEST[1]) : null].filter((p, i, a): p is Pt => !!p && (i === 0 || p !== a[i - 1]));
   // The highlighted spot's tag is drawn last, on top of the others.
   const overlays = [...spots].sort((a, b) => (a.id === active ? 1 : 0) - (b.id === active ? 1 : 0));
   return (
@@ -339,20 +377,26 @@ export function TownMap({
       onPointer={(t) => (lastPointer.current = t)}
       onBackground={() => onSelect(null)}
     >
+      <NightContext.Provider value={phase === 'night'}>
       <defs>
         <filter id="town-faded">
           <feColorMatrix type="saturate" values="0.25" />
         </filter>
+        <LampGlowDef />
       </defs>
       <GroundAndRoads />
       {spots.map((s) => (
         <Plot key={s.id} s={s} active={active === s.id} />
       ))}
       <FlatDecor />
-      <Cars />
+      <PathTrail points={trail} reduced={reduced} />
+      {reduced ? <Cars /> : <Traffic roads={ROADS} from={-MARGIN} to={N + MARGIN - 1} />}
       {standing.map((d) => (
         <g key={d.key}>{d.node}</g>
       ))}
+      {chest && <Chest x={CHEST[0]} y={CHEST[1]} state={chest.state} progress={chest.progress} onOpen={chest.onOpen} />}
+      <SkyTint phase={phase} view={VIEW} />
+      <StreetLamps spots={LAMPS} glow={phase !== 'day'} />
       {overlays.map((s) => (
         <Overlay
           key={s.id}
@@ -365,6 +409,7 @@ export function TownMap({
           dim={!!active && active !== s.id}
         />
       ))}
+      </NightContext.Provider>
     </Viewport>
   );
 }
@@ -390,6 +435,17 @@ function Viewport({ children, focus, onPointer, onBackground }: { children: Reac
     el.scrollTop = fy * zoom - el.clientHeight / 2;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Later focus changes (e.g. a building that just grew): glide there.
+  const firstFocus = useRef(focus.id);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || focus.id === firstFocus.current) return;
+    firstFocus.current = focus.id;
+    const [fx, fy] = spotCenter(focus);
+    el.scrollTo({ left: fx * zoom - el.clientWidth / 2, top: fy * zoom - el.clientHeight / 2, behavior: 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus.id]);
 
   // Keep the middle of the screen in place when zooming.
   useLayoutEffect(() => {

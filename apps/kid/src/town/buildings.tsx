@@ -42,8 +42,8 @@ const forge: Kind = (x, y, lv, color) => {
     el: (
       <g>
         <Box x={bx + 0.15} y={by + 0.1} w={0.3} d={0.3} h={h + 26} color="#8d5b3b" />
-        <circle cx={P(bx + 0.3, by + 0.25, h + 34)[0]} cy={P(bx + 0.3, by + 0.25, h + 34)[1]} r={6} fill="#d8d0c8" stroke={INK} strokeWidth={1.2} opacity={0.9} />
-        <circle cx={P(bx + 0.3, by + 0.25, h + 44)[0] + 5} cy={P(bx + 0.3, by + 0.25, h + 44)[1]} r={4.5} fill="#e6dfd8" stroke={INK} strokeWidth={1.2} opacity={0.8} />
+        <circle className="town-smoke" cx={P(bx + 0.3, by + 0.25, h + 34)[0]} cy={P(bx + 0.3, by + 0.25, h + 34)[1]} r={6} fill="#d8d0c8" stroke={INK} strokeWidth={1.2} opacity={0.9} />
+        <circle className="town-smoke-2" cx={P(bx + 0.3, by + 0.25, h + 44)[0] + 5} cy={P(bx + 0.3, by + 0.25, h + 44)[1]} r={4.5} fill="#e6dfd8" stroke={INK} strokeWidth={1.2} opacity={0.8} />
         <Box x={bx} y={by} w={w} d={d} h={h} color={shade(color, -0.1)} top="#6b4a3a" />
         <Windows x={bx} y={by} w={w} d={d} floors={1} floorH={h} cols={2} lit />
         <Door x={bx} y={by} w={w} d={d} h={13} />
@@ -472,6 +472,7 @@ export function Lake({ x, y, w, d }: { x: number; y: number; w: number; d: numbe
     <g>
       <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#7cc4e8" stroke={INK} strokeWidth={1.8} />
       <ellipse cx={cx - rx * 0.25} cy={cy - ry * 0.2} rx={rx * 0.35} ry={ry * 0.25} fill="#a5d8f0" />
+      <ellipse className="town-ripple" cx={cx + rx * 0.2} cy={cy + ry * 0.05} rx={rx * 0.25} ry={ry * 0.25} fill="none" stroke="#e6f6fd" strokeWidth={1.5} />
       <Emoji at={[cx + rx * 0.3, cy + ry * 0.2]} size={13}>
         🪷
       </Emoji>

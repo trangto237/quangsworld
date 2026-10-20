@@ -52,6 +52,16 @@ describe('AtlasDb', () => {
     }
   });
 
+  it('opens the daily chest once per day', async () => {
+    const { repo } = await fresh();
+    const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🐲' });
+    const before = repo.getWallet(id).coins;
+    expect(await repo.openDailyChest(id, '2026-10-20', { coins: 60, gems: 1, xp: 20 })).toBe(true);
+    expect(await repo.openDailyChest(id, '2026-10-20', { coins: 60, gems: 1, xp: 20 })).toBe(false);
+    expect(repo.getWallet(id)).toMatchObject({ coins: before + 60, gems: 1 });
+    expect(await repo.openDailyChest(id, '2026-10-21', { coins: 60, gems: 1, xp: 20 })).toBe(true);
+  });
+
   it('rolls back a failed write', async () => {
     const { repo } = await fresh();
     const id = await repo.addStudent({ name: 'Quang', age: 14, grade: 9, avatar: '🦊' });
