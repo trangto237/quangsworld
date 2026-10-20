@@ -238,7 +238,7 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
   }
   if (reply.promptFeedback?.blockReason) throw new GenerateError(422, `Gemini refused to read this material (${reply.promptFeedback.blockReason.toLowerCase()}). Try other pages.`);
   const cand = reply.candidates?.[0];
-  if (!cand) throw new GenerateError(502, 'Gemini returned no answer. Try again.');
+  if (!cand) throw new GenerateError(502, `Gemini returned no answer (it sent: ${JSON.stringify(reply).slice(0, 200) || 'nothing'}). Try again.`);
   if (cand.finishReason === 'MAX_TOKENS') throw new GenerateError(422, 'The answer was cut off. Try fewer questions or a shorter part of the book.');
   if (cand.finishReason && cand.finishReason !== 'STOP')
     throw new GenerateError(422, `Gemini couldn't make questions from this material (${cand.finishReason.toLowerCase()}). Try other pages.`);
@@ -254,4 +254,25 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
   }
   const { drafts, dropped } = validateDrafts(parsed.questions, MAX_ITEMS);
   return { drafts, dropped: dropped.length };
+}
+
+/** A tiny real request ("Reply with OK") through the same route the app uses, for the connection test. */
+export async function pingGemini(env: RelayEnv & { GEMINI_API_KEY?: string; GEMINI_MODEL?: string }, fetchFn: typeof fetch): Promise<{ model: string; text: string }> {
+  const gf = geminiFetch(env, fetchFn);
+  let used = '';
+  const text = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, gf, async (model) => {
+    used = model;
+    const res = await gf(`${API}/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY! },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Reply with the single word OK.' }] }], generationConfig: { maxOutputTokens: 256 } }),
+    });
+    const reply = (await res.json().catch(() => ({}))) as GeminiReply;
+    if (res.status === 404) throw new ModelMissing(model);
+    if (!res.ok) throw new GenerateError(res.status, reply.error?.message ?? `error ${res.status}`);
+    const t = (reply.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('').trim();
+    if (!t) throw new GenerateError(502, `no answer (it sent: ${JSON.stringify(reply).slice(0, 200)})`);
+    return t;
+  });
+  return { model: used, text };
 }

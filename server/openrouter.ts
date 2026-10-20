@@ -90,7 +90,13 @@ async function chat(key: string, model: string, system: string, content: Part[],
     if (status === 401) throw new GenerateError(500, 'The OPENROUTER_API_KEY on the server is not valid.');
     if (status === 402) throw new NoCredit(402, 'The OpenRouter account has no credit for this model.');
     if (status === 404) throw new NoCredit(404, `OpenRouter model "${model}" is not available.`);
-    if (status === 429) throw new GenerateError(429, 'OpenRouter is busy or its free daily limit is used up — try again later.');
+    if (status === 429)
+      throw new GenerateError(
+        429,
+        /per.day|daily|free-models-per-day/i.test(msg)
+          ? "OpenRouter's free daily limit is used up (free accounts get about 50 requests a day). Add a few dollars of credit at openrouter.ai → Credits, or try again tomorrow."
+          : `OpenRouter is busy (${model}): ${msg || 'rate limited'} — try again in a minute.`,
+      );
     throw new GenerateError(status >= 500 ? 502 : 400, `OpenRouter (${model}) could not do it: ${msg || `error ${status}`}`);
   }
   const choice = body.choices?.[0];
@@ -189,4 +195,12 @@ export async function transcribeWithOpenRouter(
   const { result } = await withModel(configured, fetchFn, (m) => chat(key, m, system, content, PAGES_JSON, fetchFn));
   const pages = ((result as { pages?: { text?: unknown }[] }).pages ?? []).map((p) => (typeof p?.text === 'string' ? p.text : ''));
   return images.map((_, i) => pages[i] ?? '');
+}
+
+/** A tiny real request through OpenRouter (the model the app would use), for the connection test. */
+export async function pingOpenRouter(key: string, configured: string | undefined, fetchFn: typeof fetch = fetch): Promise<{ model: string; text: string }> {
+  const { result, model } = await withModel(configured, fetchFn, (m) =>
+    chat(key, m, 'Answer in JSON.', [{ type: 'text', text: 'Reply with {"text": "OK"}.' }], { type: 'object', additionalProperties: false, required: ['text'], properties: { text: { type: 'string' } } }, fetchFn),
+  );
+  return { model, text: String((result as { text?: unknown }).text ?? '') };
 }

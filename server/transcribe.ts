@@ -87,7 +87,7 @@ export async function transcribeWithGemini(apiKey: string, model: string, req: T
   }
   if (reply.promptFeedback?.blockReason) throw new GenerateError(422, `Gemini refused to read these pages (${reply.promptFeedback.blockReason.toLowerCase()}).`);
   const cand = reply.candidates?.[0];
-  if (!cand) throw new GenerateError(502, 'Gemini returned no answer. Try again.');
+  if (!cand) throw new GenerateError(502, `Gemini returned no answer (it sent: ${JSON.stringify(reply).slice(0, 200) || 'nothing'}). Try again.`);
   if (cand.finishReason === 'MAX_TOKENS') throw new GenerateError(422, 'The pages had too much text for one go. Try again (fewer pages at a time).');
   const text = (cand.content?.parts ?? [])
     .filter((p) => typeof p.text === 'string' && !p.thought)

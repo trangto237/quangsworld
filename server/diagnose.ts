@@ -4,7 +4,8 @@
  * Used by functions/api/diagnose.ts. Never returns keys.
  */
 import { verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
-import { RELAY_KEY_HELP, relayHeaders } from './gemini';
+import { RELAY_KEY_HELP, pingGemini, relayHeaders } from './gemini';
+import { pingOpenRouter } from './openrouter';
 
 export interface Check {
   step: string;
@@ -64,6 +65,15 @@ export async function diagnose(request: Request, env: GenerateEnv, fetchFn: type
     }
   }
 
+  if (key) {
+    try {
+      const p = await pingGemini(env, fetchFn);
+      out.push({ step: 'Gemini answer test', ok: true, detail: `${p.model} answered “${short(p.text)}”.` });
+    } catch (e) {
+      out.push({ step: 'Gemini answer test', ok: false, detail: e instanceof Error ? short(e.message) : 'failed' });
+    }
+  }
+
   if (env.OPENROUTER_API_KEY) {
     const r = await probe(fetchFn, 'https://openrouter.ai/api/v1/key', { headers: { authorization: `Bearer ${env.OPENROUTER_API_KEY}` } });
     if ('error' in r) out.push({ step: 'OpenRouter', ok: false, detail: `Could not connect: ${r.error}` });
@@ -85,6 +95,12 @@ export async function diagnose(request: Request, env: GenerateEnv, fetchFn: type
           (d.is_free_tier ? ' No credit bought yet, so only free models (weaker, small daily limit) — buy a few dollars at openrouter.ai → Credits for the good ones.' : '') +
           (typeof d.limit_remaining === 'number' ? ` (This key's own spending cap has $${d.limit_remaining.toFixed(2)} left — that's a limit, not money.)` : ''),
       });
+    }
+    try {
+      const p = await pingOpenRouter(env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL, fetchFn);
+      out.push({ step: 'OpenRouter answer test', ok: true, detail: `${p.model} answered “${short(p.text)}”.` });
+    } catch (e) {
+      out.push({ step: 'OpenRouter answer test', ok: false, detail: e instanceof Error ? short(e.message) : 'failed' });
     }
   } else out.push({ step: 'OpenRouter (backup)', ok: false, detail: 'Not set up (optional): add OPENROUTER_API_KEY in Cloudflare.' });
   return out;
