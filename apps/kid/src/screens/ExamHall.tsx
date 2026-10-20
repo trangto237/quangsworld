@@ -32,7 +32,7 @@ export function ExamHall({ student }: { student: StudentProfile }) {
             const last = mine.at(-1);
             const resuming = inProgress?.examId === e.id;
             return (
-              <section key={e.id} className={cx('town-panel flex flex-col gap-0 p-4', resuming && 'bg-[#ffe7a8]')}>
+              <section key={e.id} className={cx('town-panel flex flex-col gap-0 p-4', resuming && 'bg-tint-amber')}>
                 <div className="grid size-14 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-3xl">{ICON[e.id]}</div>
                 <h2 className="mt-2 font-display text-xl font-bold leading-tight">{e.name}</h2>
                 <p className="mt-1 text-sm text-ink-soft">{e.description}</p>

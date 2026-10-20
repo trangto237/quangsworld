@@ -119,10 +119,31 @@ export interface RelayEnv {
   VITE_SUPABASE_ANON_KEY?: string;
   /** Supabase region the relay runs in (one Gemini serves). Default us-east-1. */
   GEMINI_RELAY_REGION?: string;
+  /** The project's publishable key (sb_publishable_…): Edge Functions may accept only new-style keys. */
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  VITE_SUPABASE_PUBLISHABLE_KEY?: string;
 }
 
 export const RELAY_HELP =
   "Google's Gemini doesn't accept requests from where Cloudflare runs this app's server. One-time fix: in the Supabase dashboard → Edge Functions → Deploy a new function → Via editor, name it gemini-relay and paste supabase/functions/gemini-relay/index.ts from the app's code, then Deploy. Then try again.";
+
+export const RELAY_KEY_HELP =
+  'Your Supabase project only lets Edge Functions be called with its new publishable key. Fix: Supabase dashboard → Project Settings → API Keys → copy the Publishable key (starts with sb_publishable_), then Cloudflare Pages → Settings → Variables and Secrets → add SUPABASE_PUBLISHABLE_KEY with that value, and redeploy.';
+
+/** The key to call the relay with: the publishable key if given, else the anon key. */
+export const relayKey = (env: RelayEnv) => env.SUPABASE_PUBLISHABLE_KEY?.trim() || env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
+
+/** Headers for a relay call: the Supabase key (Bearer only for legacy JWT keys) and the region. */
+export function relayHeaders(env: RelayEnv, base?: HeadersInit, withKey = true): Headers {
+  const headers = new Headers(base);
+  headers.set('x-region', env.GEMINI_RELAY_REGION?.trim() || 'us-east-1');
+  const key = withKey ? relayKey(env) : undefined;
+  if (key) {
+    headers.set('apikey', key);
+    if (key.startsWith('eyJ')) headers.set('authorization', `Bearer ${key}`);
+  }
+  return headers;
+}
 
 export const RELAY_JWT_HELP =
   'The gemini-relay function on Supabase refused the request (401). Fix: Supabase dashboard → Edge Functions → gemini-relay → Settings (Details) → turn OFF "Verify JWT" (also called "Enforce JWT verification"), save, and try again. It is safe: the relay only works for whoever already holds your Gemini key.';
@@ -133,24 +154,25 @@ export const RELAY_JWT_HELP =
  */
 export function geminiFetch(env: RelayEnv, fetchFn: typeof fetch): typeof fetch {
   const sbUrl = (env.SUPABASE_URL ?? env.VITE_SUPABASE_URL)?.replace(/\/$/, '');
-  const anon = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY;
   const root = 'https://generativelanguage.googleapis.com/v1beta/';
   const relay = async (url: string, init?: RequestInit) => {
     const region = env.GEMINI_RELAY_REGION?.trim() || 'us-east-1';
-    const headers = new Headers(init?.headers);
-    headers.set('x-region', region);
-    if (anon) {
-      headers.set('apikey', anon);
-      // Only legacy anon keys are JWTs; new "sb_publishable_…" keys must not be sent as a Bearer token.
-      if (anon.startsWith('eyJ')) headers.set('authorization', `Bearer ${anon}`);
+    const target = `${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${encodeURIComponent(region)}&path=${encodeURIComponent(url.slice(root.length))}`;
+    let res = await fetchFn(target, { ...init, headers: relayHeaders(env, init?.headers) });
+    let text = res.status === 401 || res.status === 404 ? await res.clone().text() : '';
+    if (res.status === 401 && /INVALID_API_KEY|matched no key/i.test(text)) {
+      // The project accepts only new-style keys for functions: try once without a key (works when the
+      // function doesn't ask for one), else explain how to add the publishable key.
+      res = await fetchFn(target, { ...init, headers: relayHeaders(env, init?.headers, false) });
+      text = res.status === 401 || res.status === 404 ? await res.clone().text() : '';
+      if (res.status === 401) return new Response(JSON.stringify({ error: { message: RELAY_KEY_HELP } }), { status: 400 });
     }
-    const res = await fetchFn(`${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${encodeURIComponent(region)}&path=${encodeURIComponent(url.slice(root.length))}`, { ...init, headers });
-    if (res.status === 404 && !(await res.clone().text()).includes('"error"')) {
+    if (res.status === 404 && !text.includes('"error"')) {
       // The relay hasn't been deployed yet.
       return new Response(JSON.stringify({ error: { message: RELAY_HELP } }), { status: 400 });
     }
-    if (res.status === 401 && !(await res.clone().text()).includes('x-goog-api-key')) {
-      // Supabase's "Verify JWT" check refused us (new projects use non-JWT publishable keys).
+    if (res.status === 401 && !text.includes('x-goog-api-key')) {
+      // Supabase's "Verify JWT" check refused us.
       return new Response(JSON.stringify({ error: { message: RELAY_JWT_HELP } }), { status: 400 });
     }
     return res;
@@ -205,7 +227,7 @@ export async function generateWithGemini(apiKey: string, model: string, req: Req
   const reply = (await res.json().catch(() => ({}))) as GeminiReply;
   if (!res.ok) {
     const msg = reply.error?.message ?? '';
-    if (msg === RELAY_HELP || msg === RELAY_JWT_HELP) throw new GenerateError(503, msg);
+    if (msg === RELAY_HELP || msg === RELAY_JWT_HELP || msg === RELAY_KEY_HELP) throw new GenerateError(503, msg);
     if (/location is not supported/i.test(msg)) throw new GenerateError(503, "Gemini doesn't serve the region the relay ran in. In Cloudflare, set GEMINI_RELAY_REGION to another Supabase region (e.g. us-west-1) and redeploy.");
     if (res.status === 429) throw new GenerateError(429, "Gemini's free daily limit is used up — try again later (limits reset daily).");
     if (res.status === 403 || reply.error?.status === 'PERMISSION_DENIED' || (res.status === 400 && /api key/i.test(msg)))

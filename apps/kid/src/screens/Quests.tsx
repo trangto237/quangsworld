@@ -46,7 +46,7 @@ export function Quests({ student }: { student: StudentProfile }) {
                   onClick={() => go({ name: 'battle', mission: m, fromPlan: true })}
                   className={cx(
                     'town-btn flex h-full w-full items-start gap-3 rounded-2xl p-3 text-left',
-                    m.done ? 'bg-[#d9efc9]' : m === next ? 'bg-[#ffe7a8]' : 'bg-paper hover:bg-paper-3',
+                    m.done ? 'bg-tint-green' : m === next ? 'bg-tint-amber' : 'bg-paper hover:bg-paper-3',
                   )}
                 >
                   <span className="grid size-11 shrink-0 place-items-center rounded-xl border-2 border-ink bg-paper text-2xl">{m.done ? '✅' : mode.emoji}</span>
@@ -73,7 +73,7 @@ export function Quests({ student }: { student: StudentProfile }) {
       </Panel>
 
       <button onClick={() => go({ name: 'mistakes' })} className="town-panel flex w-full items-center gap-3 p-3 text-left">
-        <span className="grid size-11 place-items-center rounded-xl border-2 border-ink bg-[#f8c9c2] text-2xl">📕</span>
+        <span className="grid size-11 place-items-center rounded-xl border-2 border-ink bg-tint-pink text-2xl">📕</span>
         <span className="min-w-0 flex-1">
           <span className="block font-display text-lg font-bold">
             <T en="Mistake Book" />

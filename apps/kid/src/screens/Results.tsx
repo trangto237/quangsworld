@@ -102,7 +102,7 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
                     {'★'.repeat(starOf(c.after))}
                     <span className="text-ink/20">{'★'.repeat(3 - starOf(c.after))}</span>
                   </span>
-                  <span className={`w-12 text-right text-sm font-bold tabular-nums ${up >= 0 ? 'text-[#2f8a3a]' : 'text-[#c0392b]'}`}>
+                  <span className={`w-12 text-right text-sm font-bold tabular-nums ${up >= 0 ? 'text-[#2f8a3a] dark:text-[#86d993]' : 'text-[#c0392b] dark:text-[#ff8f80]'}`}>
                     {up >= 0 ? '▲' : '▼'} {Math.abs(Math.round(up))}
                   </span>
                   {newStar && (
@@ -117,7 +117,7 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
         )}
 
         {mistakes.length > 0 && !reviewed ? (
-          <div className="mt-6 rounded-2xl border-2 border-ink bg-[#ffe1d9] p-4">
+          <div className="mt-6 rounded-2xl border-2 border-ink bg-tint-red p-4">
             <p className="font-display text-lg font-semibold">
               <T en="📕 {n} to review" vars={{ n: mistakes.length }} />
             </p>
@@ -134,7 +134,7 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
         ) : (
           <>
             {reviewed && (
-              <p className="mt-6 text-center text-sm font-semibold text-[#2f8a3a]">
+              <p className="mt-6 text-center text-sm font-semibold text-[#2f8a3a] dark:text-[#86d993]">
                 <T en="✓ Reviewed. Fix them for good in the Mistake Book to earn coins." />
               </p>
             )}

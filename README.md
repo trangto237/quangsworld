@@ -102,7 +102,9 @@ then goes through a tiny relay on Supabase pinned to a region Gemini serves (`us
 Deploy it once: Supabase dashboard → **Edge Functions → Deploy a new function → Via editor**, name it `gemini-relay`,
 paste [`supabase/functions/gemini-relay/index.ts`](supabase/functions/gemini-relay/index.ts), **Deploy**, then in the
 function's settings turn **Verify JWT off** (newer projects' publishable keys aren't JWTs; the relay is useless without
-your Gemini key anyway). It stores nothing; the key stays on the server.
+your Gemini key anyway). It stores nothing; the key stays on the server. If the app's Supabase key is the older
+"anon" key and your project only lets functions be called with new-style keys (the 🩺 test says *INVALID_API_KEY*), add
+`SUPABASE_PUBLISHABLE_KEY` (Supabase → Project Settings → API Keys → Publishable key, `sb_publishable_…`) in Cloudflare.
 
 **OpenRouter (backup, optional)** — `server/openrouter.ts`. Add a secret `OPENROUTER_API_KEY` (from
 <https://openrouter.ai/keys>) in Cloudflare and redeploy. When Gemini fails (blocked location, daily limit, retired

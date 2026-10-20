@@ -49,7 +49,7 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
           )}
         </div>
         {fixedThisWeek > 0 && (
-          <p className="mt-3 text-sm font-semibold text-[#2f8a3a]">
+          <p className="mt-3 text-sm font-semibold text-[#2f8a3a] dark:text-[#86d993]">
             <T en="✨ {n} fixed this week" vars={{ n: fixedThisWeek }} />
           </p>
         )}
@@ -101,7 +101,7 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
                             </>
                           )}
                         </span>
-                        {m.times > 1 && <span className="shrink-0 rounded border border-ink bg-[#f8c9c2] px-1.5 text-xs font-bold">×{m.times}</span>}
+                        {m.times > 1 && <span className="shrink-0 rounded border border-ink bg-tint-pink px-1.5 text-xs font-bold">×{m.times}</span>}
                         {!m.reviewedAt && (
                           <span className="shrink-0 text-xs font-bold text-[#c2410c]">
                             <T en="new" />

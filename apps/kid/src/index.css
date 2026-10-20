@@ -19,6 +19,10 @@ html { background: var(--paper-2); }
   --grass: #a9d36e;
   --grass-2: #9ccb62;
   --plot: #f1e1b8;
+  --tint-red: #ffe1d9;
+  --tint-amber: #ffe7a8;
+  --tint-green: #d9efc9;
+  --tint-pink: #f8c9c2;
   --sand: #f3dca0;
   --sea: #7cc9e6;
   --sea-2: #9ad7ee;
@@ -33,6 +37,10 @@ html { background: var(--paper-2); }
   --grass: #3e5b3a;
   --grass-2: #375233;
   --plot: #5c4f3e;
+  --tint-red: #5b3030;
+  --tint-amber: #5a4720;
+  --tint-green: #2f4a2c;
+  --tint-pink: #6a3a35;
   --sand: #6b5a3f;
   --sea: #17324d;
   --sea-2: #1f4263;
@@ -45,6 +53,10 @@ html { background: var(--paper-2); }
   --color-ink-text: var(--ink-text);
   --color-ink-soft: var(--ink-soft);
   --color-grass: var(--grass);
+  --color-tint-red: var(--tint-red);
+  --color-tint-amber: var(--tint-amber);
+  --color-tint-green: var(--tint-green);
+  --color-tint-pink: var(--tint-pink);
 }
 
 /* Sea around the town island: soft wave marks. */

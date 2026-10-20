@@ -130,3 +130,38 @@ describe('Gemini relay sign-in check', () => {
     expect((await res.json()).error).toMatch(/Verify JWT/);
   });
 });
+
+describe('Gemini relay with new-style Supabase keys', () => {
+  const LOCATION = { error: { message: 'User location is not supported for the API use.' } };
+  const INVALID = { source: '@supabase/server', code: 'INVALID_API_KEY', message: 'The apikey header matched no key configured for auth mode(s): "publishable", "secret".' };
+  const run = async (env: GenerateEnv, relayAnswers: (h: Headers) => Response) => {
+    const { forgetChosenModel } = await import('./gemini');
+    forgetChosenModel();
+    const seen: Headers[] = [];
+    const fn = (async (url: string | URL | Request, init?: RequestInit) => {
+      const u = String(url);
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'parent-1', is_anonymous: false }));
+      if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('parent-1'));
+      if (u.startsWith('https://generativelanguage.googleapis.com/')) return new Response(JSON.stringify(LOCATION), { status: 400 });
+      const h = new Headers(init?.headers);
+      seen.push(h);
+      return relayAnswers(h);
+    }) as unknown as typeof fetch;
+    const res = await handleTranscribe(post({ images: [IMG] }), env, { fetch: fn });
+    return { res, seen };
+  };
+
+  it('uses SUPABASE_PUBLISHABLE_KEY for the relay when set', async () => {
+    const { res, seen } = await run({ ...ENV, SUPABASE_ANON_KEY: 'eyJlegacy', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abc' }, (h) =>
+      h.get('apikey') === 'sb_publishable_abc' ? new Response(JSON.stringify(reply(['UNIT 1']))) : new Response(JSON.stringify(INVALID), { status: 401 }),
+    );
+    expect(await res.json()).toEqual({ pages: ['UNIT 1'] });
+    expect(seen.every((h) => h.get('authorization') === null)).toBe(true);
+  });
+
+  it('with only a legacy key that functions refuse, tries without a key, then explains what to add', async () => {
+    const { res } = await run({ ...ENV, SUPABASE_ANON_KEY: 'eyJlegacy' }, () => new Response(JSON.stringify(INVALID), { status: 401 }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/SUPABASE_PUBLISHABLE_KEY/);
+  });
+});

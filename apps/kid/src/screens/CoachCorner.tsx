@@ -65,7 +65,7 @@ export function CoachCorner({ student, topic: initialTopic, conceptId }: { stude
                   setTopic(topicFor(id));
                   setFocus(id);
                 }}
-                className="rounded-full border-2 border-ink bg-[#f8c9c2] px-3 py-1 text-sm font-semibold text-[#3b2412] hover:bg-[#f4b4ab]"
+                className="rounded-full border-2 border-ink bg-tint-pink px-3 py-1 text-sm font-semibold text-ink-text hover:brightness-95"
               >
                 {getConcept(id)?.name ?? id} · {n}
               </button>
@@ -382,7 +382,7 @@ function GrammarTopic({ focus }: { focus?: string }) {
               ))}
             </ol>
             {c.lesson && (
-              <p className="rounded-xl border-2 border-ink/25 bg-[#ffe7a8] p-3 text-[#3b2412] dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="rounded-xl border-2 border-ink/25 bg-tint-amber p-3 text-ink-text">
                 📖 {c.lesson}
                 {lang !== 'en' && LESSONS_VI[id] && (
                   <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">

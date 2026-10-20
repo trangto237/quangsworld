@@ -75,7 +75,7 @@ export function Shop({ student }: { student: StudentProfile }) {
             const locked = (item.minLevel ?? 1) > level;
             const equippable = have && item.category !== 'tower' && item.category !== 'chess-set';
             return (
-              <div key={item.id} className={cx('town-panel flex flex-col p-4', isEquipped(item) && 'bg-[#ffe7a8]')}>
+              <div key={item.id} className={cx('town-panel flex flex-col p-4', isEquipped(item) && 'bg-tint-amber')}>
                 <div className="flex items-center gap-3">
                   <span className="grid size-16 shrink-0 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-4xl">{item.emoji}</span>
                   <div>
@@ -89,7 +89,7 @@ export function Shop({ student }: { student: StudentProfile }) {
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {have ? (
-                    <span className="text-sm font-bold text-[#2f8a3a]">
+                    <span className="text-sm font-bold text-[#2f8a3a] dark:text-[#86d993]">
                       <T en="✓ Owned" />
                     </span>
                   ) : (

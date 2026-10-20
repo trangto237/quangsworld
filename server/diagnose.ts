@@ -4,6 +4,7 @@
  * Used by functions/api/diagnose.ts. Never returns keys.
  */
 import { verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
+import { RELAY_KEY_HELP, relayHeaders } from './gemini';
 
 export interface Check {
   step: string;
@@ -37,15 +38,15 @@ export async function diagnose(request: Request, env: GenerateEnv, fetchFn: type
         : { step: 'Gemini, direct', ok: r.status === 200, detail: r.status === 200 ? 'Works from this server.' : `${r.status}: ${short(r.text)}` },
     );
     const sbUrl = (env.SUPABASE_URL ?? env.VITE_SUPABASE_URL)?.replace(/\/$/, '');
-    const anon = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY;
     if (sbUrl) {
       const region = env.GEMINI_RELAY_REGION?.trim() || 'us-east-1';
-      const headers: Record<string, string> = { 'x-goog-api-key': key, 'x-region': region };
-      if (anon) {
-        headers.apikey = anon;
-        if (anon.startsWith('eyJ')) headers.authorization = `Bearer ${anon}`;
+      const headers = relayHeaders(env, { 'x-goog-api-key': key });
+      const target = `${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${region}&path=${encodeURIComponent('models?pageSize=5')}`;
+      let r2 = await probe(fetchFn, target, { headers });
+      if (!('error' in r2) && r2.status === 401 && /INVALID_API_KEY|matched no key/i.test(r2.text)) {
+        const bare = await probe(fetchFn, target, { headers: relayHeaders(env, { 'x-goog-api-key': key }, false) });
+        r2 = !('error' in bare) && bare.status === 401 ? { ...bare, text: RELAY_KEY_HELP } : bare;
       }
-      const r2 = await probe(fetchFn, `${sbUrl}/functions/v1/gemini-relay?forceFunctionRegion=${region}&path=${encodeURIComponent('models?pageSize=5')}`, { headers });
       out.push(
         'error' in r2
           ? { step: 'Gemini via Supabase relay', ok: false, detail: `Could not connect: ${r2.error}` }

@@ -29,6 +29,9 @@ export interface GenerateEnv {
   VITE_SUPABASE_ANON_KEY?: string;
   /** Supabase region for the Gemini relay (see supabase/functions/gemini-relay). Default us-east-1. */
   GEMINI_RELAY_REGION?: string;
+  /** New-style Supabase key (sb_publishable_…), used to call the Gemini relay. */
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   /** OpenRouter key: the backup when Gemini fails, or the main AI when there is no other key. */
   OPENROUTER_API_KEY?: string;
   /** Optional: force one OpenRouter model (e.g. google/gemini-3-flash). */

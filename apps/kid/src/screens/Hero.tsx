@@ -95,7 +95,7 @@ export function Hero({ student }: { student: StudentProfile }) {
                     </span>
                     <span className="shrink-0 font-display font-bold tabular-nums">
                       {p.value}
-                      {gain !== 0 && <span className={cx('ml-1 text-xs', gain > 0 ? 'text-[#2f8a3a]' : 'text-[#c0392b]')}>{gain > 0 ? `+${gain}` : gain}</span>}
+                      {gain !== 0 && <span className={cx('ml-1 text-xs', gain > 0 ? 'text-[#2f8a3a] dark:text-[#86d993]' : 'text-[#c0392b] dark:text-[#ff8f80]')}>{gain > 0 ? `+${gain}` : gain}</span>}
                     </span>
                   </div>
                   <div className="relative">
@@ -115,7 +115,7 @@ export function Hero({ student }: { student: StudentProfile }) {
         </h2>
         <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {badges.map((b) => (
-            <li key={b.id} className={cx('rounded-xl border-2 border-ink p-2 text-center', b.earned ? 'bg-[#ffe7a8]' : 'bg-paper-2')}>
+            <li key={b.id} className={cx('rounded-xl border-2 border-ink p-2 text-center', b.earned ? 'bg-tint-amber' : 'bg-paper-2')}>
               <div className={cx('text-3xl', !b.earned && 'opacity-35 grayscale')}>{b.icon}</div>
               <div className="font-display text-sm font-bold leading-tight">
                 <T en={b.name} />
@@ -189,7 +189,7 @@ function CloudCard() {
   if (status.state === 'unconfigured') return null;
   const connected = ['synced', 'syncing', 'offline', 'error'].includes(status.state);
   return (
-    <Panel className={cx('flex flex-wrap items-center gap-3', !connected && 'bg-[#ffe1d9]')}>
+    <Panel className={cx('flex flex-wrap items-center gap-3', !connected && 'bg-tint-red')}>
       <span className="text-3xl">{connected ? (status.state === 'error' ? '⚠️' : '☁️') : '📵'}</span>
       <div className="min-w-0 flex-1">
         <div className="font-display text-lg font-bold">
@@ -208,7 +208,7 @@ function CloudCard() {
             <>
               {status.email ?? tr(lang, 'Family code')} · <T en="last synced {t}" vars={{ t: tr(lang, ago(status.lastSyncedAt)) }} />
               {status.pending > 0 && <> · <T en="{n} changes waiting" vars={{ n: status.pending }} /></>}
-              {status.state === 'error' && status.error && <span className="block text-[#c0392b]">{status.error}</span>}
+              {status.state === 'error' && status.error && <span className="block text-[#c0392b] dark:text-[#ff8f80]">{status.error}</span>}
             </>
           ) : (
             <T en="Progress made here stays on this device and won't show on your other devices. Connect with your email or the family code." />
