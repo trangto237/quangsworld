@@ -141,7 +141,7 @@ describe('Gemini model choice', () => {
   it('when the model has gone, picks again and retries once', async () => {
     forgetChosenModel();
     let list = ['gemini-2.5-flash'];
-    const fn = (async (url: string) =>
+    const fn = (async () =>
       new Response(JSON.stringify({ models: list.map((n) => ({ name: `models/${n}`, supportedGenerationMethods: ['generateContent'] })) }))) as unknown as typeof fetch;
     await chooseGeminiModel('k', undefined, fn);
     list = ['gemini-3-flash'];
