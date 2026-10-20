@@ -133,16 +133,22 @@ export function Hub({ student }: { student: StudentProfile }) {
                 <button
                   key={w.id}
                   onClick={() => go({ name: 'world', worldId: w.id })}
-                  className="group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:ring-white/30"
-                  style={{ background: `linear-gradient(160deg, ${w.color}, #0f172a 85%)` }}
+                  className="relative flex flex-col rounded-2xl bg-white/[0.04] p-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-amber-400"
                 >
-                  {due > 0 && <span className="absolute right-2 top-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold">🔁 {due}</span>}
-                  <div className="text-4xl transition group-hover:scale-110">{w.emoji}</div>
-                  <div className="mt-2 font-display text-lg font-semibold leading-tight">
+                  {due > 0 && <span className="absolute right-3 top-3 rounded-full bg-rose-500/90 px-2 py-0.5 text-xs font-bold">🔁 {due}</span>}
+                  <span className="grid size-11 place-items-center rounded-xl text-2xl" style={{ background: `${w.color}33` }}>
+                    {w.emoji}
+                  </span>
+                  <div className="mt-3 font-display text-base font-semibold leading-tight">
                     <TB en={w.name} />
                   </div>
-                  <div className="mt-1 text-xs text-white/70">
-                    ⭐ {got}/{cs.length * 3}
+                  <div className="mt-auto pt-3">
+                    <div className="h-1 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full" style={{ width: `${cs.length ? (got / (cs.length * 3)) * 100 : 0}%`, background: w.color }} />
+                    </div>
+                    <div className="mt-1.5 text-xs tabular-nums text-white/60">
+                      ⭐ {got}/{cs.length * 3}
+                    </div>
                   </div>
                 </button>
               );
