@@ -39,7 +39,7 @@ describe('Gemini provider', () => {
     expect(providerOf({ ...ENV, ANTHROPIC_API_KEY: 'sk' })).toBe('gemini');
     expect(providerOf({ ANTHROPIC_API_KEY: 'sk' })).toBe('claude');
     expect(providerOf({})).toBeNull();
-    expect(health(ENV)).toEqual({ ai: true, provider: 'gemini', model: 'newest Gemini Flash', missing: [] });
+    expect(health(ENV)).toEqual({ ai: true, provider: 'gemini', model: 'newest Gemini Flash', backup: null, missing: [] });
     expect(health({ ...ENV, GEMINI_MODEL: 'gemini-3.5-flash' }).model).toBe('gemini-3.5-flash');
   });
 

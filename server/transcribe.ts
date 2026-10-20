@@ -5,7 +5,8 @@
  */
 import { ModelMissing, RELAY_HELP, geminiFetch, withGeminiModel } from './gemini';
 import { GenerateError } from './prompt';
-import { providerOf, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
+import { backupOf, providerOf, verifyParent, type GenerateDeps, type GenerateEnv } from './generate-core';
+import { transcribeWithOpenRouter } from './openrouter';
 
 export const TRANSCRIBE_LIMITS = { images: 6, imageBase64: 4_000_000 };
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -107,14 +108,30 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 /** POST /api/transcribe */
 export async function handleTranscribe(request: Request, env: GenerateEnv, deps: Pick<GenerateDeps, 'fetch'> = { fetch: (...a) => fetch(...a) }): Promise<Response> {
-  if (providerOf(env) !== 'gemini') return json({ error: 'Reading scans with AI needs GEMINI_API_KEY on the server.' }, 503);
+  const main = providerOf(env) === 'gemini' ? 'gemini' : env.OPENROUTER_API_KEY ? 'openrouter' : null;
+  if (!main) return json({ error: 'Reading scans with AI needs GEMINI_API_KEY (or OPENROUTER_API_KEY) on the server.' }, 503);
   const who = await verifyParent(request, env, deps.fetch);
   if (!who.ok) return json({ error: who.error }, who.status);
   const parsed = parseTranscribe(await request.json().catch(() => null));
   if (!parsed.ok) return json({ error: parsed.error }, 400);
+  const viaOpenRouter = () => transcribeWithOpenRouter(env.OPENROUTER_API_KEY!, env.OPENROUTER_MODEL, TRANSCRIBE_PROMPT, parsed.req.images, deps.fetch);
   try {
-    const gf = geminiFetch(env, deps.fetch);
-    const pages = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, gf, (m) => transcribeWithGemini(env.GEMINI_API_KEY!, m, parsed.req, gf));
+    let pages: string[];
+    if (main === 'openrouter') pages = await viaOpenRouter();
+    else {
+      try {
+        const gf = geminiFetch(env, deps.fetch);
+        pages = await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, gf, (m) => transcribeWithGemini(env.GEMINI_API_KEY!, m, parsed.req, gf));
+      } catch (first) {
+        if (!backupOf(env)) throw first;
+        try {
+          pages = await viaOpenRouter();
+        } catch (second) {
+          const m = (e: unknown) => (e instanceof Error ? e.message : 'failed');
+          throw new GenerateError(second instanceof GenerateError ? second.status : 502, `${m(first)} The backup (OpenRouter) failed too: ${m(second)}`);
+        }
+      }
+    }
     return json({ pages });
   } catch (e) {
     if (e instanceof GenerateError) return json({ error: e.message }, e.status);

@@ -103,6 +103,13 @@ Deploy it once: Supabase dashboard → **Edge Functions → Deploy a new functio
 paste [`supabase/functions/gemini-relay/index.ts`](supabase/functions/gemini-relay/index.ts), **Deploy** (keep
 "Verify JWT" on). It stores nothing; the key stays on the server.
 
+**OpenRouter (backup, optional)** — `server/openrouter.ts`. Add a secret `OPENROUTER_API_KEY` (from
+<https://openrouter.ai/keys>) in Cloudflare and redeploy. When Gemini fails (blocked location, daily limit, retired
+model) the app tries OpenRouter instead, for both reading scans and making questions; with only an OpenRouter key it
+is the main AI. The model is picked automatically: the newest Google Gemini Flash on OpenRouter (needs a few dollars of
+OpenRouter credit, costs fractions of a cent per page), or a free model that can read images if there's no credit.
+Set `OPENROUTER_MODEL` to force one model.
+
 The free tier has per-project limits (requests per minute and per day, shown in AI Studio); when they're used up
 the app says so and it works again after the daily reset — about one unit of pages per request. On the free tier
 Google may use what you send (the book pages, not your child's data) to improve its products; a paid Gemini key

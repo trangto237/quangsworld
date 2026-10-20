@@ -11,6 +11,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/import-validate';
 import { geminiFetch, generateWithGemini, withGeminiModel } from './gemini';
+import { generateWithOpenRouter } from './openrouter';
 import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
 
 export { GenerateError, SYSTEM_PROMPT } from './prompt';
@@ -28,6 +29,10 @@ export interface GenerateEnv {
   VITE_SUPABASE_ANON_KEY?: string;
   /** Supabase region for the Gemini relay (see supabase/functions/gemini-relay). Default us-east-1. */
   GEMINI_RELAY_REGION?: string;
+  /** OpenRouter key: the backup when Gemini fails, or the main AI when there is no other key. */
+  OPENROUTER_API_KEY?: string;
+  /** Optional: force one OpenRouter model (e.g. google/gemini-3-flash). */
+  OPENROUTER_MODEL?: string;
 }
 
 export interface GenerateRequest {
@@ -51,18 +56,22 @@ type ImageType = (typeof IMAGE_TYPES)[number];
 
 const supabaseOf = (env: GenerateEnv) => ({ url: env.SUPABASE_URL ?? env.VITE_SUPABASE_URL, key: env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY });
 
-export type Provider = 'gemini' | 'claude';
+export type Provider = 'gemini' | 'claude' | 'openrouter';
 
 /** Gemini if its key is set, else Claude if its key is set, else none. */
-export const providerOf = (env: GenerateEnv): Provider | null => (env.GEMINI_API_KEY ? 'gemini' : env.ANTHROPIC_API_KEY ? 'claude' : null);
-const modelOf = (env: GenerateEnv, p: Provider | null) => (p === 'gemini' ? env.GEMINI_MODEL?.trim() || 'newest Gemini Flash' : p === 'claude' ? MODEL : null);
+export const providerOf = (env: GenerateEnv): Provider | null =>
+  env.GEMINI_API_KEY ? 'gemini' : env.ANTHROPIC_API_KEY ? 'claude' : env.OPENROUTER_API_KEY ? 'openrouter' : null;
+/** OpenRouter backs up the main AI when its key is set too. */
+export const backupOf = (env: GenerateEnv): 'openrouter' | null => (env.OPENROUTER_API_KEY && providerOf(env) !== 'openrouter' ? 'openrouter' : null);
+const modelOf = (env: GenerateEnv, p: Provider | null) =>
+  p === 'gemini' ? env.GEMINI_MODEL?.trim() || 'newest Gemini Flash' : p === 'claude' ? MODEL : p === 'openrouter' ? env.OPENROUTER_MODEL?.trim() || 'picked automatically' : null;
 
 /** What the parent app shows: is AI generation available, with which provider, and if not, what's missing. */
-export function health(env: GenerateEnv): { ai: boolean; provider: Provider | null; model: string | null; missing: string[] } {
+export function health(env: GenerateEnv): { ai: boolean; provider: Provider | null; model: string | null; backup: 'openrouter' | null; missing: string[] } {
   const sb = supabaseOf(env);
   const provider = providerOf(env);
   const missing = [!provider && 'GEMINI_API_KEY', !sb.url && 'SUPABASE_URL', !sb.key && 'SUPABASE_ANON_KEY'].filter((x): x is string => !!x);
-  return { ai: missing.length === 0, provider, model: modelOf(env, provider), missing };
+  return { ai: missing.length === 0, provider, model: modelOf(env, provider), backup: backupOf(env), missing };
 }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
@@ -210,13 +219,35 @@ export async function handleGenerate(request: Request, env: GenerateEnv, deps: G
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const provider = providerOf(env)!;
   let model = modelOf(env, provider)!;
+  let used: Provider = provider;
+  const viaOpenRouter = async () => {
+    const r = await generateWithOpenRouter(env.OPENROUTER_API_KEY!, env.OPENROUTER_MODEL, parsed.req, deps.fetch);
+    used = 'openrouter';
+    model = r.model;
+    return r;
+  };
   try {
-    const { drafts, dropped } =
-      provider === 'gemini'
-        ? await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, geminiFetch(env, deps.fetch), (m) => ((model = m), generateWithGemini(env.GEMINI_API_KEY!, m, parsed.req, geminiFetch(env, deps.fetch))))
-        : await generateQuestions(deps.makeClient(env.ANTHROPIC_API_KEY!), parsed.req);
+    let result: { drafts: DraftQuestion[]; dropped: number };
+    try {
+      result =
+        provider === 'gemini'
+          ? await withGeminiModel(env.GEMINI_API_KEY!, env.GEMINI_MODEL, geminiFetch(env, deps.fetch), (m) => ((model = m), generateWithGemini(env.GEMINI_API_KEY!, m, parsed.req, geminiFetch(env, deps.fetch))))
+          : provider === 'openrouter'
+            ? await viaOpenRouter()
+            : await generateQuestions(deps.makeClient(env.ANTHROPIC_API_KEY!), parsed.req);
+    } catch (first) {
+      // The backup gets a go whatever went wrong (blocked location, daily limit, retired model…).
+      if (!backupOf(env)) throw first;
+      try {
+        result = await viaOpenRouter();
+      } catch (second) {
+        const m = (e: unknown) => (e instanceof Error ? e.message : 'failed');
+        throw new GenerateError(second instanceof GenerateError ? second.status : 502, `${m(first)} The backup (OpenRouter) failed too: ${m(second)}`);
+      }
+    }
+    const { drafts, dropped } = result;
     if (!drafts.length) return json({ error: 'No usable questions came back. Try a clearer page or more text.' }, 422);
-    return json({ drafts, dropped, provider, model });
+    return json({ drafts, dropped, provider: used, model });
   } catch (e) {
     if (e instanceof GenerateError) return json({ error: e.message }, e.status);
     if (e instanceof Anthropic.AuthenticationError) return json({ error: 'The ANTHROPIC_API_KEY on the server is not valid.' }, 500);

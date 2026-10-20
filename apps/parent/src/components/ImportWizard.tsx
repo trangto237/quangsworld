@@ -25,6 +25,33 @@ breathtaking (adj): đẹp ngoạn mục
 explore (v): khám phá
 preserve (v): bảo tồn`;
 
+/**
+ * The text read from a scan is kept on this device until the questions are saved, so a reload (or a
+ * phone locking) doesn't throw away minutes of reading.
+ */
+const DRAFT_KEY = 'atlas-import-draft';
+interface Draft {
+  name: string;
+  text: string;
+  at: number;
+}
+const loadDraft = (): Draft | null => {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') as Draft | null;
+    return d && typeof d.text === 'string' && d.text.trim() ? d : null;
+  } catch {
+    return null;
+  }
+};
+const keepDraft = (d: Draft | null) => {
+  try {
+    if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* storage full or blocked: the text is still on screen */
+  }
+};
+
 /** `unitId` is set in whole-book mode (each question belongs to the unit it came from). */
 type Item = DraftQuestion & { key: number; on: boolean; unitId?: string };
 type Step = 'source' | 'review' | 'done';
@@ -59,6 +86,9 @@ export function ImportWizard() {
   /** Who is reading the scan, and any note ("Gemini is busy, waiting…"). */
   const [ocrBy, setOcrBy] = useState<'device' | 'ai'>('device');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
+  /** Just finished reading a scan: how many pages (shows the "what next" banner). */
+  const [readDone, setReadDone] = useState<number | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(() => loadDraft());
 
   useEffect(() => {
     void aiStatus().then(setAi);
@@ -78,9 +108,10 @@ export function ImportWizard() {
   const signedInParent = !!status.email && !status.viaCode;
   const needsAi = !!src && !text.trim() && (src.scanned || src.kind === 'image');
   /** The AI can read scans (Gemini on the server, and the parent is signed in to the cloud). */
-  const aiReads = !!ai?.ai && ai.provider === 'gemini' && !!cloud.config();
+  const aiReads = !!ai?.ai && (ai.provider === 'gemini' || ai.provider === 'openrouter' || !!ai.backup) && !!cloud.config();
 
   const reset = () => {
+    setReadDone(null);
     setStep('source');
     setSrc(null);
     setText('');
@@ -124,6 +155,8 @@ export function ImportWizard() {
           : await ocrImages((src.images ?? []).map((i) => `data:${i.mediaType};base64,${i.data}`), setOcr, stop.signal);
       if (!res.text.trim()) throw new Error('No text could be read from these pages. Try clearer scans, or the AI option.');
       setText(res.text);
+      setReadDone(res.pages.length);
+      keepDraft({ name: src.name, text: res.text, at: Date.now() });
       // A whole book read in one go: offer to split it by unit straight away.
       if (splitByUnit(res.text).length > 1) setUnitId('book');
     } catch (e) {
@@ -167,7 +200,7 @@ export function ImportWizard() {
             if (!(e instanceof BusyError) || attempt >= 5 || stop.signal.aborted) throw e;
             // Free tier: a few requests a minute. Wait, then carry on.
             for (let s = 20; s > 0 && !stop.signal.aborted; s--) {
-              setOcrNote(`Gemini's free tier needs a short break — carrying on in ${s} s…`);
+              setOcrNote(`The AI's free tier needs a short break — carrying on in ${s} s…`);
               await new Promise((r) => setTimeout(r, 1000));
             }
             setOcrNote(null);
@@ -183,6 +216,8 @@ export function ImportWizard() {
       if (pages.length) {
         const all = pages.map((p) => p.trim()).join(PAGE_BREAK);
         setText(all);
+        setReadDone(pages.length);
+        keepDraft({ name: src.name, text: all, at: Date.now() });
         if (splitByUnit(all).length > 1) setUnitId('book');
       }
       setOcr(null);
@@ -261,6 +296,9 @@ export function ImportWizard() {
           : `Saved ${added} question${added === 1 ? '' : 's'}${skipped ? ` (${skipped} were already there)` : ''} to ${missions.join(', ')}. They're in 📘 My Textbook in the kid app.`,
       );
       setStep('done');
+      keepDraft(null);
+      setDraft(null);
+      setReadDone(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -274,6 +312,30 @@ export function ImportWizard() {
 
   return (
     <Card title="📘 Add textbook or document" className="lg:col-span-2">
+      <ol className="mb-4 flex flex-wrap gap-2 text-sm" aria-label="Steps">
+        {(
+          [
+            ['source', '1. Add the book'],
+            ['make', '2. Make questions'],
+            ['review', '3. Check & save'],
+          ] as const
+        ).map(([id, label]) => {
+          const current = id === 'review' ? step === 'review' : id === 'make' ? step === 'source' && !!text.trim() : step === 'source' && !text.trim();
+          const done = step === 'done' || (id === 'source' && !!text.trim()) || (id === 'make' && step === 'review');
+          return (
+            <li
+              key={id}
+              className={cx(
+                'rounded-full px-3 py-1 font-semibold',
+                current ? 'bg-brand-600 text-white' : done ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800',
+              )}
+            >
+              {done && !current ? '✓ ' : ''}
+              {label}
+            </li>
+          );
+        })}
+      </ol>
       {step === 'done' && (
         <div className="space-y-3">
           <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{saved}</p>
@@ -287,6 +349,35 @@ export function ImportWizard() {
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Upload pages from the school book (PDF, Word, photos) or paste text. The app turns them into missions: word quizzes, sentence building and gap-fills.
             </p>
+            {draft && !text.trim() && (
+              <div className="rounded-xl bg-amber-50 p-3 text-sm dark:bg-amber-950/40">
+                <p>
+                  The text read from <b>{draft.name}</b> on {new Date(draft.at).toLocaleString()} is still saved on this device ({draft.text.length.toLocaleString()} characters).
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    onClick={() => {
+                      setText(draft.text);
+                      if (splitByUnit(draft.text).length > 1) setUnitId('book');
+                    }}
+                  >
+                    Use it
+                  </Button>
+                  <Button variant="ghost" onClick={() => (keepDraft(null), setDraft(null))}>
+                    Throw away
+                  </Button>
+                </div>
+              </div>
+            )}
+            {readDone !== null && text.trim() && (
+              <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" role="status">
+                <p className="font-semibold">✅ Read {readDone} page{readDone === 1 ? '' : 's'}. The text is below (and kept on this device until you save).</p>
+                <p className="mt-1">
+                  <b>Next:</b> check “Which unit is it?” on the right{splitByUnit(text).length > 1 ? ' (📚 Whole book is already selected)' : ''}, then tap <b>Make questions</b>. You'll see every question
+                  to check, and a <b>Save</b> button at the end.
+                </p>
+              </div>
+            )}
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -317,7 +408,7 @@ export function ImportWizard() {
                       ✨ Read the scanned pages with AI (recommended)
                     </Button>
                     <p className="mt-1 text-slate-600 dark:text-slate-300">
-                      Much more accurate on textbook pages (columns, coloured boxes, small print). Uses the free Gemini tier: about {src?.pages ? `${Math.max(1, Math.round(src.pages / 3 / 8))}–${Math.max(2, Math.round(src.pages / 3 / 4))} min for ${src.pages} pages` : 'a few seconds per page'}, and the pages are sent to Google.
+                      Much more accurate on textbook pages (columns, coloured boxes, small print). Uses {providerName(ai?.provider)}{ai?.backup ? ' (OpenRouter as backup)' : ''}: about {src?.pages ? `${Math.max(1, Math.round(src.pages / 3 / 8))}–${Math.max(2, Math.round(src.pages / 3 / 4))} min for ${src.pages} pages` : 'a few seconds per page'}, and the pages are sent to Google.
                     </p>
                   </div>
                 )}
@@ -334,7 +425,7 @@ export function ImportWizard() {
             {ocr && (
               <div className="rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/40" aria-live="polite">
                 <p className="font-semibold">
-                  {ocrBy === 'ai' ? 'Gemini is reading' : 'Reading'} page {Math.min(ocr.done + 1, ocr.total)} of {ocr.total}…
+                  {ocrBy === 'ai' ? 'The AI is reading' : 'Reading'} page {Math.min(ocr.done + 1, ocr.total)} of {ocr.total}…
                 </p>
                 {ocrNote && <p className="text-slate-600 dark:text-slate-300">{ocrNote}</p>}
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-100 dark:bg-sky-900">
@@ -502,13 +593,14 @@ export function ImportWizard() {
               );
             })}
           {!bookMode && parts.map((part) => <ReviewPart key={part} part={part} list={items.filter((i) => i.part === part)} update={update} />)}
-          <div className="flex flex-wrap gap-2">
+          <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-2 border-t border-slate-200 bg-white/95 px-1 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
             <Button disabled={!selected || !!busy} onClick={() => void save()}>
               Save {selected} questions{bookMode ? ' to their units' : ` to ${unit.title.split(' · ')[0]}`}
             </Button>
             <Button variant="secondary" onClick={() => setStep('source')}>
               Back
             </Button>
+            <span className="text-xs text-slate-500">Saved questions appear in 📘 My Textbook in the kid app.</span>
           </div>
         </div>
       )}

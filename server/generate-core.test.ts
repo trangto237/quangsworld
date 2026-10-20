@@ -61,8 +61,8 @@ const post = (body: unknown, token: string | null = 'jwt-123') =>
 
 describe('AI question generation (Pages Function)', () => {
   it('reports what is missing', () => {
-    expect(health(ENV)).toEqual({ ai: true, provider: 'claude', model: MODEL, missing: [] });
-    expect(health({ VITE_SUPABASE_URL: 'x', VITE_SUPABASE_ANON_KEY: 'y' })).toEqual({ ai: false, provider: null, model: null, missing: ['GEMINI_API_KEY'] });
+    expect(health(ENV)).toEqual({ ai: true, provider: 'claude', model: MODEL, backup: null, missing: [] });
+    expect(health({ VITE_SUPABASE_URL: 'x', VITE_SUPABASE_ANON_KEY: 'y' })).toEqual({ ai: false, provider: null, model: null, backup: null, missing: ['GEMINI_API_KEY'] });
     expect(health({}).missing).toEqual(['GEMINI_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY']);
   });
 
