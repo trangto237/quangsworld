@@ -26,3 +26,22 @@ describe('AI connection test', () => {
     expect(relay.headers.get('authorization')).toBeNull();
   });
 });
+
+describe('OpenRouter check', () => {
+  it("shows the real balance, and calls the key's cap a limit, not money", async () => {
+    const fn = (async (url: string | URL | Request) => {
+      const u = String(url);
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'p', is_anonymous: false }));
+      if (u.includes('/rpc/atlas_my_family')) return new Response(JSON.stringify('p'));
+      if (u.endsWith('/api/v1/key')) return new Response(JSON.stringify({ data: { limit_remaining: 100, is_free_tier: true } }));
+      if (u.endsWith('/api/v1/credits')) return new Response(JSON.stringify({ data: { total_credits: 0, total_usage: 0 } }));
+      return new Response('{}', { status: 500 });
+    }) as unknown as typeof fetch;
+    const res = await handleDiagnose(new Request('https://x/api/diagnose', { method: 'POST', headers: { authorization: 'Bearer t' } }), { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_ANON_KEY: 'a', OPENROUTER_API_KEY: 'sk-or' }, { fetch: fn });
+    const { checks } = (await res.json()) as { checks: { step: string; detail: string }[] };
+    const or = checks.find((c) => c.step === 'OpenRouter')!.detail;
+    expect(or).toContain('Account balance: $0.00');
+    expect(or).toContain('No credit bought yet');
+    expect(or).toContain('not money');
+  });
+});

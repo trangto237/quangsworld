@@ -69,11 +69,21 @@ export async function diagnose(request: Request, env: GenerateEnv, fetchFn: type
     if ('error' in r) out.push({ step: 'OpenRouter', ok: false, detail: `Could not connect: ${r.error}` });
     else if (r.status !== 200) out.push({ step: 'OpenRouter', ok: false, detail: `${r.status}: ${short(r.text)}` });
     else {
-      const d = (JSON.parse(r.text) as { data?: { limit_remaining?: number | null; is_free_tier?: boolean; usage?: number } }).data ?? {};
+      const d = (JSON.parse(r.text) as { data?: { limit_remaining?: number | null; is_free_tier?: boolean } }).data ?? {};
+      // The account's real balance (bought credit minus what's been used), when OpenRouter tells us.
+      const c = await probe(fetchFn, 'https://openrouter.ai/api/v1/credits', { headers: { authorization: `Bearer ${env.OPENROUTER_API_KEY}` } });
+      let balance = '';
+      if (!('error' in c) && c.status === 200) {
+        const cd = (JSON.parse(c.text) as { data?: { total_credits?: number; total_usage?: number } }).data;
+        if (cd && typeof cd.total_credits === 'number') balance = ` Account balance: $${Math.max(0, cd.total_credits - (cd.total_usage ?? 0)).toFixed(2)}.`;
+      }
       out.push({
         step: 'OpenRouter',
         ok: true,
-        detail: `Key works${d.is_free_tier ? ' (free tier: free models only, small daily limit)' : ''}${typeof d.limit_remaining === 'number' ? `, credit left: $${d.limit_remaining.toFixed(2)}` : ''}.`,
+        detail:
+          `Key works.${balance}` +
+          (d.is_free_tier ? ' No credit bought yet, so only free models (weaker, small daily limit) — buy a few dollars at openrouter.ai → Credits for the good ones.' : '') +
+          (typeof d.limit_remaining === 'number' ? ` (This key's own spending cap has $${d.limit_remaining.toFixed(2)} left — that's a limit, not money.)` : ''),
       });
     }
   } else out.push({ step: 'OpenRouter (backup)', ok: false, detail: 'Not set up (optional): add OPENROUTER_API_KEY in Cloudflare.' });
