@@ -89,9 +89,9 @@ function viewOf(isles: Isle[], shapes: Record<string, IslandShape>) {
   const xs = isles.flatMap((i) => shapes[i.id].ring.map((p) => p[0]));
   const tops = isles.flatMap((i) => shapes[i.id].ring.map((p) => p[1] - i.lift));
   const bottoms = isles.map((i) => shapes[i.id].apex[1] - i.lift);
-  const x = Math.min(...xs) - 160;
-  const y = Math.min(...tops) - 230;
-  return { x, y, w: Math.max(...xs) + 160 - x, h: Math.max(...bottoms) + 110 - y };
+  const x = Math.min(...xs) - 70;
+  const y = Math.min(...tops) - 170;
+  return { x, y, w: Math.max(...xs) + 70 - x, h: Math.max(...bottoms) + 40 - y };
 }
 
 function finish(l: Omit<Layout, 'shapes' | 'view'>): Layout {
@@ -105,13 +105,8 @@ const HOME_SPOTS: Spot[] = [
   { id: 'shop', kind: 'shop', x: 8.2, y: 4.4, lot: 3 },
   { id: 'coach', kind: 'coach', x: 11.8, y: 4.6, lot: 3 },
   { id: 'exam-hall', kind: 'exam-hall', x: 8.6, y: 8.6, lot: 6 },
-  // A realm on each side: English up top, Maths to the right, Logic & Code below, Ngữ văn to the left.
-  { id: 'realm-english', kind: 'realm-english', x: -6.6, y: -6.6, lot: 6 },
-  { id: 'realm-maths', kind: 'realm-maths', x: 19.2, y: 0.6, lot: 6 },
-  { id: 'realm-logic', kind: 'realm-logic', x: 19.2, y: 19.2, lot: 6 },
-  { id: 'realm-literature', kind: 'realm-literature', x: 0.6, y: 19.2, lot: 6 },
 ];
-const HOME_HUB = ['home', 'shop', 'coach', 'exam-hall'];
+const HOME_HUB = HOME_SPOTS.map((s) => s.id);
 
 const homeLayout = (): Layout =>
   finish({
@@ -122,13 +117,10 @@ const homeLayout = (): Layout =>
     start: 'exam-hall',
     isles: [
       { id: 'hub', ...HUB, seed: 11, lift: 0, falls: 0.42, spots: HOME_HUB, decor: () => <Lake x={4.6} y={12} w={2.6} d={2.6} /> },
-      ...HOME_SPOTS.filter((s) => !HOME_HUB.includes(s.id)).map((s, i) => isleFor(s, i, realmById(s.id.slice(6))?.className)),
-      { id: 'rice', x: -9.5, y: 8.5, w: 3.4, d: 3.2, seed: 7, lift: 30, spots: [], small: true, decor: () => <RiceField x={-9.2} y={8.8} w={2.8} d={2.6} /> },
-      { id: 'pitch', x: 21, y: 10.5, w: 3.8, d: 3, seed: 9, lift: 24, spots: [], small: true, decor: () => <Pitch x={21.3} y={10.8} w={3.2} d={2.4} /> },
-      { id: 'tree1', x: 8.5, y: -9, w: 1.8, d: 1.8, seed: 21, lift: 40, spots: [], small: true, decor: () => <Tree x={9.4} y={-8.1} s={1.1} /> },
-      { id: 'tree2', x: 11, y: 21, w: 1.6, d: 1.6, seed: 23, lift: 10, spots: [], small: true, decor: () => <Tree x={11.8} y={21.8} s={1} kind="pine" color="#3f8f3a" /> },
-      { id: 'rock1', x: 23, y: -6, w: 1.2, d: 1.2, seed: 27, lift: 60, spots: [], small: true },
-      { id: 'rock2', x: -9, y: 18, w: 1.1, d: 1.1, seed: 29, lift: 50, spots: [], small: true },
+      { id: 'rice', x: -2.4, y: 7.4, w: 3.4, d: 3.2, seed: 7, lift: 30, spots: [], small: true, decor: () => <RiceField x={-2.1} y={7.7} w={2.8} d={2.6} /> },
+      { id: 'pitch', x: 17, y: 6.6, w: 3.8, d: 3, seed: 9, lift: 24, spots: [], small: true, decor: () => <Pitch x={17.3} y={6.9} w={3.2} d={2.4} /> },
+      { id: 'tree1', x: 8.6, y: -1.4, w: 1.8, d: 1.8, seed: 21, lift: 40, spots: [], small: true, decor: () => <Tree x={9.5} y={-0.5} s={1.1} /> },
+      { id: 'tree2', x: 16.6, y: 16.6, w: 1.6, d: 1.6, seed: 23, lift: 10, spots: [], small: true, decor: () => <Tree x={17.4} y={17.4} s={1} kind="pine" color="#3f8f3a" /> },
     ],
     chest: [7.3, 14.2],
     lamps: [
@@ -215,6 +207,37 @@ const MIDDLE_DECOR: Record<RealmId, () => ReactNode> = {
   ),
 };
 
+/**
+ * Phones held upright: the gate at the top and the places zig-zagging down in two columns, so a whole
+ * realm fits a tall screen. (Positions as across = x − y and down = x + y.)
+ */
+const tallRealm = (id: RealmId): Layout => {
+  const realm = realmById(id)!;
+  const at = (a: number, d: number, half: number) => ({ x: (d + a) / 2 - half, y: (d - a) / 2 - half });
+  const mid = { ...at(0, 0, 3), w: 6, d: 6 };
+  const spots: Spot[] = [
+    { id: 'gate', kind: 'gate', ...at(0, 0, 1.5), lot: 3 },
+    ...realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(i % 2 ? 7 : -7, 10.4 + i * 6, 1.5), lot: 3 })),
+  ];
+  const rows = realm.places.length;
+  const decor = Array.from({ length: Math.max(0, Math.floor((rows - 1) / 2)) }, (_, k) => at(0, 13.4 + k * 12, 1.1));
+  return finish({
+    id,
+    spots,
+    hub: mid,
+    hubSpots: ['gate'],
+    start: 'gate',
+    cls: realm.className,
+    night: realm.night,
+    isles: [
+      { id: 'hub', ...mid, seed: 17, lift: 0, falls: 0.5, spots: ['gate'] },
+      ...spots.slice(1).map((sp, i) => isleFor(sp, i + 1)),
+      ...decor.map((p, k): Isle => ({ id: `deco${k}`, ...p, w: 2.2, d: 2.2, seed: 60 + k * 9, lift: 26, spots: [], small: true, decor: () => DECOR[id](p.x + 0.1, p.y + 0.1) })),
+    ],
+    lamps: [],
+  });
+};
+
 const realmLayout = (id: RealmId): Layout => {
   const realm = realmById(id)!;
   const slots = SLOTS[id];
@@ -244,12 +267,14 @@ const realmLayout = (id: RealmId): Layout => {
   });
 };
 
-const cache = new Map<LayoutId, Layout>();
-export function layoutFor(id: LayoutId): Layout {
-  let l = cache.get(id);
+const cache = new Map<string, Layout>();
+/** A map's layout; `tall` for phones held upright (realms zig-zag down instead of a ring). */
+export function layoutFor(id: LayoutId, tall = false): Layout {
+  const key = `${id}:${tall && id !== 'home'}`;
+  let l = cache.get(key);
   if (!l) {
-    l = id === 'home' ? homeLayout() : realmLayout(id);
-    cache.set(id, l);
+    l = id === 'home' ? homeLayout() : tall ? tallRealm(id) : realmLayout(id);
+    cache.set(key, l);
   }
   return l;
 }

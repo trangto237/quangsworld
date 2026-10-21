@@ -84,7 +84,7 @@ function Screens() {
     case 'exam':
       return <Exam key={screen.examId} student={student} examId={screen.examId} />;
     case 'realm':
-      return <Town key={screen.realmId} student={student} realm={screen.realmId} />;
+      return <Town student={student} realm={screen.realmId} />;
     default:
       return <Town student={student} />;
   }

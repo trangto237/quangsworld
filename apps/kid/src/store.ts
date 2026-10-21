@@ -46,6 +46,8 @@ interface KidState {
   studentId: string | null;
   screen: Screen;
   go: (s: Screen) => void;
+  /** Switch screen without a new Back step (e.g. swiping between realms). */
+  swap: (s: Screen) => void;
   login: (id: string) => void;
   logout: () => void;
 }
@@ -79,6 +81,14 @@ export const useKid = create<KidState>((set, get) => ({
   screen: startScreen(),
   go: (screen) => {
     syncUrl(get().screen, screen);
+    set({ screen });
+  },
+  swap: (screen) => {
+    try {
+      history.replaceState(null, '', pathOf(screen));
+    } catch {
+      /* sandboxed */
+    }
     set({ screen });
   },
   login: (id) => {

@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Bubble, Contact, Emoji, Flag, Ground, NameTag, P, ShadeDefs, Tree, type Pt } from './iso';
 import { KINDS, house } from './buildings';
-import { footprint, isleOf, layoutFor, spotCenter, type Isle, type Layout, type LayoutId, type Spot } from './layouts';
+import { footprint, isleOf, layoutFor, type Isle, type Layout, type LayoutId, type Spot } from './layouts';
 import { Builders, Chest, HazeDefs, LampGlowDef, NightContext, SkyLife, SkyTint, StopBadge, StreetLamps, useDayPhase, useReducedMotion, type ChestState } from './life';
 import { Knight } from '../components/Knight';
 import { Cloud, Crumble, IslandDefs, IslandBase, IslandCloud, RopeBridge, edgeToward } from './island';
@@ -183,7 +183,7 @@ function Island({ L, isle, states, active, tapFor, reduced, index }: { L: Layout
 }
 
 /** Name tag, bubbles and the hero: drawn last so nothing covers them. Also a keyboard target. */
-function Overlay({ L, s, st, tap, onOpen, hero, active, dim }: { L: Layout; s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: HeroLook; active: boolean; dim: boolean }) {
+function Overlay({ L, s, st, tap, onOpen, hero, active, dim, k = 1 }: { L: Layout; s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: HeroLook; active: boolean; dim: boolean; k?: number }) {
   if (st.hidden) return null;
   const d = drawingFor(s, st);
   const top = P(...d.top);
@@ -205,7 +205,16 @@ function Overlay({ L, s, st, tap, onOpen, hero, active, dim }: { L: Layout; s: S
       style={{ cursor: 'pointer', outline: 'none', opacity: dim ? 0.45 : 1, transition: 'opacity 0.15s', transform: `translateY(${-isle.lift}px)` }}
     >
       {/* The hero rides in the quest bubble (or on home when today's quests are done), never over a name. */}
-      <Tags top={[top[0], top[1] - lift]} st={st} hero={!!hero} />
+      <g style={{ transform: `scale(${k})`, transformOrigin: `${top[0]}px ${top[1] - lift}px` }}>
+        <Tags top={[top[0], top[1] - lift]} st={st} hero={!!hero} />
+        {!!st.stops?.length && (
+          <StopBadge
+            at={[top[0], top[1] - lift - (st.quest || st.due || hero || st.grew ? 50 : 14)]}
+            label={st.stops.map((x) => x.n).join('·')}
+            done={st.stops.every((x) => x.done)}
+          />
+        )}
+      </g>
       {hero && (
         <g className="town-bob" style={{ pointerEvents: 'none' }}>
           <Knight armour={hero.armour} emblem={hero.emblem} hat={hero.hat} box={{ x: front[0] - 92, y: front[1] - 62, w: 48, h: 60 }} />
@@ -216,14 +225,7 @@ function Overlay({ L, s, st, tap, onOpen, hero, active, dim }: { L: Layout; s: S
           )}
         </g>
       )}
-      {!!st.stops?.length && (
-        <StopBadge
-          at={[top[0], top[1] - lift - (st.quest || st.due || hero || st.grew ? 50 : 14)]}
-          label={st.stops.map((x) => x.n).join('·')}
-          done={st.stops.every((x) => x.done)}
-        />
-      )}
-      <g style={{ transform: active ? 'scale(1.18)' : undefined, transformOrigin: `${front[0]}px ${front[1] + 15}px`, transition: 'transform 0.15s' }}>
+      <g style={{ transform: `scale(${k * (active ? 1.18 : 1)})`, transformOrigin: `${front[0]}px ${front[1] + 4}px`, transition: 'transform 0.15s' }}>
         <NameTag at={[front[0], front[1] + 4]} icon={st.icon} title={st.title} sub={st.sub} color={active ? '#ffc23d' : st.color} />
       </g>
     </g>
@@ -241,7 +243,7 @@ function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: boolean }) {
 }
 
 /** Sky colours for the time of day. */
-const SKY = {
+export const SKY = {
   day: ['var(--sky-top)', 'var(--sky-bottom)'],
   dusk: ['#f08a5d', '#fcd7a1'],
   night: ['#0b1736', '#22386e'],
@@ -252,19 +254,19 @@ export function TownMap({
   onOpen,
   onSelect,
   selected,
-  focus,
   hero,
   path = [],
   chest,
   layout = 'home',
+  tall = false,
+  labelScale = 1,
+  still = false,
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
   /** Touch screens: the first tap selects (the screen shows its card), the second opens. */
   onSelect: (spot: Spot | null) => void;
   selected: string | null;
-  /** Spot to centre on at first. */
-  focus?: string;
   /** The hero knight, drawn next to the quest building (or home). */
   hero?: HeroLook;
   /** Today's path, in order (spot ids). */
@@ -272,8 +274,14 @@ export function TownMap({
   chest?: { state: ChestState; progress: string; onOpen: () => void };
   /** Home, or one realm's map. */
   layout?: LayoutId;
+  /** Phones held upright: the realm's tall arrangement. */
+  tall?: boolean;
+  /** Name tags and bubbles drawn bigger when the map is shown small, so they stay readable. */
+  labelScale?: number;
+  /** A map in the background (the next realm along): not tappable. */
+  still?: boolean;
 }) {
-  const L = layoutFor(layout);
+  const L = layoutFor(layout, tall);
   const phase = useDayPhase();
   const reduced = useReducedMotion();
   const [hover, setHover] = useState<string | null>(null);
@@ -329,12 +337,15 @@ export function TownMap({
   // The highlighted spot's tag is drawn last, on top of the others.
   const overlays = [...spots].sort((a, b) => (a.id === active ? 1 : 0) - (b.id === active ? 1 : 0));
   return (
-    <Viewport
-      L={L}
-      focus={L.spots.find((s) => s.id === focus) ?? L.spots.find((s) => s.id === L.start)!}
-      onPointer={(t) => (lastPointer.current = t)}
-      onBackground={() => onSelect(null)}
-      sky={L.night ? SKY.night : SKY[phase]}
+    <svg
+      viewBox={`${L.view.x} ${L.view.y} ${L.view.w} ${L.view.h}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="block h-full w-full select-none"
+      style={{ fontFamily: "'Baloo 2', Nunito, sans-serif", pointerEvents: still ? 'none' : undefined }}
+      role="img"
+      aria-label="Map"
+      onPointerDown={(e) => (lastPointer.current = e.pointerType)}
+      onClick={() => onSelect(null)}
     >
       <NightContext.Provider value={phase === 'night' || !!L.night}>
         <defs>
@@ -365,146 +376,10 @@ export function TownMap({
             hero={s === questSpot ? hero : undefined}
             active={active === s.id}
             dim={!!active && active !== s.id}
+            k={labelScale}
           />
         ))}
       </NightContext.Provider>
-    </Viewport>
-  );
-}
-
-/** Room above and below the map, so the hero bar and the bottom bars never hide the edge islands. */
-const PAD_TOP = 150;
-const PAD_BOTTOM = 200;
-/** The middle of the part of the screen the bars leave free. */
-const mid = (el: HTMLElement) => (el.clientHeight + PAD_TOP - PAD_BOTTOM) / 2;
-
-const MIN_Z = 0.5;
-const MAX_Z = 1.6;
-
-/** Scrollable, zoomable stage. Drag with the mouse, pinch on touch screens, or use the buttons. */
-function Viewport({ L, children, focus, onPointer, onBackground, sky }: { L: Layout; children: ReactNode; focus: Spot; onPointer: (type: string) => void; onBackground: () => void; sky: readonly [string, string] }) {
-  const VIEW = L.view;
-  const ref = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 0.95 : 1.1));
-  const pending = useRef<{ cx: number; cy: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; sl: number; st: number; moved: boolean } | null>(null);
-  const touches = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
-
-  // First paint: centre on the focus spot.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const [fx, fy] = spotCenter(L, focus);
-    el.scrollLeft = fx * zoom - el.clientWidth / 2;
-    el.scrollTop = PAD_TOP + fy * zoom - mid(el);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Later focus changes (e.g. a building that just grew): glide there.
-  const firstFocus = useRef(focus.id);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || focus.id === firstFocus.current) return;
-    firstFocus.current = focus.id;
-    const [fx, fy] = spotCenter(L, focus);
-    el.scrollTo({ left: fx * zoom - el.clientWidth / 2, top: PAD_TOP + fy * zoom - mid(el), behavior: 'smooth' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus.id]);
-
-  // Keep the middle of the screen in place when zooming.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const p = pending.current;
-    if (!el || !p) return;
-    el.scrollLeft = p.cx * zoom - el.clientWidth / 2;
-    el.scrollTop = PAD_TOP + p.cy * zoom - mid(el);
-    pending.current = null;
-  }, [zoom]);
-
-  const zoomTo = (z: number) => {
-    const el = ref.current;
-    if (!el) return;
-    const next = Math.max(MIN_Z, Math.min(MAX_Z, z));
-    pending.current = { cx: (el.scrollLeft + el.clientWidth / 2) / zoom, cy: (el.scrollTop + mid(el) - PAD_TOP) / zoom };
-    setZoom(next);
-  };
-
-  return (
-    <>
-      <div
-        ref={ref}
-        className={`fixed inset-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${L.cls ?? ''}`}
-        style={{ touchAction: 'pan-x pan-y', background: `linear-gradient(${sky[0]}, ${sky[1]})` }}
-        onClick={() => !drag.current?.moved && onBackground()}
-        onPointerDown={(e) => {
-          onPointer(e.pointerType);
-          if (e.pointerType === 'mouse') {
-            drag.current = { x: e.clientX, y: e.clientY, sl: ref.current!.scrollLeft, st: ref.current!.scrollTop, moved: false };
-          } else {
-            touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-            if (touches.current.size === 2) {
-              const [a, b] = [...touches.current.values()];
-              pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom };
-            }
-          }
-        }}
-        onPointerMove={(e) => {
-          const d = drag.current;
-          if (d && e.pointerType === 'mouse' && e.buttons === 1) {
-            const dx = e.clientX - d.x;
-            const dy = e.clientY - d.y;
-            if (Math.abs(dx) + Math.abs(dy) > 6) d.moved = true;
-            ref.current!.scrollLeft = d.sl - dx;
-            ref.current!.scrollTop = d.st - dy;
-          }
-          if (touches.current.has(e.pointerId)) {
-            touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-            const p = pinch.current;
-            if (p && touches.current.size === 2) {
-              const [a, b] = [...touches.current.values()];
-              const z = p.zoom * (Math.hypot(a.x - b.x, a.y - b.y) / p.dist);
-              if (Math.abs(z - zoom) > 0.03) zoomTo(z);
-            }
-          }
-        }}
-        onPointerUp={(e) => {
-          touches.current.delete(e.pointerId);
-          if (touches.current.size < 2) pinch.current = null;
-          setTimeout(() => (drag.current = null), 0);
-        }}
-        onPointerCancel={(e) => {
-          touches.current.delete(e.pointerId);
-          pinch.current = null;
-          drag.current = null;
-        }}
-        onClickCapture={(e) => {
-          // A drag is not a tap on a building.
-          if (drag.current?.moved) e.stopPropagation();
-        }}
-      >
-        <div style={{ paddingTop: PAD_TOP, paddingBottom: `calc(${PAD_BOTTOM}px + env(safe-area-inset-bottom))`, width: 'max-content' }}>
-        <svg
-          viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
-          width={VIEW.w * zoom}
-          height={VIEW.h * zoom}
-          className="block select-none"
-          style={{ minWidth: VIEW.w * zoom, fontFamily: "'Baloo 2', Nunito, sans-serif" }}
-          role="img"
-          aria-label="Town map"
-        >
-          {children}
-        </svg>
-        </div>
-      </div>
-      <div className="fixed left-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2">
-        <button onClick={() => zoomTo(zoom + 0.2)} className="town-btn grid size-10 place-items-center rounded-full bg-paper font-display text-2xl font-bold text-ink-text" aria-label="Zoom in">
-          +
-        </button>
-        <button onClick={() => zoomTo(zoom - 0.2)} className="town-btn grid size-10 place-items-center rounded-full bg-paper font-display text-2xl font-bold text-ink-text" aria-label="Zoom out">
-          −
-        </button>
-      </div>
-    </>
+    </svg>
   );
 }

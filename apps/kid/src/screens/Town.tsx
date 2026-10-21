@@ -11,8 +11,12 @@ import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
 import { BottomNav, HeroBar, rankFor } from '../town/Shell';
 import { TownMap, levelFor, type Spot, type SpotState } from '../town/TownMap';
-import { layoutFor } from '../town/layouts';
-import { REALMS, realmById, realmOf, type RealmId } from '../lib/realms';
+import { layoutFor, type LayoutId } from '../town/layouts';
+import { Carousel, type Slide } from '../town/Carousel';
+import { SKY } from '../town/TownMap';
+import { useDayPhase } from '../town/life';
+import { cx } from '@atlas/ui';
+import { REALMS, realmOf, type RealmId } from '../lib/realms';
 import { writingKey } from './Writing';
 import { Meter, Ribbon, TownButton } from '../town/ui';
 
@@ -35,8 +39,8 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
   const codeProgress = useQuery((r) => r.getKv<string[]>(`code-done:${student.id}`) ?? [], [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
   const writings = useQuery((r) => (r.getKv<unknown[]>(writingKey(student.id)) ?? []).length, [student.id]);
-  const layout = layoutFor(realm ?? 'home');
-  const here = new Set(layout.spots.map((s) => s.id));
+  const swap = useKid((s) => s.swap);
+  const phase = useDayPhase();
   const hero = { armour: inSlot(slots, 'armour')?.id, emblem: student.avatar, hat: inSlot(slots, 'hat')?.emoji, pet: inSlot(slots, 'pet')?.emoji };
   const next = plan.missions.find((m) => !m.done);
   const doneCount = plan.missions.filter((m) => m.done).length;
@@ -117,22 +121,19 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
         stops: members.flatMap((x) => x.stops ?? []).sort((a, b) => a.n - b.n),
       };
     }
-    if (realm) {
-      const r = realmById(realm)!;
-      out.gate = { level: 2, title: tr(lang, 'Home'), sub: tr(lang, r.name), icon: '🏠', color: r.color, blurb: tr(lang, 'Fly back to the home island.') };
-    }
+    out.gate = { level: 2, title: tr(lang, 'Home'), sub: '', icon: '🏠', color: '#ffc23d', blurb: tr(lang, 'Fly back to the home island.') };
     return { out, questWorld, path };
-  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress, writings, realm]);
+  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress, writings]);
 
   // Level-up moments: compare with what this device last showed; celebrate one building that grew.
-  const seenKey = `atlas-town-seen:${student.id}:${realm ?? 'home'}`;
+  const seenKey = `atlas-town-seen:${student.id}`;
   const [grew, setGrew] = useState<{ id: string; text: string; title: string } | null>(null);
   const checked = useRef(false);
   useEffect(() => {
     if (checked.current) return;
     checked.current = true;
     const now: Record<string, { level: number; explored: boolean }> = {};
-    for (const [id, st] of Object.entries(spots.out)) if (here.has(id) && !st.hidden && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade', 'gate', 'writing'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
+    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !id.startsWith('realm-') && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade', 'gate', 'writing'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
     let before: typeof now | null = null;
     try {
       before = JSON.parse(localStorage.getItem(seenKey) ?? 'null');
@@ -184,9 +185,44 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
   };
 
   // Home shows realms; a realm shows its own places.
-  const toHere = (id: string) => (realm ? (here.has(id) ? id : undefined) : here.has(id) ? id : realmOf(id) ? `realm-${realmOf(id)!.id}` : undefined);
-  const mapPath = spots.path.map(toHere).filter((x): x is string => !!x);
-  const focusSpot = (spots.questWorld && toHere(spots.questWorld)) ?? layout.start;
+  // The realms side by side (Home first). Start on the one asked for, else where today's quest is.
+  const slides: (Slide & { realm?: RealmId; emoji: string; name: string })[] = useMemo(
+    () => [
+      { id: 'home', emoji: '🏠', name: 'Home', sky: phase === 'day' ? 'linear-gradient(var(--sky-top), var(--sky-bottom))' : `linear-gradient(${SKY[phase][0]}, ${SKY[phase][1]})` },
+      ...REALMS.map((r) => ({
+        id: r.id,
+        realm: r.id,
+        emoji: r.emoji,
+        name: r.name,
+        cls: r.className,
+        sky: r.night ? `linear-gradient(${SKY.night[0]}, ${SKY.night[1]})` : phase === 'day' ? 'linear-gradient(var(--sky-top), var(--sky-bottom))' : `linear-gradient(${SKY[phase][0]}, ${SKY[phase][1]})`,
+      })),
+    ],
+    [phase],
+  );
+  const slideOf = (r?: string) => Math.max(0, slides.findIndex((x) => x.id === r));
+  const [index, setIndex] = useState(() => (realm ? slideOf(realm) : slideOf(spots.questWorld && realmOf(spots.questWorld)?.id)));
+  const first = useRef(true);
+  useEffect(() => {
+    // Back / Forward between realms.
+    if (first.current) return void (first.current = false);
+    setIndex(realm ? slideOf(realm) : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realm]);
+  const choose = (i: number) => {
+    setIndex(i);
+    setSelected(null);
+    const r = slides[i].realm;
+    swap(r ? { name: 'realm', realmId: r } : { name: 'hub' });
+  };
+  // Something grew: show its realm.
+  useEffect(() => {
+    if (grew) {
+      const r = realmOf(grew.id);
+      if (r) setIndex(slideOf(r.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grew?.id]);
 
   const [selected, setSelected] = useState<Spot | null>(null);
   const picked = selected ? spots.out[selected.id] : undefined;
@@ -199,7 +235,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
     else if (s.kind === 'code-lab') go({ name: 'code' });
     else if (s.kind === 'arcade') go({ name: 'arcade' });
     else if (s.id === 'word-forest') go({ name: 'garden' });
-    else if (s.kind === 'gate') go({ name: 'hub' });
+    else if (s.kind === 'gate') choose(0);
     else if (s.kind === 'writing') go({ name: 'writing' });
     else if (s.kind.startsWith('realm-')) go({ name: 'realm', realmId: s.kind.slice(6) as RealmId });
     else if (!spots.out[s.id]?.hidden) go({ name: 'world', worldId: s.id });
@@ -207,18 +243,56 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
 
   return (
     <div className="text-ink-text">
-      <TownMap
-        key={realm ?? 'home'}
-        layout={realm ?? 'home'}
-        states={shown}
-        path={mapPath}
-        chest={realm ? undefined : { state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
-        onOpen={open}
-        onSelect={setSelected}
-        selected={selected?.id ?? null}
-        focus={grew?.id ?? focusSpot}
-        hero={hero}
-      />
+      <div className={cx('fixed inset-0', slides[index].cls)} style={{ background: slides[index].sky, transition: 'background 0.4s' }} />
+      <div className="fixed inset-x-0 bottom-[11.25rem] top-[10.5rem] sm:bottom-[10.5rem] sm:top-[8.5rem]">
+        <Carousel
+          slides={slides}
+          index={index}
+          onIndex={choose}
+          render={(sl, { front, size, zoom }) => {
+            const tall = size.h > size.w * 1.05;
+            const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
+            const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
+            const here = new Set(L.spots.map((x) => x.id));
+            return (
+              <TownMap
+                layout={L.id}
+                tall={tall}
+                labelScale={Math.max(1, Math.min(2, 0.75 / (fit * zoom)))}
+                still={!front}
+                states={shown}
+                path={spots.path.filter((id) => here.has(id))}
+                chest={sl.realm ? undefined : { state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
+                onOpen={open}
+                onSelect={setSelected}
+                selected={front ? (selected?.id ?? null) : null}
+                hero={hero}
+              />
+            );
+          }}
+        />
+      </div>
+      {/* Realm tabs */}
+      <div className="fixed inset-x-0 top-[7.85rem] z-20 flex justify-center gap-1 px-2 sm:top-[5.75rem]">
+        {slides.map((sl, i) => {
+          const st = sl.realm ? shown[`realm-${sl.realm}`] : undefined;
+          return (
+            <button
+              key={sl.id}
+              onClick={() => choose(i)}
+              className={cx('town-btn relative flex items-center gap-1 rounded-full px-2.5 py-1 font-display text-sm font-bold', i === index ? 'bg-[#ffc23d] text-[#3b2412]' : 'bg-paper text-ink-text')}
+              aria-label={tr(lang, sl.name)}
+              aria-pressed={i === index}
+            >
+              <span className="text-base leading-none">{sl.emoji}</span>
+              <span className={cx(i === index ? 'inline' : 'hidden sm:inline')}>
+                <T en={sl.realm ? sl.name.replace(' Realm', '') : 'Home'} />
+              </span>
+              {st?.quest && <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-ink bg-[#e8584a]" title="Today's quest" />}
+            </button>
+          );
+        })}
+      </div>
       {(grew || chestNote) && (
         <div className="pointer-events-none fixed inset-x-0 top-40 z-30 flex justify-center px-3">
           <div className="town-panel pointer-events-auto flex max-w-md items-center gap-3 px-4 py-3 animate-pop">
@@ -231,7 +305,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
         </div>
       )}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-30 [&>*]:pointer-events-auto">
-        <HeroBar student={student} back={realm ? () => go({ name: 'hub' }) : undefined} />
+        <HeroBar student={student} />
       </div>
       {/* A tapped place's card (phones), or today's quest, like a chapter card on the map. */}
       <div className="fixed inset-x-0 z-30 px-2" style={{ bottom: 'calc(96px + max(0.5rem, env(safe-area-inset-bottom)))' }}>
