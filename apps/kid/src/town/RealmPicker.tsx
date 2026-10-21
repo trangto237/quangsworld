@@ -136,7 +136,7 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
       </div>
       <div key={`t${index}`} className="z-20 animate-pop pt-1 text-center">
         <div className="font-display text-[2rem] font-black leading-none tracking-wide text-white sm:text-5xl" style={{ textShadow: '2px 0 0 #3b2412, -2px 0 0 #3b2412, 0 2px 0 #3b2412, 0 -2px 0 #3b2412, 1.5px 1.5px 0 #3b2412, -1.5px 1.5px 0 #3b2412, 1.5px -1.5px 0 #3b2412, -1.5px -1.5px 0 #3b2412, 0 5px 0 #3b2412, 0 8px 18px rgba(0,0,0,0.3)' }}>
-          {cards[index].emoji} {cards[index].name}
+          {cards[index].emoji} {cards[index].label}
         </div>
         <div className="mx-auto mt-2 h-1 w-32 rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${cards[index].color}, transparent)` }} />
       </div>
