@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { MissionSession, historyFromAttempts, isDue, scoreConcepts, stars } from '@atlas/engine';
-import { allConcepts, getConcept, getQuestion, present, type PresentedQuestion } from '@atlas/knowledge';
+import { allConcepts, getConcept, getQuestion, pickQuestion, present, type PresentedQuestion } from '@atlas/knowledge';
 import type { Mission, Question } from '@atlas/shared';
-import { DAY_MS, dayKey } from '@atlas/shared';
+import { DAY_MS, dayKey, rng } from '@atlas/shared';
 import { cx, useQuery, useRepo } from '@atlas/ui';
 import { T, TB, tr, useLang } from '../i18n';
 import { useKid } from '../store';
 import { DECOR, GardenScene } from '../garden/scene';
-import { QuestionCard } from '../components/QuestionCard';
+import { FlashCardView } from '../garden/FlashCard';
+import { flashcardOf, type Flashcard } from '../lib/flashcard';
 import { ActiveTimer } from '../lib/activeTime';
 import { doneKey } from '../lib/equipped';
 import {
@@ -52,6 +53,26 @@ export function PlantIcon({ p, className, hidden }: { p: Plant; className?: stri
 
 const topicName = (id: string) => getConcept(id)?.name ?? id;
 
+/** Topics that are mostly word cards (not gap-fill sentences), so they can be planted. */
+const cardTopics = new Map<string, boolean>();
+function hasCards(conceptId: string) {
+  if (!cardTopics.has(conceptId)) {
+    let n = 0;
+    for (let s = 1; s <= 24; s++) {
+      const q = pickQuestion({ conceptId, difficulty: 1 + (s % 5), rand: rng(s * 7) });
+      if (q && flashcardOf(q)) n++;
+    }
+    cardTopics.set(conceptId, n >= 8);
+  }
+  return cardTopics.get(conceptId)!;
+}
+
+const SEEDS = [
+  { kind: 'packet', icon: '🎒', name: 'Seed packet', how: '' },
+  { kind: 'rare', icon: '🌟', name: 'Rare seed', how: 'Get 10 right answers in a row to earn a rare seed.' },
+  { kind: 'golden', icon: '👑', name: 'Golden seed', how: 'Learn 25 new words or beat a bug invasion to earn a golden seed.' },
+] as const;
+
 /** The Word Garden's state and seeds. */
 function useGarden(student: StudentProfile) {
   const attempts = useQuery((r) => r.listAttempts(student.id), [student.id]);
@@ -67,6 +88,7 @@ interface Card {
   kind: CardKind;
   q: PresentedQuestion;
   raw: Question;
+  flash: Flashcard;
 }
 
 const questKey = (sid: string, missionId: string) => `garden-quest:${sid}:${missionId}`;
@@ -84,7 +106,8 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
   const lang = useLang();
   const { garden, states, e, w } = useGarden(student);
   const [picking, setPicking] = useState<number | null>(null);
-  const [seedKind, setSeedKind] = useState<SeedKind>('packet');
+  /** Planting is two steps: pick a seed, then a word pack. */
+  const [seedKind, setSeedKind] = useState<SeedKind | null>(null);
   const [card, setCard] = useState<Card | null>(null);
   const [splash, setSplash] = useState<number | null>(null);
   const [reaped, setReaped] = useState<{ i: number; emoji: string; filter?: string } | null>(null);
@@ -139,16 +162,18 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
 
   // Seed packets: every vocabulary topic, today's quest first, then what the planner most wants.
   const topics = useMemo(() => {
-    const vocab = allConcepts().filter((c) => isVocab(c.id));
+    const vocab = allConcepts().filter((c) => isVocab(c.id) && hasCards(c.id));
     const rank = new Map(scoreConcepts({ states, goals: [], concepts: vocab }).map((s, k) => [s.concept.id, k]));
     const inQuest = (id: string) => (quest?.concepts.includes(id) ? 0 : 1);
-    return vocab.sort((a, b) => inQuest(a.id) - inQuest(b.id) || (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99));
+    // Single words first, then the IELTS phrasebooks.
+    const phrases = (id: string) => (id.startsWith('en.ielts.lex.') ? 1 : 0);
+    return vocab.sort((a, b) => inQuest(a.id) - inQuest(b.id) || phrases(a.id) - phrases(b.id) || (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99));
   }, [states, quest]);
 
   const sow = async (i: number, topic: string) => {
-    const r = plant(fresh(), w, e.plots, i, seedKind, topic, Date.now());
+    const r = plant(fresh(), w, e.plots, i, seedKind ?? 'packet', topic, Date.now());
     setPicking(null);
-    setSeedKind('packet');
+    setSeedKind(null);
     if (!r.ok) return setNote(tr(lang, r.why));
     await save(r.garden);
     setNote(tr(lang, '🌱 Planted! Tap it to answer its first word card.'));
@@ -162,9 +187,14 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
       s = new MissionSession({ id: 'garden', concepts: [b.topic], duration: 5, kind: 'learn', title: 'Word Garden', reward: { coins: 0, gems: 0, xp: 0 } }, states, Math.random, history);
       sessions.current.set(b.topic, s);
     }
-    const q = s.next();
-    if (!q) return setNote(tr(lang, 'No more words in this topic right now — try another bed.'));
-    setCard({ i, kind, q: present(q), raw: q });
+    // Word cards only: skip the topic's gap-fill sentences.
+    for (let tries = 0; tries < 30; tries++) {
+      const q = s.next();
+      if (!q) break;
+      const flash = flashcardOf(q);
+      if (flash) return setCard({ i, kind, q: present(q), raw: q, flash });
+    }
+    setNote(tr(lang, 'No more words in this topic right now — try another bed.'));
   };
 
   const answer = async (c: Card, correct: boolean, ms: number, picked: string) => {
@@ -382,46 +412,59 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
               <div className="text-xs font-semibold text-ink-soft">{topicName(garden.beds[card.i]?.topic ?? '')}</div>
             </div>
           </div>
-          <div className="rounded-xl bg-white p-3 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-            <QuestionCard key={card.raw.id} question={card.q} mode="practice" glossary={false} wrongNote="📕 Saved to your Mistake Book" onAnswer={(c, ms, p) => void answer(card, c, ms, p)} />
-          </div>
+          <FlashCardView key={card.raw.id} card={card.flash} q={card.q} onAnswer={(c, ms, p) => void answer(card, c, ms, p)} />
         </Sheet>
       )}
 
       {picking != null && (
-        <Sheet onClose={() => setPicking(null)} wide>
-          <h2 className="font-display text-xl font-bold">
-            <T en="Plant a seed" />
-          </h2>
-          <p className="text-xs text-ink-soft">
-            <T en="Every seed packet is a word topic. Its word cards make it grow." />
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {(
-              [
-                ['packet', '🎒', 'Seed packet', '∞'],
-                ['rare', '🌟', 'Rare seed', String(w.rare)],
-                ['golden', '👑', 'Golden seed', String(w.golden)],
-              ] as const
-            ).map(([k, icon, name, n]) => (
-              <button
-                key={k}
-                disabled={k !== 'packet' && w[k] < 1}
-                onClick={() => setSeedKind(k)}
-                className={cx('town-btn rounded-xl p-2 text-center', seedKind === k ? 'bg-tint-amber ring-2 ring-[#ffc23d]' : 'bg-paper')}
-              >
-                <div className="text-2xl">{icon}</div>
-                <div className="font-display text-xs font-bold leading-tight">
-                  <T en={name} />
-                </div>
-                <div className="text-xs font-bold text-ink-soft">×{n}</div>
+        <Sheet
+          onClose={() => {
+            setPicking(null);
+            setSeedKind(null);
+          }}
+          wide
+        >
+          {seedKind == null ? (
+            <>
+              <h2 className="font-display text-xl font-bold">
+                <T en="1. Choose a seed" />
+              </h2>
+              <p className="text-xs text-ink-soft">
+                <T en="Rare and golden seeds grow rarer plants for your catalogue." />
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {SEEDS.map((sd) => {
+                  const n = sd.kind === 'packet' ? Infinity : w[sd.kind];
+                  const none = n < 1;
+                  return (
+                    <button
+                      key={sd.kind}
+                      onClick={() => (none ? setNote(tr(lang, sd.how)) : setSeedKind(sd.kind))}
+                      className={cx('town-btn rounded-xl p-3 text-center', none ? 'bg-paper-3 opacity-60' : 'bg-paper hover:bg-tint-amber')}
+                    >
+                      <div className={cx('text-3xl', none && 'grayscale')}>{sd.icon}</div>
+                      <div className="mt-1 font-display text-xs font-bold leading-tight">
+                        <T en={sd.name} />
+                      </div>
+                      <div className="text-xs font-bold text-ink-soft">{n === Infinity ? '∞' : `×${n}`}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {note && <p className="mt-3 rounded-xl bg-tint-amber p-2 text-center text-sm font-semibold">{note}</p>}
+            </>
+          ) : (
+            <>
+              <button onClick={() => setSeedKind(null)} className="text-sm font-bold text-ink-soft underline">
+                ← <T en="Seeds" />
               </button>
-            ))}
-          </div>
-          <h3 className="mt-4 font-display font-bold">
-            <T en="Pick a topic" />
-          </h3>
-          <div className="mt-2 grid max-h-[45dvh] gap-1.5 overflow-y-auto pr-1">
+              <h2 className="mt-1 font-display text-xl font-bold">
+                {SEEDS.find((x) => x.kind === seedKind)!.icon} <T en="2. Pick a word pack to plant" />
+              </h2>
+              <p className="text-xs text-ink-soft">
+                <T en="Its word cards make the plant grow." />
+              </p>
+              <div className="mt-2 grid max-h-[55dvh] gap-1.5 overflow-y-auto pr-1">
             {topics.map((c) => {
               const s = states[c.id];
               const st = stars(s);
@@ -440,7 +483,9 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
                 </button>
               );
             })}
-          </div>
+              </div>
+            </>
+          )}
         </Sheet>
       )}
 
