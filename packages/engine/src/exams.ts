@@ -179,8 +179,8 @@ export interface ExamGrade {
   sections: { id: string; title: string; correct: number; total: number }[];
 }
 
-export function gradePaper(paper: ExamPaper, answers: Record<string, string>): ExamGrade {
-  const blueprint = examById(paper.examId)!;
+/** `scoring` defaults to the blueprint's (imported papers pass their own). */
+export function gradePaper(paper: ExamPaper, answers: Record<string, string>, scoring: ExamScoring = examById(paper.examId)?.scoring ?? 'ten'): ExamGrade {
   const sections = paper.sections.map((s) => ({
     id: s.id,
     title: s.title,
@@ -191,7 +191,7 @@ export function gradePaper(paper: ExamPaper, answers: Record<string, string>): E
   const total = sections.reduce((n, s) => n + s.total, 0);
   let score: number | null = null;
   let band: number | null = null;
-  if (blueprint.scoring === 'ten') score = Math.round((correct / Math.max(1, total)) * 10 * 100) / 100;
-  else band = ieltsBandFromRaw(Math.round((correct / Math.max(1, total)) * 40), blueprint.scoring === 'ielts-reading' ? 'reading' : 'listening');
+  if (scoring === 'ten') score = Math.round((correct / Math.max(1, total)) * 10 * 100) / 100;
+  else band = ieltsBandFromRaw(Math.round((correct / Math.max(1, total)) * 40), scoring === 'ielts-reading' ? 'reading' : 'listening');
   return { correct, total, score, band, sections };
 }

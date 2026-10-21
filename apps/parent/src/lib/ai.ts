@@ -74,3 +74,16 @@ export async function diagnoseAI(token: string): Promise<Check[]> {
   if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
   return body.checks ?? [];
 }
+
+/** Reads a real exam paper (page images, plus the PDF's text layer if any) into structured questions. */
+export async function readExamWithAI(token: string, kind: 'hn10' | 'ielts-reading' | 'ielts-listening', images: { mediaType: string; data: string }[], text?: string): Promise<unknown> {
+  const res = await fetch('/api/exam', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ kind, images, text }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { exam?: unknown; error?: string };
+  if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
+  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  return body.exam;
+}

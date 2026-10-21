@@ -4,7 +4,7 @@ import type {
 } from '@atlas/shared';
 import { hashString, uid } from '@atlas/shared';
 import { PART_LABEL, allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept, type DraftPart, type DraftQuestion } from '@atlas/knowledge';
-import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, type PlacementState } from '@atlas/engine';
+import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, type ImportedExam, type PlacementState } from '@atlas/engine';
 import type { AtlasDb } from './database';
 import * as t from './schema';
 import { hashSecret, verifySecret } from './crypto';
@@ -535,7 +535,7 @@ export class Repo {
     // Concepts touched by this material: its own concept rows and the concepts of its questions.
     const touched = new Set<string>([
       ...(m?.conceptId ? [m.conceptId] : []),
-      ...rows.filter((r) => r.materialId === id).map((r) => (r.kind === 'concept' ? r.id : (r.data as Question).conceptId)),
+      ...rows.filter((r) => r.materialId === id && r.kind !== 'exam').map((r) => (r.kind === 'concept' ? r.id : (r.data as Question).conceptId)),
     ]);
     // A textbook unit can be filled by several imports: keep a concept while other imports still have questions in it.
     const remaining = (cid: string) => rows.filter((r) => r.kind === 'question' && r.materialId !== id && (r.data as Question).conceptId === cid);
@@ -557,6 +557,34 @@ export class Repo {
     await this.db.deleteFile(id);
     for (const cid of touched) unregisterConcept(cid);
     this.loadCustomContent();
+  }
+
+  // ── Imported exam papers ──────────────────────────────────
+  /** Real papers the parent imported, newest first. */
+  listImportedExams(): ImportedExam[] {
+    return this.db
+      .read((o) => o.select().from(t.customItems).where(eq(t.customItems.kind, 'exam')).all())
+      .map((r) => r.data as ImportedExam)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  getImportedExam(id: string): ImportedExam | undefined {
+    const row = this.db.read((o) => o.select().from(t.customItems).where(eq(t.customItems.id, id)).get());
+    return row?.kind === 'exam' ? (row.data as ImportedExam) : undefined;
+  }
+
+  /** Saves an imported paper (and its file, kept on this device only). Delete it like any other material. */
+  async saveImportedExam(exam: ImportedExam, file: { name: string; kind: 'pdf' | 'image'; bytes?: Uint8Array; size: number }) {
+    const materialId = uid('mat_');
+    if (file.bytes) await this.db.putFile(materialId, file.bytes);
+    const n = exam.sections.reduce((s, x) => s + x.questions.length, 0);
+    await this.db.write((o) => {
+      o.insert(t.materials)
+        .values({ id: materialId, name: file.name, kind: file.kind, size: file.size, status: 'processed', note: `Exam paper “${exam.name}”: ${n} questions · in the Exam Hall`, createdAt: Date.now() })
+        .run();
+      o.insert(t.customItems).values({ id: exam.id, kind: 'exam', materialId, data: exam }).run();
+    });
+    return materialId;
   }
 
   /**

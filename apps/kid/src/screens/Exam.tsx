@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import {
-  applyAnswer, assemblePaper, examById, gradePaper, historyFromAttempts, isCorrectAnswer, newConceptState, scheduleReview,
-  type ExamGrade, type ExamPaper,
+  KIND_INFO, applyAnswer, assemblePaper, examById, examSize, gradePaper, historyFromAttempts, importedPaper, isCorrectAnswer, newConceptState, scheduleReview,
+  type ExamBlueprint, type ExamGrade, type ExamPaper,
 } from '@atlas/engine';
 import { present, type PresentedQuestion } from '@atlas/knowledge';
 import type { ConceptState, Question } from '@atlas/shared';
@@ -41,7 +41,21 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
   const repo = useRepo();
   const go = useKid((s) => s.go);
   const lang = useLang();
-  const blueprint = examById(examId)!;
+  // A mock paper built by the app, or a real paper the parent imported.
+  const imported = useMemo(() => (examById(examId) ? undefined : repo.getImportedExam(examId)), [repo, examId]);
+  const missing = !examById(examId) && !imported;
+  const blueprint: ExamBlueprint =
+    examById(examId) ??
+    (imported
+      ? {
+          id: imported.id,
+          name: imported.name,
+          description: `${examSize(imported)} questions · ${imported.minutes} minutes · a real paper imported by your parent.`,
+          minutes: imported.minutes,
+          scoring: KIND_INFO[imported.kind].scoring,
+          sections: [],
+        }
+      : { id: examId, name: 'Paper not found', description: 'This paper was removed.', minutes: 60, scoring: 'ten', sections: [] });
   const [progress, setProgress] = useState<ExamProgress | null>(() => {
     const saved = repo.getKv<ExamProgress>(key(student.id));
     if (!saved || saved.examId !== examId) return null;
@@ -59,9 +73,10 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
   const start = () => {
     const history = historyFromAttempts(repo.listAttempts(student.id, Date.now() - 30 * DAY_MS));
     const usedSets = repo.listExamResults(student.id).flatMap((r) => r.setIds);
-    const paper = assemblePaper(blueprint, { history, usedSets });
+    const paper = imported ? importedPaper(imported) : assemblePaper(blueprint, { history, usedSets });
     const shown: Record<string, string[]> = {};
-    for (const s of paper.sections) for (const q of s.questions) shown[q.id] = present(q).shown;
+    // Real papers keep the order printed on the paper (A–D); mock papers shuffle.
+    for (const s of paper.sections) for (const q of s.questions) shown[q.id] = imported ? [...q.options] : present(q).shown;
     const p: ExamProgress = { examId, paper, shown, answers: {}, flagged: [], played: [], startedAt: Date.now(), strictAudio };
     setProgress(p);
     void repo.setKv(key(student.id), p);
@@ -88,7 +103,7 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
     if (!progress || submitted.current) return;
     submitted.current = true;
     stopSpeaking();
-    const g = gradePaper(progress.paper, progress.answers);
+    const g = gradePaper(progress.paper, progress.answers, blueprint.scoring);
     const finishedAt = Date.now();
     // Every answer updates mastery; unanswered questions count as wrong.
     const states: Record<string, ConceptState> = { ...repo.getStates(student.id) };
@@ -124,7 +139,7 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
     });
     await repo.setKv(key(student.id), null);
     setGrade(g);
-  }, [blueprint.minutes, examId, progress, questions, repo, student.id]);
+  }, [blueprint.minutes, blueprint.scoring, examId, progress, questions, repo, student.id]);
 
   // Clock; time's up → submit automatically.
   useEffect(() => {
@@ -167,7 +182,7 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
             <Button variant="secondary" onClick={() => go({ name: 'exam-hall' })}>
               <TB en="← Back" />
             </Button>
-            <Button className="flex-1" onClick={start}>
+            <Button className="flex-1" onClick={start} disabled={missing}>
               <TB en="Start — the timer begins" />
             </Button>
           </div>
@@ -176,7 +191,7 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
     );
 
   // ── Results & review ─────────────────────────────────────────
-  if (grade) return <ExamResultView grade={grade} progress={progress} examName={blueprint.name} onDone={() => go({ name: 'exam-hall' })} />;
+  if (grade) return <ExamResultView grade={grade} progress={progress} examName={blueprint.name} minutes={blueprint.minutes} onDone={() => go({ name: 'exam-hall' })} />;
 
   // ── Paper ────────────────────────────────────────────────────
   const answeredCount = questions.filter((q) => (progress.answers[q.id] ?? '') !== '').length;
@@ -415,7 +430,7 @@ function PaperQuestion({
   );
 }
 
-function ExamResultView({ grade, progress, examName, onDone }: { grade: ExamGrade; progress: ExamProgress; examName: string; onDone: () => void }) {
+function ExamResultView({ grade, progress, examName, minutes, onDone }: { grade: ExamGrade; progress: ExamProgress; examName: string; minutes: number; onDone: () => void }) {
   const [reviewing, setReviewing] = useState(false);
   const [onlyWrong, setOnlyWrong] = useState(true);
   const questions = progress.paper.sections.flatMap((s) => s.questions);
@@ -477,7 +492,7 @@ function ExamResultView({ grade, progress, examName, onDone }: { grade: ExamGrad
           </p>
         )}
         <p className="mt-2 text-center text-white/70">
-          {grade.correct}/{grade.total} <T en="correct" /> · {Math.round(Math.min(Date.now() - progress.startedAt, examById(progress.examId)!.minutes * 60_000) / 60000)} min
+          {grade.correct}/{grade.total} <T en="correct" /> · {Math.round(Math.min(Date.now() - progress.startedAt, minutes * 60_000) / 60000)} min
         </p>
         <div className="mt-6 space-y-2">
           {grade.sections.map((s) => (

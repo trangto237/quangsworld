@@ -204,3 +204,24 @@ export async function pingOpenRouter(key: string, configured: string | undefined
   );
   return { model, text: String((result as { text?: unknown }).text ?? '') };
 }
+
+/** Any task with a JSON answer: a PDF and/or page images and/or text, then the task. For the exam import. */
+export async function askOpenRouterJson(
+  key: string,
+  configured: string | undefined,
+  system: string,
+  material: { text?: string; pdfBase64?: string; images?: { mediaType: string; data: string }[] },
+  task: string,
+  schema: Record<string, unknown>,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ result: unknown; model: string }> {
+  const content: Part[] = [];
+  if (material.pdfBase64) content.push({ type: 'file', file: { filename: 'paper.pdf', file_data: `data:application/pdf;base64,${material.pdfBase64}` } });
+  (material.images ?? []).forEach((im, i) => {
+    content.push({ type: 'text', text: `Page ${i + 1}:` });
+    content.push({ type: 'image_url', image_url: { url: `data:${im.mediaType};base64,${im.data}` } });
+  });
+  if (material.text) content.push({ type: 'text', text: `<material>\n${material.text}\n</material>` });
+  content.push({ type: 'text', text: `${task}\nAnswer with JSON only.` });
+  return withModel(configured, fetchFn, (m) => chat(key, m, system, content, schema, fetchFn));
+}

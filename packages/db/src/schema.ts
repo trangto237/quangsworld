@@ -116,7 +116,7 @@ export const materials = sqliteTable('materials', {
 /** Family-imported concepts and questions (JSON of ConceptDef / Question). */
 export const customItems = sqliteTable('custom_items', {
   id: text('id').primaryKey(),
-  kind: text('kind', { enum: ['concept', 'question'] }).notNull(),
+  kind: text('kind', { enum: ['concept', 'question', 'exam'] }).notNull(),
   materialId: text('material_id').notNull(),
   data: text('data', { mode: 'json' }).notNull(),
 });

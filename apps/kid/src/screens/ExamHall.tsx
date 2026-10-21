@@ -1,5 +1,5 @@
 import type { StudentProfile } from '@atlas/db';
-import { EXAMS } from '@atlas/engine';
+import { EXAMS, KIND_INFO, examSize } from '@atlas/engine';
 import { cx, useQuery } from '@atlas/ui';
 import { TownScreen } from '../town/Shell';
 import { Panel, TownButton } from '../town/ui';
@@ -15,6 +15,8 @@ export function ExamHall({ student }: { student: StudentProfile }) {
   const go = useKid((s) => s.go);
   const results = useQuery((r) => r.listExamResults(student.id), [student.id]);
   const inProgress = useQuery((r) => r.getKv<{ examId: string }>(`exam-progress:${student.id}`), [student.id]);
+  const real = useQuery((r) => r.listImportedExams(), []);
+  const nameOf = (id: string) => EXAMS.find((e) => e.id === id)?.name ?? real.find((e) => e.id === id)?.name ?? 'Removed paper';
 
   return (
     <TownScreen student={student} tab="exams">
@@ -52,6 +54,44 @@ export function ExamHall({ student }: { student: StudentProfile }) {
             );
           })}
         </div>
+        {real.length > 0 && (
+          <section className="mt-8">
+            <h2 className="font-display text-2xl font-bold">
+              📜 <T en="Real papers" />
+            </h2>
+            <p className="text-sm text-ink-soft">
+              <T en="Past papers and practice tests your parent imported." />
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {real.map((e) => {
+                const mine = results.filter((r) => r.examId === e.id);
+                const last = mine.at(-1);
+                const resuming = inProgress?.examId === e.id;
+                return (
+                  <section key={e.id} className={cx('town-panel flex items-center gap-3 p-3', resuming && 'bg-tint-amber')}>
+                    <span className="grid size-12 shrink-0 place-items-center rounded-xl border-2 border-ink bg-paper-2 text-2xl">{KIND_INFO[e.kind].emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-display text-lg font-bold leading-tight">{e.name}</div>
+                      <div className="text-xs text-ink-soft">
+                        {examSize(e)} <T en="questions" /> · {e.minutes} min ·{' '}
+                        {last ? (
+                          <>
+                            <T en="Last result" />: <b className="text-ink-text">{formatScore(last)}</b>
+                          </>
+                        ) : (
+                          <T en="Not taken yet" />
+                        )}
+                      </div>
+                    </div>
+                    <TownButton tone="green" size="sm" onClick={() => go({ name: 'exam', examId: e.id })}>
+                      <TB en={resuming ? 'Continue →' : 'Start →'} />
+                    </TownButton>
+                  </section>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <p className="mt-4 text-xs text-ink-soft">
           <T en="The Hà Nội paper follows the usual structure of recent entrance exams for regular public schools. Check your school's official sample paper (đề minh họa) for this year's exact format." />
         </p>
@@ -86,7 +126,7 @@ export function ExamHall({ student }: { student: StudentProfile }) {
                   {[...results].reverse().map((r) => (
                     <tr key={r.id} className="border-t-2 border-ink/15">
                       <td className="px-4 py-2">{new Date(r.finishedAt).toLocaleDateString()}</td>
-                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? r.examId}</td>
+                      <td>{nameOf(r.examId)}</td>
                       <td className="text-right font-bold tabular-nums">{formatScore(r)}</td>
                       <td className="text-right tabular-nums">
                         {r.correct}/{r.total}
