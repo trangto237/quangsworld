@@ -2,10 +2,14 @@ import { createContext, useContext, useMemo, type CSSProperties, type ReactNode 
 import type { ShopItem } from '@atlas/engine';
 import { cx } from '@atlas/ui';
 import { inSlot, type Slots } from '../../lib/equipped';
+import { Knight } from '../Knight';
 
 /** What the hero is wearing from the shop, for every game to read. */
 export interface Look {
+  /** Profile emoji: painted on the knight's shield. */
   avatar: string;
+  /** Armour item id. */
+  armour?: string;
   hat?: string;
   pet?: string;
   /** Right-answer effect emoji. */
@@ -23,6 +27,7 @@ export function LookProvider({ slots, avatar, children }: { slots?: Slots; avata
     const s = slots ?? {};
     return {
       avatar: avatar ?? '🦊',
+      armour: inSlot(s, 'armour')?.id,
       hat: inSlot(s, 'hat')?.emoji,
       pet: inSlot(s, 'pet')?.emoji,
       effect: inSlot(s, 'effect')?.emoji,
@@ -32,15 +37,14 @@ export function LookProvider({ slots, avatar, children }: { slots?: Slots; avata
   return <LookCtx.Provider value={look}>{children}</LookCtx.Provider>;
 }
 
-/** The hero with hat and pet, sized by the parent's font size. */
+/** The hero knight with armour, hat and pet, sized by the parent's font size. */
 export function HeroSprite({ className, style, look: given }: { className?: string; style?: CSSProperties; look?: Look }) {
   const ctx = useLook();
   const look = given ?? ctx;
   return (
     <span className={cx('relative inline-block leading-none', className)} style={style}>
-      {look.avatar}
-      {look.hat && <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[55%] text-[0.55em]">{look.hat}</span>}
-      {look.pet && <span className="absolute -bottom-[0.05em] -right-[0.55em] text-[0.45em]">{look.pet}</span>}
+      <Knight armour={look.armour} emblem={look.avatar} hat={look.hat} style={{ width: '1.15em', height: '1.43em', display: 'block' }} />
+      {look.pet && <span className="absolute -bottom-[0.05em] -right-[0.5em] text-[0.42em]">{look.pet}</span>}
     </span>
   );
 }

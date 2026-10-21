@@ -7,7 +7,7 @@ import { QuestionCard } from '../QuestionCard';
 import { playQuestionAudio, stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
-import { useLook } from './look';
+import { HeroSprite, useLook } from './look';
 import { PromptPanel } from './PromptPanel';
 import type { ModeProps } from './types';
 
@@ -114,7 +114,7 @@ export function PenaltyArena(p: ModeProps) {
       {/* Scoreboard */}
       <div className="mx-auto mt-3 flex w-full max-w-3xl items-center justify-between gap-2 rounded-2xl bg-black/40 px-4 py-2 font-display">
         <div className="min-w-0">
-          <div className="truncate font-bold">{look.avatar} <T en="Your team" /></div>
+          <div className="truncate font-bold"><HeroSprite className="align-middle text-[1.4em]" look={{ ...look, hat: undefined, pet: undefined }} /> <T en="Your team" /></div>
           <div className="text-xs">{dots('you')}</div>
         </div>
         <div className="text-center">

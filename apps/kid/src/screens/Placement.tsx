@@ -11,6 +11,7 @@ import type { PlacementScores } from '@atlas/shared';
 import { Button, Progress, cx, useRepo } from '@atlas/ui';
 import { GameArena } from '../components/modes/GameArena';
 import { getSlots } from '../lib/equipped';
+import { Knight } from '../components/Knight';
 import type { GameMode } from '@atlas/game';
 import { ActiveTimer } from '../lib/activeTime';
 import { useKid } from '../store';
@@ -101,7 +102,7 @@ export function Placement({ student }: { student: StudentProfile }) {
     return (
       <Shell>
         <div className="text-center">
-          <div className="animate-float text-7xl">{student.avatar}</div>
+          <Knight emblem={student.avatar} armour={getSlots(repo, student.id).armour} className="animate-float mx-auto h-32 w-28" />
           <h1 className="mt-4 font-display text-3xl font-bold sm:text-4xl">
             <T en="The Trial of Five Realms" />
           </h1>

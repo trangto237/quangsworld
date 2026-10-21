@@ -278,7 +278,7 @@ describe('shop catalogue', () => {
     const ids = SHOP.map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const i of SHOP) {
-      if (i.category === 'look') expect(['hat', 'pet']).toContain(i.slot);
+      if (i.category === 'look') expect(['armour', 'hat', 'pet']).toContain(i.slot);
       if (i.category === 'effect') expect(i.slot).toBe('effect');
       if (i.category === 'game') {
         expect(i.mode).toBeTruthy();

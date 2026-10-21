@@ -25,7 +25,7 @@ export function Town({ student }: { student: StudentProfile }) {
   const chestOpened = useQuery((r) => !!r.getKv(`chest:${student.id}:${plan.date}`), [student.id, plan.date]);
   const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
-  const hero = `${inSlot(slots, 'hat')?.emoji ?? ''}${student.avatar}${inSlot(slots, 'pet')?.emoji ?? ''}`;
+  const hero = { armour: inSlot(slots, 'armour')?.id, emblem: student.avatar, hat: inSlot(slots, 'hat')?.emoji, pet: inSlot(slots, 'pet')?.emoji };
   const next = plan.missions.find((m) => !m.done);
   const doneCount = plan.missions.filter((m) => m.done).length;
 
@@ -71,7 +71,7 @@ export function Town({ student }: { student: StudentProfile }) {
       level: 2,
       title: student.name,
       sub: tr(lang, rankFor(levelFromXp(wallet.xp).level)),
-      icon: student.avatar,
+      icon: '🏠',
       color: '#ffc23d',
       blurb: tr(lang, 'Your hero: powers, badges and settings.'),
     };

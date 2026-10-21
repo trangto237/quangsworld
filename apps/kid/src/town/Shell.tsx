@@ -9,6 +9,7 @@ import { todayPlan } from '../lib/plan';
 import { useKid } from '../store';
 import { T, tr, useLang } from '../i18n';
 import { Chip, Meter } from './ui';
+import { Knight } from '../components/Knight';
 
 export type NavTab = 'map' | 'quests' | 'coach' | 'exams' | 'shop' | 'hero' | null;
 
@@ -16,17 +17,18 @@ export type NavTab = 'map' | 'quests' | 'coach' | 'exams' | 'shop' | 'hero' | nu
 export const rankFor = (level: number) =>
   level >= 11 ? 'Legend' : level >= 8 ? 'Champion' : level >= 5 ? 'Ranger' : level >= 3 ? 'Explorer' : 'Apprentice';
 
-/** The hero's avatar in a round frame, with the equipped hat, pet and the level badge. */
+/** The hero knight in a round frame, with the equipped armour, hat, pet and the level badge. */
 export function HeroAvatar({ student, size = 'md' }: { student: StudentProfile; size?: 'md' | 'lg' }) {
   const wallet = useQuery((r) => r.getWallet(student.id), [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
   const hat = inSlot(slots, 'hat')?.emoji;
   const pet = inSlot(slots, 'pet')?.emoji;
+  const armour = inSlot(slots, 'armour')?.id;
   const lvl = levelFromXp(wallet.xp).level;
   const big = size === 'lg';
   return (
     <span className={cx('relative grid shrink-0 place-items-center rounded-full border-[2.5px] border-ink bg-[#ffd98a]', big ? 'size-24 text-6xl' : 'size-12 text-3xl')} aria-hidden>
-      {student.avatar}
+      <Knight bust armour={armour} emblem={student.avatar} className="size-full overflow-hidden rounded-full" />
       {hat && <span className={cx('absolute left-1/2 -translate-x-1/2', big ? '-top-7 text-5xl' : '-top-3.5 text-xl')}>{hat}</span>}
       {pet && <span className={cx('absolute', big ? '-bottom-2 -right-4 text-4xl' : '-bottom-2 -right-2.5 text-lg')}>{pet}</span>}
       <span className={cx('absolute grid place-items-center rounded-full border-2 border-ink bg-[#5cb85c] font-display font-bold text-white', big ? '-bottom-1 -left-1 size-9 text-base' : '-bottom-1.5 -left-1.5 size-6 text-xs')}>

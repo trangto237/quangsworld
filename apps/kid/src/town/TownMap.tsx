@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent,
 import { Bubble, Emoji, Flag, Ground, NameTag, P, Tree, type Pt } from './iso';
 import { KINDS, Lake, Pitch, RiceField, house } from './buildings';
 import { Builders, Chest, HazeDefs, LampGlowDef, NightContext, SkyLife, SkyTint, StopBadge, StreetLamps, useDayPhase, useReducedMotion, type ChestState } from './life';
+import { Knight } from '../components/Knight';
 import { Cloud, Crumble, IslandBase, IslandCloud, RopeBridge, edgeToward, islandShape, type IslandShape } from './island';
 
 /**
@@ -50,6 +51,14 @@ export const SPOTS: Spot[] = [
   { id: 'geometry-isles', kind: 'geometry-isles', x: 21.0, y: 12.1, lot: 3 },
   { id: 'logic-labyrinth', kind: 'logic-labyrinth', x: 20.4, y: 20.4, lot: 3 },
 ];
+
+/** The hero knight as drawn on the map. */
+export interface HeroLook {
+  armour?: string;
+  emblem: string;
+  hat?: string;
+  pet?: string;
+}
 
 export interface SpotState {
   /** 0 not started … 4 complete. */
@@ -269,7 +278,7 @@ function Island({ isle, states, active, tapFor, reduced, index }: { isle: Isle; 
 }
 
 /** Name tag, bubbles and the hero: drawn last so nothing covers them. Also a keyboard target. */
-function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: string; active: boolean; dim: boolean }) {
+function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: HeroLook; active: boolean; dim: boolean }) {
   if (st.hidden) return null;
   const d = drawingFor(s, st);
   const top = P(...d.top);
@@ -291,7 +300,17 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
       style={{ cursor: 'pointer', outline: 'none', opacity: dim ? 0.45 : 1, transition: 'opacity 0.15s', transform: `translateY(${-isle.lift}px)` }}
     >
       {/* The hero rides in the quest bubble (or on home when today's quests are done), never over a name. */}
-      <Tags top={[top[0], top[1] - lift]} st={st} hero={hero} />
+      <Tags top={[top[0], top[1] - lift]} st={st} hero={!!hero} />
+      {hero && (
+        <g className="town-bob" style={{ pointerEvents: 'none' }}>
+          <Knight armour={hero.armour} emblem={hero.emblem} hat={hero.hat} box={{ x: front[0] - 92, y: front[1] - 62, w: 48, h: 60 }} />
+          {hero.pet && (
+            <text x={front[0] - 40} y={front[1] - 8} fontSize={18} textAnchor="middle" dominantBaseline="central">
+              {hero.pet}
+            </text>
+          )}
+        </g>
+      )}
       {!!st.stops?.length && (
         <StopBadge
           at={[top[0], top[1] - lift - (st.quest || st.due || hero || st.grew ? 50 : 14)]}
@@ -306,11 +325,11 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
   );
 }
 
-function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: string }) {
+function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: boolean }) {
   const at: Pt = [top[0], top[1] - 4];
   if (st.grew) return <Bubble at={at} text={st.grew} color="#f59e0b" bob />;
-  if (st.quest) return <Bubble at={at} text={`${hero ?? '⚔️'} Quest${st.due ? ` · 🔁 ${st.due}` : ''}`} color="#e8584a" bob />;
-  if (hero) return <Bubble at={at} text={`${hero} Home`} color="#f59e0b" />;
+  if (st.quest) return <Bubble at={at} text={`⚔️ Quest${st.due ? ` · 🔁 ${st.due}` : ''}`} color="#e8584a" bob />;
+  if (hero) return <Bubble at={at} text="🏠 Home" color="#f59e0b" />;
   if (st.due) return <Bubble at={at} text={`🔁 ${st.due} crumbling`} color="#8b5cf6" />;
   return null;
 }
@@ -339,8 +358,8 @@ export function TownMap({
   selected: string | null;
   /** Spot to centre on at first. */
   focus?: string;
-  /** Hero emoji, drawn next to the quest building (or home). */
-  hero?: string;
+  /** The hero knight, drawn next to the quest building (or home). */
+  hero?: HeroLook;
   /** Today's path, in order (spot ids). */
   path?: string[];
   chest?: { state: ChestState; progress: string; onOpen: () => void };

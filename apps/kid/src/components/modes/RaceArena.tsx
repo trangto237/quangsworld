@@ -6,7 +6,7 @@ import { QuestionCard } from '../QuestionCard';
 import { stopSpeaking } from '../../lib/speech';
 import { T } from '../../i18n';
 import { GameShell, Pill } from './GameShell';
-import { useLook } from './look';
+import { HeroSprite, useLook } from './look';
 import type { ModeProps } from './types';
 
 const PLACE = ['', '1st', '2nd', '3rd', '4th', '5th'];
@@ -115,7 +115,7 @@ export function RaceArena(p: ModeProps) {
                 <div key={i} className={cx('relative h-14 border-b border-dashed border-white/15 last:border-0 sm:h-16', me && 'bg-amber-400/10')}>
                   <span className="absolute left-2 top-1 text-[10px] font-bold uppercase tracking-wide text-white/40">{me ? (
                       <>
-                        {look.avatar} <T en="You" />
+                        <HeroSprite className="align-middle text-[1.4em]" look={{ ...look, hat: undefined, pet: undefined }} /> <T en="You" />
                       </>
                     ) : (
                       r.name

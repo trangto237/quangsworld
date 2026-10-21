@@ -3,14 +3,15 @@ import type { StudentProfile } from '@atlas/db';
 import { SHOP, canAfford, levelFromXp, type ShopCategory, type ShopItem, type ShopMode } from '@atlas/engine';
 import { MODES } from '@atlas/game';
 import { cx, useQuery, useRepo } from '@atlas/ui';
-import { HeroAvatar, TownScreen } from '../town/Shell';
+import { TownScreen } from '../town/Shell';
+import { DEFAULT_ARMOUR, Knight } from '../components/Knight';
 import { Panel, TownButton } from '../town/ui';
 import { getSlots, toggleEquip } from '../lib/equipped';
 import { EffectBurst } from '../components/modes/look';
 import { T, TB, tr, useLang, type LangMode } from '../i18n';
 
 const TABS: { id: ShopCategory; label: string; note: string }[] = [
-  { id: 'look', label: '🧢 Your look', note: 'A hat and a pet for your hero. You see them on the map, on your hero card and in every game.' },
+  { id: 'look', label: '🛡️ Your knight', note: 'Armour, a hat and a pet for your knight. You see them on the map, on your hero card and in every game.' },
   { id: 'effect', label: '✨ Effects', note: 'What bursts out when you answer right — in every game.' },
   { id: 'game', label: '🎮 Games', note: 'Items for one game: its place, or your gear. You see them only in that game.' },
 ];
@@ -19,6 +20,7 @@ const GAME_ORDER: ShopMode[] = ['defense', 'runner', 'duel', 'knight', 'penalty'
 
 /** Where an item shows up, in plain words. */
 function whereText(lang: LangMode, item: ShopItem): string {
+  if (item.slot === 'armour') return tr(lang, 'Your knight: map, hero card, every game');
   if (item.slot === 'hat') return tr(lang, 'On your hero: map, hero card, every game');
   if (item.slot === 'pet') return tr(lang, 'Next to your hero: map, hero card, every game');
   if (item.category === 'effect') return tr(lang, 'Every game, after a right answer');
@@ -57,7 +59,10 @@ export function Shop({ student }: { student: StudentProfile }) {
     }
   };
 
+  // Armour is always worn: Iron Squire when nothing else is on.
+  const isOn = (item: ShopItem) => !!item.slot && (slots[item.slot] === item.id || (item.slot === 'armour' && !slots.armour && item.id === DEFAULT_ARMOUR));
   const equip = async (item: ShopItem) => {
+    if (item.slot === 'armour' && isOn(item)) return;
     await toggleEquip(repo, student.id, item);
     if (item.category === 'effect' && slots.effect !== item.id) tryEffect(item.emoji);
   };
@@ -66,18 +71,20 @@ export function Shop({ student }: { student: StudentProfile }) {
   const groups: { title: string; items: ShopItem[] }[] =
     tab === 'look'
       ? [
+          { title: '🛡️ Armour', items: items.filter((i) => i.slot === 'armour') },
           { title: '🎩 Hats', items: items.filter((i) => i.slot === 'hat') },
           { title: '🐾 Pets', items: items.filter((i) => i.slot === 'pet') },
         ]
       : [{ title: '', items }];
   const note = TABS.find((t) => t.id === tab)!.note;
-  const wearing = ['hat', 'pet', 'effect'].map((s) => SHOP.find((i) => i.id === slots[s])).filter(Boolean) as ShopItem[];
+  const wearing = ['armour', 'hat', 'pet', 'effect'].map((s) => SHOP.find((i) => i.id === (slots[s] ?? (s === 'armour' ? DEFAULT_ARMOUR : '')))).filter(Boolean) as ShopItem[];
 
   return (
     <TownScreen student={student} tab="shop">
       <Panel className="flex items-center gap-4">
-        <div className="px-3 pt-4">
-          <HeroAvatar student={student} size="lg" />
+        <div className="relative shrink-0">
+          <Knight armour={slots.armour} emblem={student.avatar} hat={SHOP.find((i) => i.id === slots.hat)?.emoji} className="h-32 w-26" />
+          {slots.pet && <span className="absolute -right-3 bottom-0 text-3xl">{SHOP.find((i) => i.id === slots.pet)?.emoji}</span>}
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-3xl font-bold leading-tight">
@@ -87,7 +94,7 @@ export function Shop({ student }: { student: StudentProfile }) {
             <T en="Spend the coins and gems you earn by learning. Tap Equip to wear an item; tap again to take it off." />
           </p>
           <p className="mt-1 text-sm font-semibold">
-            <T en="Wearing:" /> {wearing.length ? wearing.map((i) => i.emoji).join(' ') : <T en="nothing yet" />}
+            <T en="Wearing:" /> {wearing.map((i) => tr(lang, i.name)).join(' · ')}
           </p>
         </div>
       </Panel>
@@ -141,11 +148,13 @@ export function Shop({ student }: { student: StudentProfile }) {
             {g.items.map((item) => {
               const have = owned.includes(item.id);
               const locked = (item.minLevel ?? 1) > level;
-              const on = !!item.slot && slots[item.slot] === item.id;
+              const on = isOn(item);
               return (
                 <div key={item.id} className={cx('town-panel flex flex-col p-4', on && 'bg-tint-amber')}>
                   <div className="flex items-center gap-3">
-                    <span className="grid size-16 shrink-0 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-4xl">{item.emoji}</span>
+                    <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-ink bg-paper-2 text-4xl">
+                      {item.slot === 'armour' ? <Knight armour={item.id} emblem={student.avatar} className="h-15 w-13" /> : item.emoji}
+                    </span>
                     <div className="min-w-0">
                       <div className="font-display text-lg font-bold leading-tight">
                         <T en={item.name} />
@@ -173,7 +182,7 @@ export function Shop({ student }: { student: StudentProfile }) {
                           <TB en="Try" />
                         </TownButton>
                       )}
-                      {have && item.slot ? (
+                      {have && item.slot && !(item.slot === 'armour' && on) ? (
                         <TownButton tone={on ? 'paper' : 'blue'} size="sm" onClick={() => void equip(item)}>
                           <TB en={on ? 'Take off' : 'Equip'} />
                         </TownButton>

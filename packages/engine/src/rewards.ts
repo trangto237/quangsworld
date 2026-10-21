@@ -2,7 +2,7 @@ import type { Mission, Reward, Wallet } from '@atlas/shared';
 
 /**
  * Shop catalogue. Everything is cosmetic or earned by learning — no pay-to-win.
- * - look: a hat and a pet on his hero — in every game, on the map and on his hero card.
+ * - look: his knight's armour, a hat and a pet — in every game, on the map and on his hero card.
  * - effect: what bursts out when he answers right — in every game.
  * - game: items for one game (its scene, or its gear: car, ball, chess set, rocket…).
  * Each equippable item fills one `slot`; towers are simply owned (all owned towers can be built).
@@ -29,7 +29,7 @@ export interface ShopItem {
   minLevel?: number;
 }
 
-const look = (id: string, slot: 'hat' | 'pet', emoji: string, name: string, coins: number, gems: number, description: string): ShopItem => ({ id, slot, emoji, name, coins, gems, description, category: 'look' });
+const look = (id: string, slot: 'armour' | 'hat' | 'pet', emoji: string, name: string, coins: number, gems: number, description: string): ShopItem => ({ id, slot, emoji, name, coins, gems, description, category: 'look' });
 const fx = (id: string, emoji: string, name: string, coins: number, gems: number, description: string): ShopItem => ({ id, slot: 'effect', emoji, name, coins, gems, description, category: 'effect' });
 const game = (mode: ShopMode, id: string, slot: string, emoji: string, name: string, coins: number, gems: number, description: string, extra: Partial<ShopItem> = {}): ShopItem => ({
   id,
@@ -46,6 +46,14 @@ const game = (mode: ShopMode, id: string, slot: string, emoji: string, name: str
 
 export const SHOP: ShopItem[] = [
   // ── Your look: everywhere ──
+  { ...look('armour.iron', 'armour', '🛡️', 'Iron Squire', 0, 0, 'Every knight starts here. Steel helmet, red cape.'), starter: true },
+  look('armour.bronze', 'armour', '🛡️', 'Bronze Guard', 150, 0, 'Warm bronze armour and a forest-green cape.'),
+  look('armour.silver', 'armour', '🛡️', 'Silver Paladin', 300, 1, 'Shining silver with a royal-blue cape.'),
+  look('armour.jade', 'armour', '🛡️', 'Jade Warrior', 350, 2, 'Green jade and gold, like the heroes of old Vietnam.'),
+  look('armour.frost', 'armour', '🛡️', 'Frost Knight', 400, 2, 'Ice-blue armour with a crystal crown.'),
+  look('armour.gold', 'armour', '🛡️', 'Golden Champion', 500, 3, 'Solid gold, spiked helmet. For true champions.'),
+  look('armour.dragon', 'armour', '🛡️', 'Dragon Knight', 600, 4, 'Red dragon-scale armour with horns.'),
+  look('armour.shadow', 'armour', '🛡️', 'Shadow Knight', 600, 4, 'Dark armour, closed visor, glowing eyes.'),
   look('avatar.cap', 'hat', '🧢', 'Cap', 80, 0, 'A cool everyday cap.'),
   look('avatar.wizard', 'hat', '🎩', 'Magician Hat', 120, 0, 'Knowledge is magic.'),
   look('avatar.robot', 'hat', '🤖', 'Robot Visor', 120, 0, 'Beep boop, correct answer.'),
