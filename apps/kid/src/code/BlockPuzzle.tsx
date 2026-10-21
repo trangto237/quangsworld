@@ -110,7 +110,7 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
         return (
           <div key={i}>
             <div className="flex items-center gap-1.5 rounded-lg px-2 py-1 font-display text-sm font-bold text-white shadow" style={{ background: LABEL[b.t].color }}>
-              <span>{LABEL[b.t].emoji}</span>
+              {LABEL[b.t].emoji && <span>{LABEL[b.t].emoji}</span>}
               <span className="flex-1">{LABEL[b.t].en}</span>
               {b.t === 'repeat' && (
                 <span className="flex items-center gap-1">
@@ -156,7 +156,7 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
               className="town-btn rounded-lg px-2.5 py-1.5 font-display text-sm font-bold text-white disabled:opacity-40"
               style={{ background: LABEL[t].color }}
             >
-              + {LABEL[t].emoji} {LABEL[t].en}
+              + {LABEL[t].emoji ? `${LABEL[t].emoji} ` : ''}{LABEL[t].en}
             </button>
           ))}
         </div>

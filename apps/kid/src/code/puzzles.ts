@@ -40,7 +40,7 @@ export const PUZZLES: Puzzle[] = [
   {
     id: 'b1',
     title: { en: '1. First steps', vi: '1. Những bước đầu' },
-    idea: { en: 'A program is steps in order. Add "move forward" blocks until the snake reaches the apple. Forward is the way the little arrow on the snake points.', vi: 'Chương trình là các bước theo thứ tự. Thêm khối "move forward" (đi tới) đến khi rắn tới quả táo. "Tới" là hướng mũi tên nhỏ trên con rắn chỉ.' },
+    idea: { en: 'A program is steps in order. Add "move" blocks until the snake reaches the apple. The snake moves the way the little arrow on it points.', vi: 'Chương trình là các bước theo thứ tự. Thêm khối "move" đến khi rắn tới quả táo. Rắn đi theo hướng mũi tên nhỏ trên nó.' },
     cols: 7,
     rows: 5,
     start: { x: 1, y: 2, dir: 0 },
@@ -144,8 +144,8 @@ export const PUZZLES: Puzzle[] = [
 ];
 
 export const LABEL: Record<BlockKind, { en: string; emoji: string; color: string }> = {
-  // "Forward" is whichever way the snake faces (the arrow on the snake), so no arrow here.
-  move: { en: 'move forward', emoji: '👣', color: '#4b8fe2' },
+  // Moves the way the snake faces (the arrow on the snake), so no arrow of its own.
+  move: { en: 'move', emoji: '', color: '#4b8fe2' },
   left: { en: 'turn left', emoji: '↶', color: '#8b5cf6' },
   right: { en: 'turn right', emoji: '↷', color: '#8b5cf6' },
   repeat: { en: 'repeat', emoji: '🔁', color: '#f59e0b' },
