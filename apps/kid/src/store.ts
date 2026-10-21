@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Mission } from '@atlas/shared';
 import type { Reward } from '@atlas/shared';
+import { pathOf, screenOf } from './lib/route';
 
 export type Screen =
   | { name: 'profiles' }
@@ -52,16 +53,35 @@ const saved = (() => {
   }
 })();
 
-export const useKid = create<KidState>((set) => ({
+/** Keeps the address bar in step with the screen. Leaving a battle replaces it, so Back never re-enters one. */
+function syncUrl(from: Screen, to: Screen) {
+  if (typeof history === 'undefined') return;
+  const path = pathOf(to);
+  try {
+    if (path === location.pathname) history.replaceState(null, '', path);
+    else if (from.name === 'battle' || from.name === 'placement') history.replaceState(null, '', path);
+    else history.pushState(null, '', path);
+  } catch {
+    /* sandboxed */
+  }
+}
+
+const startScreen = (): Screen => (saved ? (typeof location !== 'undefined' ? screenOf(location.pathname) : { name: 'hub' }) : { name: 'profiles' });
+
+export const useKid = create<KidState>((set, get) => ({
   studentId: saved,
-  screen: saved ? { name: 'hub' } : { name: 'profiles' },
-  go: (screen) => set({ screen }),
+  screen: startScreen(),
+  go: (screen) => {
+    syncUrl(get().screen, screen);
+    set({ screen });
+  },
   login: (id) => {
     try {
       sessionStorage.setItem(SESSION_KEY, id);
     } catch {
       /* ignore */
     }
+    syncUrl({ name: 'profiles' }, { name: 'hub' });
     set({ studentId: id, screen: { name: 'hub' } });
   },
   logout: () => {
@@ -70,6 +90,14 @@ export const useKid = create<KidState>((set) => ({
     } catch {
       /* ignore */
     }
+    syncUrl({ name: 'profiles' }, { name: 'profiles' });
     set({ studentId: null, screen: { name: 'profiles' } });
   },
 }));
+
+// Browser Back / Forward: show the screen for the new address.
+if (typeof window !== 'undefined')
+  window.addEventListener('popstate', () => {
+    if (!useKid.getState().studentId) return;
+    useKid.setState({ screen: screenOf(location.pathname) });
+  });
