@@ -108,7 +108,8 @@ const NAV: { id: Exclude<NavTab, null | 'hero'>; icon: string; en: string; color
 ];
 
 /** Bottom navigation, with a big round Play button for the next quest in the middle. */
-export function BottomNav({ student, active }: { student: StudentProfile; active: NavTab }) {
+/** `play={false}` on the map, where the quest card has its own Play button. */
+export function BottomNav({ student, active, play = true }: { student: StudentProfile; active: NavTab; play?: boolean }) {
   const go = useKid((s) => s.go);
   const lang = useLang();
   const plan = useQuery((r) => todayPlan(r, student.id), [student.id]);
@@ -132,6 +133,7 @@ export function BottomNav({ student, active }: { student: StudentProfile; active
     <nav className="fixed inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <div className="town-panel mx-auto flex max-w-xl items-end gap-1 px-2 pb-1.5 pt-2">
         {NAV.slice(0, 2).map(item)}
+        {play && (
         <button
           onClick={() => (next ? go({ name: 'battle', mission: next, fromPlan: true }) : go({ name: 'quests' }))}
           className="town-btn -mt-7 grid size-16 shrink-0 place-items-center rounded-full bg-[#e8584a] font-display text-white"
@@ -144,6 +146,7 @@ export function BottomNav({ student, active }: { student: StudentProfile; active
             </span>
           </span>
         </button>
+        )}
         {NAV.slice(2).map(item)}
         <button onClick={() => go({ name: 'shop' })} className="flex min-w-0 flex-1 flex-col items-center gap-0.5" aria-current={active === 'shop' ? 'page' : undefined}>
           <span

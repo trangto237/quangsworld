@@ -201,22 +201,29 @@ export function Town({ student }: { student: StudentProfile }) {
             </div>
           </div>
         ) : (
-          // Today's quest, as a slim strip: tap it for the quest list. The big Play button below starts it.
-          <button onClick={() => go({ name: 'quests' })} className="town-panel mx-auto flex w-full max-w-xl items-center gap-3 px-3 py-1.5 text-left">
-            <Ribbon>
-              <T en="Today's quest" />
-            </Ribbon>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-sm font-bold leading-tight">{next ? next.title : <T en="All done for today! 🏆" />}</span>
-              <Meter value={doneCount} max={plan.missions.length} className="mt-0.5 h-2" />
-            </span>
-            <span className="shrink-0 text-xs font-bold text-ink-soft">
-              {doneCount}/{plan.missions.length} ›
-            </span>
-          </button>
+          // Today's quest: tap the card for the list, or Play to start it. (The bottom bar has no Play here.)
+          <div className="town-panel mx-auto flex w-full max-w-xl items-center gap-3 px-3 py-1.5">
+            <button onClick={() => go({ name: 'quests' })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <Ribbon>
+                <T en="Today's quest" />
+              </Ribbon>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-display text-sm font-bold leading-tight">{next ? next.title : <T en="All done for today! 🏆" />}</span>
+                <Meter value={doneCount} max={plan.missions.length} className="mt-0.5 h-2" />
+              </span>
+              <span className="shrink-0 text-xs font-bold text-ink-soft">
+                {doneCount}/{plan.missions.length}
+              </span>
+            </button>
+            {next && (
+              <TownButton tone="green" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
+                <TB en="▶ Play" />
+              </TownButton>
+            )}
+          </div>
         )}
       </div>
-      <BottomNav student={student} active="map" />
+      <BottomNav student={student} active="map" play={false} />
     </div>
   );
 }
