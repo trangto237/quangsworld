@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Box, Cylinder, Door, Emoji, Flag, GableRoof, Ground, INK, P, Poly, PyramidRoof, Tree, Windows, shade, type Pt } from './iso';
+import { Ball, Box, Cylinder, Door, Emoji, Flag, GableRoof, Ground, INK, P, Poly, PyramidRoof, Tree, Windows, shade, type Pt } from './iso';
 
 /**
  * One drawing per world, each on a 2×2-tile lot (the Exam Hall on 4×4). `lv` (0–4) is how far the
@@ -320,24 +320,101 @@ const examHall: Kind = (x, y, lv, color) => {
   };
 };
 
+/** Coach Owl's treehouse: a big old tree with a cabin in its branches and the owl at the window. */
 const owlTree: Kind = (x, y, lv) => {
   const [cx, cy] = P(x + 1, y + 1);
-  const r = 34 + lv * 2;
+  const leaf = '#4f9a3c';
+  const grow = 1 + lv * 0.05;
+  // Crown: a cluster of lit spheres, back ones darker.
+  const back: [number, number, number][] = [
+    [-30, -96, 24],
+    [28, -100, 26],
+    [0, -118, 30],
+    [-14, -128, 22],
+    [18, -126, 20],
+  ];
+  const front: [number, number, number][] = [
+    [-54, -66, 18],
+    [52, -70, 17],
+    [-44, -50, 11],
+    [44, -52, 11],
+  ];
+  const plank = '#b98552';
+  const z = 62;
   return {
     el: (
       <g>
-        <rect x={cx - 7} y={cy - 40} width={14} height={40} fill="#8a5a33" stroke={INK} strokeWidth={1.6} />
-        <circle cx={cx - 22} cy={cy - 58} r={r * 0.7} fill="#4f9a3c" stroke={INK} strokeWidth={1.8} />
-        <circle cx={cx + 22} cy={cy - 56} r={r * 0.7} fill="#4f9a3c" stroke={INK} strokeWidth={1.8} />
-        <circle cx={cx} cy={cy - 78} r={r} fill="#5aa845" stroke={INK} strokeWidth={1.8} />
-        <rect x={cx - 16} y={cy - 74} width={32} height={20} rx={3} fill="#c98b4f" stroke={INK} strokeWidth={1.6} />
-        <polygon points={`${cx - 20},${cy - 74} ${cx},${cy - 88} ${cx + 20},${cy - 74}`} fill="#a4643a" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
-        <Emoji at={[cx, cy - 64]} size={16}>
-          🦉
+        <ellipse cx={cx} cy={cy} rx={52} ry={24} fill="url(#sh-contact)" />
+        {/* Roots and trunk */}
+        <path d={`M${cx - 24},${cy + 2} q10,-6 12,-20 L${cx - 9},${cy - 62} L${cx + 9},${cy - 62} L${cx + 12},${cy - 18} q2,14 14,20 q-12,4 -20,-2 q-6,6 -12,0 q-8,6 -18,0 z`} fill="#7a4e2c" />
+        <path d={`M${cx - 24},${cy + 2} q10,-6 12,-20 L${cx - 9},${cy - 62} L${cx + 9},${cy - 62} L${cx + 12},${cy - 18} q2,14 14,20 q-12,4 -20,-2 q-6,6 -12,0 q-8,6 -18,0 z`} fill="url(#sh-cyl)" stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+        <path d={`M${cx - 3},${cy - 10} q-2,-14 1,-28 M${cx + 5},${cy - 22} q1,-10 -1,-18`} fill="none" stroke="#5a3519" strokeWidth={1.3} opacity={0.6} strokeLinecap="round" />
+        {/* Branches */}
+        <path d={`M${cx - 6},${cy - 58} q-14,-10 -30,-30 M${cx + 6},${cy - 58} q14,-10 28,-32`} fill="none" stroke="#6e4426" strokeWidth={6} strokeLinecap="round" />
+        <g transform={`translate(${cx} ${cy}) scale(${grow}) translate(${-cx} ${-cy})`}>
+          {back.map(([dx, dy, r], i) => (
+            <Ball key={`b${i}`} cx={cx + dx} cy={cy + dy} r={r} color={shade(leaf, -0.12 + (i % 2) * 0.05)} />
+          ))}
+        </g>
+        {/* Platform and cabin in the branches */}
+        <Box x={x + 0.35} y={y + 0.35} w={1.3} d={1.3} h={4} z={z - 4} color={plank} />
+        <Box x={x + 0.55} y={y + 0.55} w={0.9} d={0.9} h={24} z={z} color="#d39a5e" />
+        <GableRoof x={x + 0.55} y={y + 0.55} w={0.9} d={0.9} z={z + 24} h={16} color="#b5523b" />
+        {/* Round window with the owl looking out */}
+        {(() => {
+          const [wx, wy] = P(x + 0.92, y + 1.45, z + 12);
+          return (
+            <g>
+              <ellipse cx={wx} cy={wy} rx={10} ry={9.5} fill="#3a2414" stroke={INK} strokeWidth={1.4} />
+              <ellipse cx={wx} cy={wy} rx={10} ry={9.5} fill="none" stroke="#f3d29b" strokeWidth={1.8} />
+              <Emoji at={[wx, wy + 1]} size={15}>
+                🦉
+              </Emoji>
+            </g>
+          );
+        })()}
+        {/* Door on the right wall */}
+        {(() => {
+          const a = P(x + 1.45, y + 0.8, z);
+          const b = P(x + 1.45, y + 1.1, z);
+          return <polygon points={`${a[0]},${a[1]} ${b[0]},${b[1]} ${b[0]},${b[1] - 15} ${a[0]},${a[1] - 15}`} fill="#7a4a26" stroke={INK} strokeWidth={1.2} />;
+        })()}
+        {/* Rope ladder down to the ground */}
+        {(() => {
+          const top = P(x + 1.62, y + 1.2, z - 4);
+          const bottom = P(x + 1.75, y + 1.3, 0);
+          const rungs = 6;
+          return (
+            <g stroke="#8a6a3a" strokeWidth={1.6} strokeLinecap="round">
+              <line x1={top[0] - 5} y1={top[1]} x2={bottom[0] - 5} y2={bottom[1]} />
+              <line x1={top[0] + 5} y1={top[1]} x2={bottom[0] + 5} y2={bottom[1]} />
+              {Array.from({ length: rungs }, (_, i) => {
+                const t = (i + 0.5) / rungs;
+                const px = top[0] + (bottom[0] - top[0]) * t;
+                const py = top[1] + (bottom[1] - top[1]) * t;
+                return <line key={i} x1={px - 5} y1={py} x2={px + 5} y2={py} />;
+              })}
+            </g>
+          );
+        })()}
+        {/* Leaves in front, hugging the cabin */}
+        <g transform={`translate(${cx} ${cy}) scale(${grow}) translate(${-cx} ${-cy})`}>
+          {front.map(([dx, dy, r], i) => (
+            <Ball key={`f${i}`} cx={cx + dx} cy={cy + dy} r={r} color={shade(leaf, 0.04)} />
+          ))}
+        </g>
+        {/* A lantern on the platform */}
+        <Emoji at={P(x + 1.6, y + 0.45, z + 6)} size={12}>
+          🏮
         </Emoji>
+        {lv >= 3 && (
+          <Emoji at={[cx + 34, cy - 132]} size={14}>
+            ✨
+          </Emoji>
+        )}
       </g>
     ),
-    top: [x + 1, y + 1, 110],
+    top: [x + 1, y + 1, 140],
   };
 };
 
