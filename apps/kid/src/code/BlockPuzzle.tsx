@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cx } from '@atlas/ui';
 import { T, TB, useLang } from '../i18n';
 import { Panel, TownButton } from '../town/ui';
-import { LABEL, countBlocks, newBlock, runProgram, toCode, type Block, type BlockKind, type Puzzle, type Step } from './puzzles';
+import { LABEL, countBlocks, explainCode, newBlock, runProgram, toCode, type Block, type BlockKind, type Puzzle, type Step } from './puzzles';
 
 type Path = number[];
 
@@ -235,6 +235,26 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
             ))}
           </div>
           <pre className="max-h-48 overflow-auto rounded-lg bg-[#0f172a] p-3 font-mono text-xs leading-relaxed text-[#e2e8f0]">{toCode(prog, view) || (view === 'js' ? '// …' : '# …')}</pre>
+          {prog.length > 0 && (
+            <details className="mt-2" open>
+              <summary className="cursor-pointer text-sm font-bold">
+                🔍 <T en="Why the code looks like this" />
+              </summary>
+              <ul className="mt-2 space-y-2">
+                {explainCode(prog, view).map((n) => (
+                  <li key={n.code} className="rounded-lg bg-paper-2 p-2 text-sm">
+                    <code className="rounded bg-[#0f172a] px-1.5 py-0.5 font-mono text-xs text-[#e2e8f0]">{n.code}</code>
+                    <p className="mt-1">{n.en}</p>
+                    {lang !== 'en' && (
+                      <p className="mt-0.5 text-[#9b1c47] dark:text-[#ffb3c6]" lang="vi">
+                        🇻🇳 {n.vi}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </Panel>
       </div>
     </div>

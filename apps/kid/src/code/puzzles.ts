@@ -245,3 +245,97 @@ export function toCode(prog: Block[], lang: 'js' | 'py'): string {
   walk(prog, 0);
   return out.join('\n');
 }
+
+export interface CodeNote {
+  /** The piece of code being explained. */
+  code: string;
+  en: string;
+  vi: string;
+}
+
+/**
+ * Why the real code looks the way it does: one note for each kind of thing his program uses, in the order
+ * they first appear, for the language he's looking at.
+ */
+export function explainCode(prog: Block[], lang: 'js' | 'py'): CodeNote[] {
+  const seen = new Set<string>();
+  const out: CodeNote[] = [];
+  const add = (key: string, n: CodeNote) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(n);
+  };
+  const js = lang === 'js';
+  const walk = (bs: Block[], depth: number) => {
+    for (const b of bs) {
+      if (b.t === 'move' || b.t === 'left' || b.t === 'right') {
+        const name = b.t === 'move' ? (js ? 'moveForward' : 'move_forward') : b.t === 'left' ? (js ? 'turnLeft' : 'turn_left') : js ? 'turnRight' : 'turn_right';
+        add('call', {
+          code: js ? `${name}();` : `${name}()`,
+          en: js
+            ? 'A command (a "function call"). The name says what to do; the brackets () mean "do it now". In JavaScript each command ends with a semicolon ;'
+            : 'A command (a "function call"). The name says what to do; the brackets () mean "do it now". Python needs no ; at the end of a line.',
+          vi: js
+            ? 'Một lệnh (gọi hàm). Tên cho biết làm gì; cặp ngoặc () nghĩa là "làm ngay". Trong JavaScript mỗi lệnh kết thúc bằng dấu chấm phẩy ;'
+            : 'Một lệnh (gọi hàm). Tên cho biết làm gì; cặp ngoặc () nghĩa là "làm ngay". Python không cần dấu ; ở cuối dòng.',
+        });
+        add('names', {
+          code: name,
+          en: js
+            ? 'Names can\'t have spaces, so JavaScript joins the words and starts each new word with a capital letter: moveForward, turnLeft ("camelCase").'
+            : 'Names can\'t have spaces, so Python joins the words with an underscore _: move_forward, turn_left ("snake_case").',
+          vi: js
+            ? 'Tên không được có dấu cách, nên JavaScript viết liền các từ và viết hoa chữ đầu mỗi từ mới: moveForward, turnLeft (kiểu "camelCase").'
+            : 'Tên không được có dấu cách, nên Python nối các từ bằng dấu gạch dưới _: move_forward, turn_left (kiểu "snake_case").',
+        });
+        continue;
+      }
+      if (b.t === 'repeat')
+        add('repeat', {
+          code: js ? `for (let i = 0; i < ${b.n}; i++) {` : `for i in range(${b.n}):`,
+          en: js
+            ? `A loop that counts. i starts at 0; it keeps going while i < ${b.n}; i++ adds 1 each time. So it runs ${b.n} times: i = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
+            : `A loop that counts. range(${b.n}) gives the numbers 0 to ${b.n - 1}, so the lines inside run ${b.n} times.`,
+          vi: js
+            ? `Vòng lặp đếm. i bắt đầu từ 0; lặp tiếp khi i < ${b.n}; i++ cộng thêm 1 mỗi lần. Vậy nó chạy ${b.n} lần: i = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
+            : `Vòng lặp đếm. range(${b.n}) cho các số từ 0 đến ${b.n - 1}, nên các dòng bên trong chạy ${b.n} lần.`,
+        });
+      if (b.t === 'until')
+        add('until', {
+          code: js ? 'while (!atApple()) {' : 'while not at_apple():',
+          en: js
+            ? 'while keeps repeating as long as the question in ( ) is true. ! means NOT, so: keep going while the snake is NOT at the apple.'
+            : 'while keeps repeating as long as the question is true. not flips it, so: keep going while the snake is NOT at the apple.',
+          vi: js
+            ? 'while lặp lại khi câu hỏi trong ( ) còn đúng. ! nghĩa là KHÔNG, vậy: tiếp tục khi rắn CHƯA tới quả táo.'
+            : 'while lặp lại khi câu hỏi còn đúng. not đảo ngược nó, vậy: tiếp tục khi rắn CHƯA tới quả táo.',
+        });
+      if (b.t === 'ifWall')
+        add('if', {
+          code: js ? 'if (wallAhead()) {' : 'if wall_ahead():',
+          en: 'if asks a yes/no question. The lines inside only run when the answer is yes — here, when there is a wall in front of the snake.',
+          vi: 'if hỏi một câu có/không. Các dòng bên trong chỉ chạy khi câu trả lời là có — ở đây là khi có tường phía trước con rắn.',
+        });
+      if ('body' in b) {
+        add('block', {
+          code: js ? '{ … }' : ':  + indent',
+          en: js
+            ? 'The curly brackets { } hold the commands that belong inside the loop or the if. The closing } shows where it ends.'
+            : 'The colon : starts the part inside, and the lines inside are pushed to the right (indented). That indent is how Python knows they belong to the loop or the if.',
+          vi: js
+            ? 'Cặp ngoặc nhọn { } chứa các lệnh nằm bên trong vòng lặp hoặc if. Dấu } đóng cho biết chỗ kết thúc.'
+            : 'Dấu hai chấm : mở phần bên trong, và các dòng bên trong được lùi vào (thụt lề). Nhờ thụt lề mà Python biết chúng thuộc vòng lặp hoặc if.',
+        });
+        if (!b.body.length && !js)
+          add('pass', {
+            code: 'pass',
+            en: 'Python can\'t have an empty inside, so pass means "do nothing here" until you add blocks.',
+            vi: 'Python không cho phần bên trong để trống, nên pass nghĩa là "chưa làm gì" cho tới khi em thêm khối.',
+          });
+        walk(b.body, depth + 1);
+      }
+    }
+  };
+  walk(prog, 0);
+  return out;
+}

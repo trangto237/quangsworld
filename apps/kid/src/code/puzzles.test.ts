@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PUZZLES, countBlocks, runProgram, toCode, type Block } from './puzzles';
+import { PUZZLES, countBlocks, explainCode, runProgram, toCode, type Block } from './puzzles';
 
 const m: Block = { t: 'move' };
 const L: Block = { t: 'left' };
@@ -39,5 +39,20 @@ describe('blocks puzzles', () => {
     const prog = [rep(3, m, R)];
     expect(toCode(prog, 'js')).toBe('for (let i = 0; i < 3; i++) {\n  moveForward();\n  turnRight();\n}');
     expect(toCode(prog, 'py')).toBe('for i in range(3):\n    move_forward()\n    turn_right()');
+  });
+});
+
+
+describe('why the real code looks like this', () => {
+  it('explains each kind of thing in the program once, in order, for each language', () => {
+    const prog = [{ t: 'move' as const }, { t: 'repeat' as const, n: 3, body: [{ t: 'move' as const }, { t: 'left' as const }] }];
+    const js = explainCode(prog, 'js');
+    expect(js.map((n) => n.code)).toEqual(['moveForward();', 'moveForward', 'for (let i = 0; i < 3; i++) {', '{ … }']);
+    expect(js[2].en).toContain('3 times');
+    const py = explainCode(prog, 'py');
+    expect(py[2].code).toBe('for i in range(3):');
+    expect(py[3].en).toContain('indented');
+    expect(explainCode([{ t: 'until', body: [] }], 'py').map((n) => n.code)).toContain('pass');
+    expect(explainCode([], 'js')).toEqual([]);
   });
 });

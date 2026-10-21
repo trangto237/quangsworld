@@ -50,6 +50,7 @@ const VI: Record<string, string> = {
   'Boss Battle': 'Đánh trùm',
   'Word Garden': 'Vườn ươm Từ vựng',
   'Island game': 'Trò chơi của đảo',
+  'Why the code looks like this': 'Vì sao code viết như vậy',
   Bugs: 'Sửa lỗi',
   '👪 Parent': '👪 Phụ huynh',
   '{n} to review': '{n} cần ôn',
