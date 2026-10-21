@@ -800,6 +800,94 @@ export function whyNot(q: Question, picked: string): Bi | null {
   return null;
 }
 
+/**
+ * About his mistake, not the topic in general: why the option he picked is wrong and what gives the
+ * right one away. Null when there's nothing specific to say (the question's own explanation is used).
+ */
+export function mistakeNote(q: Question, picked: string): Bi[] | null {
+  const right = q.options[q.answer];
+  if (!picked || picked === right) return null;
+  if (q.conceptId === 'en.pron.stress') {
+    const all = q.options.map((o) => ({ o, w: stressWord(o) }));
+    const mine = all.find((x) => x.o === picked)?.w;
+    const odd = all.find((x) => x.o === right)?.w;
+    if (!mine || !odd) return null;
+    const a = analyseStress(mine);
+    const b = analyseStress(odd);
+    const pos = mine.stress;
+    const twins = all.filter((x) => x.o !== picked && x.o !== right && x.w?.stress === pos).map((x) => x.w!.display);
+    const out: Bi[] = [];
+    out.push(
+      twins.length
+        ? bi(
+            `You picked ${mine.display}. Its stress is on the ${ORD_EN[pos]} syllable — the same as ${twins.join(' and ')}. So it isn't the odd one out.`,
+            `Em chọn ${mine.display}. Trọng âm của nó ở âm tiết ${ORD_VI[pos]} — giống ${twins.join(' và ')}. Nên nó không phải từ khác biệt.`,
+          )
+        : bi(`You picked ${mine.display}: its stress is on the ${ORD_EN[pos]} syllable.`, `Em chọn ${mine.display}: trọng âm ở âm tiết ${ORD_VI[pos]}.`),
+    );
+    const why = stressNote(a);
+    out.push(bi(`Why it's stressed there: ${why.en.replace(/^[^—]*— /, '')}.`, `Vì sao nhấn ở đó: ${why.vi.replace(/^[^—]*— /, '')}.`));
+    const whyOdd = stressNote(b);
+    out.push(
+      bi(
+        `The odd one out is ${odd.display} — stress on the ${ORD_EN[odd.stress]} syllable. ${whyOdd.en.replace(/^[^—]*— /, '')}.`,
+        `Từ khác biệt là ${odd.display} — trọng âm ở âm tiết ${ORD_VI[odd.stress]}. ${whyOdd.vi.replace(/^[^—]*— /, '')}.`,
+      ),
+    );
+    out.push(
+      bi(
+        'Next time: say each word and write its stress number (1, 2, 3) next to it first. The word with the different number is the answer.',
+        'Lần sau: đọc từng từ và ghi số âm tiết được nhấn (1, 2, 3) bên cạnh trước. Từ có số khác là đáp án.',
+      ),
+    );
+    return out;
+  }
+  if (q.conceptId === 'en.pron.endings' || q.conceptId === 'en.pron.sounds') {
+    const plain = q.options.map((o) => unmark(o));
+    const pi = q.options.indexOf(picked);
+    const ri = q.answer;
+    const next = bi(
+      "Next time: say each word aloud and listen only to the underlined part — don't trust the spelling.",
+      'Lần sau: đọc to từng từ và chỉ nghe phần gạch chân — đừng tin vào cách viết.',
+    );
+    const isEd = plain.every((w) => soundOf(ED, w));
+    const isS = !isEd && plain.every((w) => soundOf(S, w));
+    if (isEd || isS) {
+      const sounds = plain.map((w) => (isEd ? soundOf(ED, w)! : soundOf(S, w)!));
+      const why = (i: number) => (isEd ? edWhy(plain[i], sounds[i]) : sWhy(plain[i], sounds[i]));
+      const twins = plain.filter((_, i) => i !== pi && i !== ri && sounds[i] === sounds[pi]);
+      return [
+        bi(
+          `You picked "${plain[pi]}": its ending sounds ${sounds[pi]}${twins.length ? `, the same as ${twins.map((t) => `"${t}"`).join(' and ')}` : ''}.`,
+          `Em chọn "${plain[pi]}": đuôi của nó đọc là ${sounds[pi]}${twins.length ? `, giống ${twins.map((t) => `"${t}"`).join(' và ')}` : ''}.`,
+        ),
+        why(pi),
+        bi(`The odd one out is "${plain[ri]}": ${sounds[ri]}.`, `Từ khác biệt là "${plain[ri]}": ${sounds[ri]}.`),
+        why(ri),
+        next,
+      ];
+    }
+    const found = q.options.map((o) => findSoundGroup(o));
+    if (found[pi] && found[ri]) {
+      const letters = found[pi]!.g.letters;
+      const twins = plain.filter((_, i) => i !== pi && i !== ri && found[i]?.sound === found[pi]!.sound);
+      const tip = SOUND_TIPS[letters];
+      return [
+        bi(
+          `You picked "${plain[pi]}": its "${letters}" sounds ${soundName(found[pi]!.sound)}${twins.length ? `, the same as ${twins.map((t) => `"${t}"`).join(' and ')}` : ''}.`,
+          `Em chọn "${plain[pi]}": "${letters}" trong từ này đọc là ${soundName(found[pi]!.sound)}${twins.length ? `, giống ${twins.map((t) => `"${t}"`).join(' và ')}` : ''}.`,
+        ),
+        bi(`The odd one out is "${plain[ri]}": its "${letters}" sounds ${soundName(found[ri]!.sound)}.`, `Từ khác biệt là "${plain[ri]}": "${letters}" đọc là ${soundName(found[ri]!.sound)}.`),
+        ...(tip ? [tip] : []),
+        next,
+      ];
+    }
+    return null;
+  }
+  const w = whyNot(q, picked);
+  return w ? [w] : null;
+}
+
 /** A step-by-step plan for any question. */
 export function coach(q: Question, r: () => number = Math.random): CoachPlan {
   switch (q.conceptId) {

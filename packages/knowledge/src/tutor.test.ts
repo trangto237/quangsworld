@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ED, S, STRESS, analyseStress, coach, endingDrill, lastSound, pickQuestion, soundDrill, stressDrill, whyNot, wordsForRule, STRESS_RULES, exceptionNote } from './index';
+import { ED, S, STRESS, analyseStress, coach, endingDrill, lastSound, pickQuestion, soundDrill, stressDrill, whyNot, mistakeNote, wordsForRule, STRESS_RULES, exceptionNote } from './index';
 import { allConcepts } from './graph';
 
 const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -59,5 +59,35 @@ describe('Coach', () => {
     const q = { id: 't', conceptId: 'en.grammar.tenses', prompt: 'When we arrived, they ___ the film.', options: ['had already seen', 'have already seen'], answer: 0, difficulty: 4, type: 'mcq' } as never;
     expect(whyNot(q, 'have already seen')?.en).toContain('present perfect');
     expect(coach(q).steps[0].chips?.length).toBeGreaterThan(0);
+  });
+});
+
+describe('mistakeNote', () => {
+  it('explains a wrong stress pick in terms of the words in the question', () => {
+    const q = { id: 'x', conceptId: 'en.pron.stress', prompt: '', options: ['musician', 'understand', 'unemployed', 'engineer'], answer: 0, difficulty: 3 } as never;
+    const note = mistakeNote(q, 'understand')!;
+    expect(note[0].en).toContain('un-der-STAND');
+    expect(note[0].en).toContain('3rd syllable');
+    expect(note.some((n) => n.en.includes('mu-SI-cian'))).toBe(true);
+    expect(mistakeNote(q, 'musician')).toBeNull();
+  });
+});
+
+describe('mistakeNote for sounds', () => {
+  it('names the picked word and the odd one for every generated sounds/endings question it can explain', () => {
+    const r = seeded(7);
+    let explained = 0;
+    for (let i = 0; i < 40; i++) {
+      for (const c of ['en.pron.endings', 'en.pron.sounds']) {
+        const q = pickQuestion({ conceptId: c, difficulty: 3, rand: r });
+        if (!q) continue;
+        const wrong = q.options.find((_, j) => j !== q.answer)!;
+        const note = mistakeNote(q, wrong);
+        if (!note) continue;
+        explained++;
+        expect(note[0].en).toContain('You picked');
+      }
+    }
+    expect(explained).toBeGreaterThan(20);
   });
 });

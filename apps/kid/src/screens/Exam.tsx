@@ -25,6 +25,8 @@ interface ExamProgress {
   played: string[];
   startedAt: number;
   strictAudio: boolean;
+  /** Left part-way: time already used. The clock is paused until he comes back. */
+  pausedMs?: number;
 }
 
 const LETTER = 'ABCD';
@@ -42,11 +44,14 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
   const blueprint = examById(examId)!;
   const [progress, setProgress] = useState<ExamProgress | null>(() => {
     const saved = repo.getKv<ExamProgress>(key(student.id));
-    return saved && saved.examId === examId ? saved : null;
+    if (!saved || saved.examId !== examId) return null;
+    // Coming back to a paused paper: the clock carries on from where he left.
+    return saved.pausedMs != null ? { ...saved, startedAt: Date.now() - saved.pausedMs, pausedMs: undefined } : saved;
   });
   const [strictAudio, setStrictAudio] = useState(true);
   const [grade, setGrade] = useState<ExamGrade | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [playing, setPlaying] = useState<string | null>(null);
   const submitted = useRef(false);
@@ -143,7 +148,7 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
           <p className="mt-2 text-slate-600 dark:text-slate-300">{blueprint.description}</p>
           <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
             <li>
-              <T en="The timer starts when you press Start and keeps running if you leave." />
+              <T en="The timer starts when you press Start. If you leave part-way, it pauses until you come back." />
             </li>
             <li>
               <T en="You can change answers and flag questions until you submit." />
@@ -182,6 +187,9 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <button onClick={() => setLeaving(true)} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label={tr(lang, 'Leave the test')}>
+          ✕
+        </button>
         <div className="min-w-0">
           <div className="truncate font-display font-semibold">{blueprint.name}</div>
           <div className="text-xs text-slate-500">
@@ -279,6 +287,34 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
           </p>
         </aside>
       </div>
+
+      <Modal open={leaving} onClose={() => setLeaving(false)} title={tr(lang, 'Leave the test?')}>
+        <p className="text-sm">
+          <T en="Save it and the clock stops — you can finish it later from the Exam Hall. Or throw this paper away and start a new one another time." />
+        </p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => setLeaving(false)}>
+            <TB en="Keep working" />
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              void repo.setKv(key(student.id), null);
+              go({ name: 'exam-hall' });
+            }}
+          >
+            <TB en="Throw away" />
+          </Button>
+          <Button
+            onClick={() => {
+              void repo.setKv(key(student.id), { ...progress, pausedMs: Math.max(0, Date.now() - progress.startedAt) });
+              go({ name: 'exam-hall' });
+            }}
+          >
+            <TB en="Save & leave" />
+          </Button>
+        </div>
+      </Modal>
 
       <Modal open={confirm} onClose={() => setConfirm(false)} title={tr(lang, 'Submit your paper?')}>
         <p className="text-sm">

@@ -1,5 +1,5 @@
 import type { Question } from '@atlas/shared';
-import { LESSONS_VI, getConcept, stressOf, translateExplanation, unmark } from '@atlas/knowledge';
+import { LESSONS_VI, getConcept, mistakeNote, stressOf, translateExplanation, unmark } from '@atlas/knowledge';
 import { Marked } from '@atlas/ui';
 import { speak } from '../lib/speech';
 import { T, useLang } from '../i18n';
@@ -17,6 +17,8 @@ export function Explanation({ question: q, picked }: { question: Question; picke
   const lessonVi = help ? LESSONS_VI[q.conceptId] : undefined;
   const [coachOpen, setCoachOpen] = useState(false);
   const canCoach = q.conceptId.startsWith('en.');
+  // About his mistake first; the general rule is tucked away below.
+  const mistake = picked && picked !== right ? mistakeNote(q, picked) : null;
   return (
     <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800/60">
       {picked && picked !== right && (
@@ -77,7 +79,24 @@ export function Explanation({ question: q, picked }: { question: Question; picke
           ))}
         </div>
       )}
-      {q.explanation && (
+      {mistake && (
+        <div className="space-y-1.5 rounded-lg border-l-4 border-rose-400 bg-rose-50 p-3 dark:bg-rose-950/40">
+          <p className="font-bold text-rose-700 dark:text-rose-300">
+            <T en="🎯 Your mistake" />
+          </p>
+          {mistake.map((m, i) => (
+            <p key={i} className="text-slate-800 dark:text-slate-100">
+              {m.en}
+              {help && (
+                <span lang="vi" className="mt-0.5 block text-rose-900 dark:text-rose-200">
+                  🇻🇳 {m.vi}
+                </span>
+              )}
+            </p>
+          ))}
+        </div>
+      )}
+      {q.explanation && !(mistake && q.conceptId.startsWith('en.pron')) && (
         <p className="text-slate-700 dark:text-slate-200">
           💡 <GlossText text={q.explanation} enabled={help} />
           {explanationVi && (
@@ -88,14 +107,19 @@ export function Explanation({ question: q, picked }: { question: Question; picke
         </p>
       )}
       {concept?.lesson && (
-        <p className="text-slate-600 dark:text-slate-300">
-          <span className="font-bold">📖 {concept.name}:</span> <GlossText text={concept.lesson} enabled={help && concept.subject !== 'literature'} />
-          {lessonVi && (
-            <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">
-              🇻🇳 {lessonVi}
-            </span>
-          )}
-        </p>
+        <details className="text-slate-600 dark:text-slate-300">
+          <summary className="cursor-pointer font-bold">
+            📖 <T en="All the rules for" /> {concept.name}
+          </summary>
+          <p className="mt-1">
+            <GlossText text={concept.lesson} enabled={help && concept.subject !== 'literature'} />
+            {lessonVi && (
+              <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">
+                🇻🇳 {lessonVi}
+              </span>
+            )}
+          </p>
+        </details>
       )}
       {canCoach &&
         (coachOpen ? (
