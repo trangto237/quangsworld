@@ -82,7 +82,7 @@ export function RaceArena(p: ModeProps) {
       progress={p.progress ?? { value: Math.min(sim.you.pos, len), max: len, label: 'Race' }}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-zinc-900 via-slate-950 to-slate-950"
+      className={p.dress?.bg ?? "bg-gradient-to-b from-zinc-900 via-slate-950 to-slate-950"}
       stats={
         <>
           <Pill className={cx(place <= 3 ? 'bg-amber-400/20 text-amber-300' : 'bg-white/10')} title="Position">
@@ -107,7 +107,14 @@ export function RaceArena(p: ModeProps) {
             </div>
           )}
           {/* Track: one lane per car */}
-          <div className="relative rounded-2xl border-y-8 border-dashed border-y-red-500/80 bg-zinc-800 py-2 shadow-inner">
+          {p.dress?.backdrop && (
+            <div className="flex justify-around text-4xl opacity-80 sm:text-5xl" aria-hidden>
+              {p.dress.backdrop.split(' ').map((d, i) => (
+                <span key={i}>{d}</span>
+              ))}
+            </div>
+          )}
+          <div className={cx('relative rounded-2xl border-y-8 border-dashed border-y-red-500/80 py-2 shadow-inner', p.dress?.track ?? 'bg-zinc-800')}>
             <div className="absolute inset-y-0 right-[6%] w-3 bg-[repeating-linear-gradient(0deg,#fff_0_8px,#000_8px_16px)]" aria-hidden />
             {sim.racers.map((r, i) => {
               const me = r === sim.you;
@@ -126,7 +133,7 @@ export function RaceArena(p: ModeProps) {
                     style={{ left: `${x(r.pos)}%` }}
                     aria-label={me ? 'Your car' : r.name}
                   >
-                    {me && vehicle ? vehicle.emoji : r.car}
+                    {me && vehicle ? vehicle.emoji : me && p.dress?.car ? p.dress.car : r.car}
                   </span>
                   {r.finished > 0 && <span className="absolute right-1 top-1/2 -translate-y-1/2 text-xl">{MEDAL[r.finished]}</span>}
                 </div>

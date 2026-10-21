@@ -110,7 +110,7 @@ export function DetectiveArena(p: ModeProps) {
       progress={p.progress ?? { value: sim.solvedCount, max: sim.cfg.cases, label: 'Cases solved' }}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-stone-900 via-stone-950 to-slate-950"
+      className={p.dress?.bg ?? "bg-gradient-to-b from-stone-900 via-stone-950 to-slate-950"}
       stats={
         <>
           <Pill title="Stars for this case">

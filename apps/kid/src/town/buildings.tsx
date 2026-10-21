@@ -493,7 +493,40 @@ const codeLab: Kind = (x, y, lv) => {
   };
 };
 
+/** The Arcade: a purple games hall with a neon sign and a big joystick on the roof. */
+const arcade: Kind = (x, y) => {
+  const [bx, by, w, d] = [x + 0.3, y + 0.35, 1.4, 1.3];
+  const h = 30;
+  const stick = P(bx + w / 2, by + d / 2, h);
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#8b5cf6" top="#a78bfa" />
+        {/* Neon sign on the front */}
+        <Poly
+          p={[P(bx + w * 0.1, by + d, h * 0.55), P(bx + w * 0.9, by + d, h * 0.55), P(bx + w * 0.9, by + d, h * 0.92), P(bx + w * 0.1, by + d, h * 0.92)]}
+          fill="#1e1b4b"
+          sw={1.2}
+        />
+        {[0.25, 0.5, 0.75].map((t, i) => {
+          const [cx, cy] = P(bx + w * t, by + d, h * 0.73);
+          return <circle key={i} cx={cx} cy={cy} r={2.6} fill={['#f472b6', '#facc15', '#22d3ee'][i]} />;
+        })}
+        <Door x={bx} y={by} w={w} d={d} color="#4c1d95" />
+        {/* Joystick */}
+        <line x1={stick[0]} y1={stick[1]} x2={stick[0] + 6} y2={stick[1] - 22} stroke="#1f2937" strokeWidth={4} strokeLinecap="round" />
+        <circle cx={stick[0] + 6} cy={stick[1] - 24} r={7} fill="#ef4444" stroke={INK} strokeWidth={1.2} />
+        <Emoji at={P(bx + w + 0.25, by + d * 0.5, 8)} size={16}>
+          👾
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 26],
+  };
+};
+
 export const KINDS: Record<string, Kind> = {
+  arcade,
   'code-lab': codeLab,
   'scholars-academy': school,
   'grammar-forge': forge,

@@ -23,7 +23,7 @@ export function DuelArena(p: ModeProps) {
   const look = useLook();
   const sim = useMemo(() => new DuelSim({ ...duelConfigFor(p.minutes), noDefeat: p.trial, paced: p.trial }), [p.minutes, p.trial]);
   const lang = useLang();
-  const boss = BOSSES[hashString(p.bossName ?? p.title) % BOSSES.length];
+  const boss = p.dress?.boss ?? BOSSES[hashString(p.bossName ?? p.title) % BOSSES.length];
   const [question, setQuestion] = useState<PresentedQuestion | null>(null);
   const [, force] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -109,7 +109,7 @@ export function DuelArena(p: ModeProps) {
       progress={p.progress}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-rose-950 via-slate-950 to-slate-950"
+      className={p.dress?.bg ?? "bg-gradient-to-b from-rose-950 via-slate-950 to-slate-950"}
       stats={<Pill title="Answer streak">🔥 {streak}</Pill>}
     >
       <div className="flex flex-1 flex-col lg:flex-row">

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { getConcept } from '@atlas/knowledge';
-import { modeFor, type GameMode } from '@atlas/game';
+import type { GameMode } from '@atlas/game';
+import { gameOf } from '../lib/islands';
 import { useRepo } from '@atlas/ui';
 import { MistakeReview } from '../components/MistakeReview';
 import { T, TB } from '../i18n';
@@ -35,8 +36,8 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
   const [reviewing, setReviewing] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const acc = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
-  const mode: GameMode = r.mission.mode ?? modeFor(r.mission.concepts, r.mission.kind, r.mission.id);
-  const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : LOSS[mode];
+  const game = gameOf(r.mission);
+  const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : (game.loss ?? LOSS[game.mode]);
   const sub = r.victory ? '{name}, the realm is safe!' : r.retreated ? 'Rest up, hero. The Glitches will be back.' : 'Every hero loses sometimes. You still grew stronger.';
 
   if (reviewing)

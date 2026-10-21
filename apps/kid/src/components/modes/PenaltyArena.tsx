@@ -108,7 +108,7 @@ export function PenaltyArena(p: ModeProps) {
       progress={p.progress}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className={night ? 'bg-gradient-to-b from-slate-950 via-indigo-950 to-emerald-950' : 'bg-gradient-to-b from-emerald-950 via-emerald-900 to-slate-950'}
+      className={night ? 'bg-gradient-to-b from-slate-950 via-indigo-950 to-emerald-950' : (p.dress?.bg ?? 'bg-gradient-to-b from-emerald-950 via-emerald-900 to-slate-950')}
       stats={<Pill title="Answer streak">🔥 {streak}</Pill>}
     >
       {/* Scoreboard */}

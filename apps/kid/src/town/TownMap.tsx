@@ -52,6 +52,8 @@ export const SPOTS: Spot[] = [
   { id: 'logic-labyrinth', kind: 'logic-labyrinth', x: 20.4, y: 20.4, lot: 3 },
   // Coding: unlocked by a parent.
   { id: 'code-lab', kind: 'code-lab', x: 27.4, y: 17.2, lot: 3 },
+  // Any game, any time.
+  { id: 'arcade', kind: 'arcade', x: 30.4, y: 8.2, lot: 3 },
 ];
 
 /** The hero knight as drawn on the map. */
@@ -125,7 +127,7 @@ const ISLES: Isle[] = [
   ),
   // Little islands just for looks.
   { id: 'rice', x: -12.5, y: 6.5, w: 3.4, d: 3.2, seed: 7, lift: 30, spots: [], small: true, decor: () => <RiceField x={-12.2} y={6.8} w={2.8} d={2.6} /> },
-  { id: 'pitch', x: 27.5, y: 10, w: 3.8, d: 3, seed: 9, lift: 24, spots: [], small: true, decor: () => <Pitch x={27.8} y={10.3} w={3.2} d={2.4} /> },
+  { id: 'pitch', x: -15, y: -9, w: 3.8, d: 3, seed: 9, lift: 24, spots: [], small: true, decor: () => <Pitch x={-14.7} y={-8.7} w={3.2} d={2.4} /> },
   { id: 'tree1', x: 8.5, y: -12, w: 1.8, d: 1.8, seed: 21, lift: 40, spots: [], small: true, decor: () => <Tree x={9.4} y={-11.1} s={1.1} /> },
   { id: 'tree2', x: 8.5, y: 29, w: 1.6, d: 1.6, seed: 23, lift: 10, spots: [], small: true, decor: () => <Tree x={9.3} y={29.8} s={1} kind="pine" color="#3f8f3a" /> },
   { id: 'rock1', x: 28, y: 0, w: 1.2, d: 1.2, seed: 27, lift: 60, spots: [], small: true },

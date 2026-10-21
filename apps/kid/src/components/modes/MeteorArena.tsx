@@ -116,7 +116,9 @@ export function MeteorArena(p: ModeProps) {
   const n = question?.shown.length ?? 4;
   const free = !!question && isFreeAnswer(question);
 
-  const ship = look.gear('meteor.ship')?.emoji;
+  const dress = p.dress?.falling;
+  const colors = dress?.colors ?? COLORS;
+  const ship = dress?.shooter ?? look.gear('meteor.ship')?.emoji;
   return (
     <GameShell
       title={p.title}
@@ -124,10 +126,10 @@ export function MeteorArena(p: ModeProps) {
       progress={p.progress ?? { value: sim.wave, max: sim.cfg.waves, label: 'Showers survived' }}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-slate-950 via-indigo-950 to-violet-950"
+      className={p.dress?.bg ?? "bg-gradient-to-b from-slate-950 via-indigo-950 to-violet-950"}
       stats={
         <>
-          <Pill title="Buildings standing">🏙️ {sim.standing}/{sim.buildings.length}</Pill>
+          <Pill title="Buildings standing">{dress?.standing ?? '🏙️'} {sim.standing}/{sim.buildings.length}</Pill>
           {sim.shield && <Pill className="bg-cyan-400/20 text-cyan-200" title="Shield">🛡️</Pill>}
           <Pill className="bg-amber-400/20 text-amber-300" title="Score">
             ⭐ {sim.score}
@@ -142,7 +144,7 @@ export function MeteorArena(p: ModeProps) {
             <ol className="mt-2 grid gap-1.5 text-sm sm:grid-cols-2">
               {question.shown.map((o, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[i] }}>
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: colors[i] }}>
                     {i + 1}
                   </span>
                   <Marked text={o} />
@@ -154,7 +156,7 @@ export function MeteorArena(p: ModeProps) {
         {question && free && (
           <div className="rounded-2xl bg-slate-100 p-4 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-indigo-500">
-              <T en="🛰️ Radar lock — answer to fire the laser" />
+              <T en={dress?.radar ?? '🛰️ Radar lock — answer to fire the laser'} />
             </p>
             <QuestionCard question={question} onAnswer={(correct, ms, picked) => finish(correct, correct ? question.correct : -1, picked, ms)} wrongNote={p.wrongNote} glossary={p.glossary ? p.glossary(question) : true} />
           </div>
@@ -163,7 +165,7 @@ export function MeteorArena(p: ModeProps) {
 
       {/* Sky */}
       <div className="relative mx-auto mt-2 w-full max-w-3xl flex-1 select-none overflow-hidden" style={{ minHeight: 300 }}>
-        <div className="meteor-stars pointer-events-none absolute inset-0 opacity-60" />
+        {(!dress || dress.stars) && <div className="meteor-stars pointer-events-none absolute inset-0 opacity-60" />}
         {question &&
           !free &&
           question.shown.map((o, i) => {
@@ -180,9 +182,16 @@ export function MeteorArena(p: ModeProps) {
                 style={{ left: `${x + (fall - 0.5) * (i % 2 ? 6 : -6)}%`, top: `${2 + fall * 62}%` }}
                 aria-label={`Meteor ${i + 1}: ${o}`}
               >
-                <span className="relative grid size-20 place-items-center rounded-full text-center sm:size-24" style={{ background: `radial-gradient(circle at 35% 35%, ${COLORS[i]}, #451a03 75%)`, boxShadow: `0 0 24px ${COLORS[i]}aa` }}>
-                  <span className="absolute -top-6 left-1/2 h-8 w-3 -translate-x-1/2 rounded-full bg-gradient-to-t from-orange-300/80 to-transparent blur-[2px]" />
-                  <span className="px-1 text-[11px] font-bold leading-tight text-white drop-shadow sm:text-xs">
+                <span
+                  className={cx('relative grid size-20 place-items-center text-center sm:size-24', dress ? 'rounded-[45%] border-[3px] border-black/40' : 'rounded-full')}
+                  style={{ background: dress ? `radial-gradient(circle at 35% 30%, #ffffffcc, ${colors[i]} 70%)` : `radial-gradient(circle at 35% 35%, ${colors[i]}, #451a03 75%)`, boxShadow: `0 0 24px ${colors[i]}aa` }}
+                >
+                  {dress ? (
+                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-3xl drop-shadow">{dress.icons[i % dress.icons.length]}</span>
+                  ) : (
+                    <span className="absolute -top-6 left-1/2 h-8 w-3 -translate-x-1/2 rounded-full bg-gradient-to-t from-orange-300/80 to-transparent blur-[2px]" />
+                  )}
+                  <span className={cx('px-1 text-[11px] font-bold leading-tight sm:text-xs', dress ? 'text-black/85' : 'text-white drop-shadow')}>
                     <span className="block text-lg">{i + 1}</span>
                     {short(o.replace(/[[\]]/g, ''))}
                   </span>
@@ -191,30 +200,30 @@ export function MeteorArena(p: ModeProps) {
               </button>
             );
           })}
-        {outcome?.correct && <div className="pointer-events-none absolute inset-x-0 top-1/3 animate-pop text-center font-display text-4xl font-bold text-emerald-300 drop-shadow">💥 <T en="Sky cleared!" /></div>}
+        {outcome?.correct && <div className="pointer-events-none absolute inset-x-0 top-1/3 animate-pop text-center font-display text-4xl font-bold text-emerald-300 drop-shadow"><T en={dress?.hit ?? '💥 Sky cleared!'} /></div>}
         {outcome && !outcome.correct && (
           <div className="pointer-events-none absolute inset-x-0 top-1/3 animate-pop text-center font-display text-3xl font-bold text-rose-300 drop-shadow">
-            {outcome.shielded ? <T en="🛡️ The shield held!" /> : <T en="💥 Impact!" />}
+            {outcome.shielded ? <T en={dress?.held ?? '🛡️ The shield held!'} /> : <T en={dress?.miss ?? '💥 Impact!'} />}
           </div>
         )}
         {/* City */}
         <div className="absolute inset-x-0 bottom-0">
           {/* The cannon (a ship from the shop, or the standard rocket). */}
-          <span className={cx('absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-4xl leading-none sm:text-5xl', !ship && '-rotate-45', outcome?.correct && 'animate-pop')} aria-hidden>
+          <span className={cx('absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-4xl leading-none sm:text-5xl', !ship && !dress && '-rotate-45', outcome?.correct && 'animate-pop')} aria-hidden>
             {ship ?? '🚀'}
           </span>
           {sim.shield && <div className="absolute inset-x-[4%] bottom-0 h-28 rounded-t-[100%] border-t-4 border-cyan-300/70 bg-cyan-300/10" />}
-          <div className="flex items-end justify-around border-t-4 border-slate-600 bg-slate-800/80 px-2 pb-2 pt-1">
+          <div className={cx('flex items-end justify-around border-t-4 px-2 pb-2 pt-1', dress?.groundClass ?? 'border-slate-600 bg-slate-800/80')}>
             {sim.buildings.map((up, i) => (
               <span key={i} className={cx('text-4xl leading-none transition-all sm:text-5xl', !up && 'translate-y-2 opacity-30 grayscale', outcome && outcome.hit === i && 'animate-shake')}>
-                {up ? BUILDINGS[i % BUILDINGS.length] : '🔥'}
+                {up ? (dress?.ground ?? BUILDINGS)[i % (dress?.ground ?? BUILDINGS).length] : (dress?.lost ?? '🔥')}
               </span>
             ))}
           </div>
         </div>
       </div>
       <p className="hidden pb-2 text-center text-xs text-white/50 lg:block">
-        <T en="Click a meteor or press 1–4 to fire · R to replay audio" />
+        <T en={dress ? 'Click one or press 1–4 · R to replay audio' : 'Click a meteor or press 1–4 to fire · R to replay audio'} />
       </p>
     </GameShell>
   );

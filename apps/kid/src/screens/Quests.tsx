@@ -1,6 +1,6 @@
 import type { StudentProfile } from '@atlas/db';
 import { isDue, stars } from '@atlas/engine';
-import { MODES, modeFor } from '@atlas/game';
+import { gameOf } from '../lib/islands';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { startOfDay } from '@atlas/shared';
 import { cx, useQuery } from '@atlas/ui';
@@ -38,7 +38,7 @@ export function Quests({ student }: { student: StudentProfile }) {
         </div>
         <ol className="mt-4 grid gap-3 sm:grid-cols-2">
           {plan.missions.map((m, i) => {
-            const mode = MODES[m.mode ?? modeFor(m.concepts, m.kind, m.id)];
+            const mode = gameOf(m);
             return (
               <li key={m.id}>
                 <button

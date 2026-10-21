@@ -1,4 +1,5 @@
 import type { PresentedQuestion } from '@atlas/knowledge';
+import type { Dress } from '../../lib/islands';
 
 /** The contract every game mode shares: a question source, an answer callback and an end callback. */
 export interface ModeProps {
@@ -21,4 +22,6 @@ export interface ModeProps {
   /** Hero avatar (emoji). */
   avatar?: string;
   bossName?: string;
+  /** How the game is dressed for the island it's played on. */
+  dress?: Dress;
 }

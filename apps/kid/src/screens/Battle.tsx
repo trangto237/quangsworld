@@ -2,7 +2,8 @@ import { reportError, watch } from '../lib/errors';
 import { useMemo, useRef } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { MissionSession, battleReward, historyFromAttempts, levelFromXp } from '@atlas/engine';
-import { battleConfigFor, modeFor, type TowerKind } from '@atlas/game';
+import { battleConfigFor, type TowerKind } from '@atlas/game';
+import { gameOf } from '../lib/islands';
 import { getQuestion, present } from '@atlas/knowledge';
 import type { Mission } from '@atlas/shared';
 import { DAY_MS, dayKey } from '@atlas/shared';
@@ -34,6 +35,8 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
       config: battleConfigFor(mission.duration, { towers, boss: mission.kind === 'boss', difficulty: mission.kind === 'boss' ? 1.5 : avg > 70 ? 1.3 : 1 }),
     };
   }, [repo, student.id, mission]);
+
+  const game = useMemo(() => gameOf(mission), [mission]);
 
   const finish = (victory: boolean, retreated: boolean) => {
     const { session, states } = setup;
@@ -83,12 +86,14 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
 
   return (
     <GameArena
-      mode={mission.mode ?? modeFor(mission.concepts, mission.kind, mission.id)}
+      mode={game.mode}
       title={mission.title}
+      subtitle={game.name}
+      dress={game.dress}
       minutes={mission.duration}
       avatar={student.avatar}
       slots={setup.eq.slots}
-      bossName={mission.title}
+      bossName={game.dress?.bossName ?? mission.title}
       defense={{
         config: setup.config,
         theme: setup.eq.theme,

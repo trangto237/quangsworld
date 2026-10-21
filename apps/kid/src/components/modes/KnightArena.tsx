@@ -96,7 +96,7 @@ export function KnightArena(p: ModeProps) {
       progress={p.progress}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}
-      className="bg-gradient-to-b from-amber-950 via-stone-950 to-slate-950"
+      className={p.dress?.bg ?? "bg-gradient-to-b from-amber-950 via-stone-950 to-slate-950"}
       stats={
         <>
           <Hearts n={sim.hearts} max={sim.maxHearts} />

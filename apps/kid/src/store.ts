@@ -18,6 +18,7 @@ export type Screen =
   | { name: 'exam'; examId: string }
   | { name: 'code' }
   | { name: 'writing' }
+  | { name: 'arcade' }
   | { name: 'coach'; topic?: CoachTopic; conceptId?: string };
 
 export type CoachTopic = 'stress' | 'endings' | 'sounds' | 'twins' | 'grammar';
