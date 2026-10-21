@@ -21,7 +21,7 @@ export type Screen =
   | { name: 'writing' }
   | { name: 'arcade' }
   | { name: 'garden'; quest?: Mission }
-  | { name: 'realm'; realmId: RealmId }
+  | { name: 'realm'; realmId: RealmId | 'home' }
   | { name: 'coach'; topic?: CoachTopic; conceptId?: string };
 
 export type CoachTopic = 'stress' | 'endings' | 'sounds' | 'twins' | 'grammar';

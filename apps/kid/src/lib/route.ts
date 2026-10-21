@@ -62,7 +62,7 @@ export function screenOf(path: string): Screen {
     case 'world':
       return b ? { name: 'world', worldId: b } : { name: 'hub' };
     case 'realm':
-      return realmById(b) ? { name: 'realm', realmId: b as RealmId } : { name: 'hub' };
+      return realmById(b) || b === 'home' ? { name: 'realm', realmId: b as RealmId | 'home' } : { name: 'hub' };
     case 'coach':
       return { name: 'coach', topic: COACH.includes(b as CoachTopic) ? (b as CoachTopic) : undefined };
     case 'play':
