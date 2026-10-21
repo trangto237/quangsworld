@@ -67,6 +67,14 @@ export function Modal({ open, onClose, children, title }: { open: boolean; onClo
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
       <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md animate-pop overflow-y-auto rounded-2xl bg-white p-6 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100" onClick={(e) => e.stopPropagation()}>
+        {/* Always a way out, even when the content fills the screen. */}
+        <button
+          onClick={onClose}
+          className="sticky top-0 z-10 float-right -mr-2 -mt-2 ml-2 grid size-9 place-items-center rounded-full bg-slate-100 text-base font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+          aria-label="Close"
+        >
+          ✕
+        </button>
         {title && <h2 className="mb-4 text-lg font-extrabold">{title}</h2>}
         {children}
       </div>

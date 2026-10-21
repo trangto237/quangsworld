@@ -461,6 +461,9 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
               </div>
             ))}
           </div>
+          <TownButton tone="green" className="mt-4 w-full" onClick={() => setSheet(null)}>
+            <TB en="Close" />
+          </TownButton>
         </Sheet>
       )}
 
@@ -602,7 +605,15 @@ function Catalogue({ found }: { found: Record<string, number> }) {
 function Sheet({ onClose, children, wide }: { onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" onClick={onClose} role="dialog" aria-modal="true">
-      <div className={cx('town-panel max-h-[calc(100dvh-2rem)] w-full animate-pop overflow-y-auto p-5', wide ? 'max-w-2xl' : 'max-w-sm')} onClick={(ev) => ev.stopPropagation()}>
+      <div className={cx('town-panel relative max-h-[calc(100dvh-2rem)] w-full animate-pop overflow-y-auto p-5', wide ? 'max-w-2xl' : 'max-w-sm')} onClick={(ev) => ev.stopPropagation()}>
+        {/* Always a way out, even when the sheet fills the screen. */}
+        <button
+          onClick={onClose}
+          className="town-btn sticky top-0 z-10 float-right -mr-1 -mt-1 ml-2 grid size-10 place-items-center rounded-full bg-paper text-lg font-bold text-ink-text"
+          aria-label="Close"
+        >
+          ✕
+        </button>
         {children}
       </div>
     </div>
