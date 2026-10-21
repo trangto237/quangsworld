@@ -1,11 +1,12 @@
-import { useContext, useEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { NightContext } from './night';
 import { Box, Emoji, INK, P, shade, type Pt } from './iso';
+import { Cloud } from './island';
 
 /**
- * What makes the town feel alive: day and night by the real clock, traffic and people, birds, today's
- * path with its treasure chest, fog over unexplored worlds, wear on worlds with reviews due, and builders
- * when a building grows. Movement uses SVG animation and is left out when the device asks for less motion.
+ * What makes the sky world feel alive: day and night by the real clock, drifting clouds, birds and
+ * balloons, today's treasure chest, and builders when a building grows. Movement is left out when the
+ * device asks for less motion.
  */
 
 export type DayPhase = 'day' | 'dusk' | 'night';
@@ -41,77 +42,58 @@ export function useReducedMotion() {
 export { NightContext };
 export const useNight = () => useContext(NightContext);
 
-/** Moves its children from one ground point to another, forever. */
-function Mover({ from, to, dur, delay = 0, children }: { from: [number, number]; to: [number, number]; dur: number; delay?: number; children: ReactNode }) {
-  const a = P(...from);
-  const b = P(...to);
+/** Drifting clouds, birds and a balloon; stars at night. */
+export function SkyLife({ view, phase, reduced }: { view: { x: number; y: number; w: number; h: number }; phase: DayPhase; reduced: boolean }) {
+  const clouds: [number, number, number, number][] = [
+    [-700, -250, 1.4, 160],
+    [-150, -300, 1, 190],
+    [420, -200, 1.6, 140],
+    [-500, 250, 1.2, 175],
+    [600, 330, 1.3, 155],
+    [80, 520, 1.5, 200],
+  ];
+  const stars = Array.from({ length: 40 }, (_, i) => [view.x + ((i * 397) % view.w), view.y + ((i * 211) % (view.h * 0.8)), 1 + (i % 3) * 0.6] as const);
   return (
-    <g>
-      <animateTransform attributeName="transform" type="translate" from="0 0" to={`${b[0] - a[0]} ${b[1] - a[1]}`} dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
-      {children}
+    <g style={{ pointerEvents: 'none' }}>
+      {phase === 'night' &&
+        stars.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r} fill="#fff" opacity={0.8}>
+            {!reduced && <animate attributeName="opacity" values="0.3;0.9;0.3" dur={`${3 + (i % 4)}s`} repeatCount="indefinite" />}
+          </circle>
+        ))}
+      {clouds.map(([x, y, s, dur], i) => (
+        <g key={i} opacity={phase === 'night' ? 0.35 : 0.8}>
+          {!reduced && <animateTransform attributeName="transform" type="translate" values={`0 0; ${i % 2 ? -160 : 160} 0; 0 0`} dur={`${dur}s`} repeatCount="indefinite" />}
+          <Cloud x={x} y={y} s={s} />
+        </g>
+      ))}
+      {!reduced && (
+        <>
+          <g>
+            <animateTransform attributeName="transform" type="translate" from="-1000 -40" to="1000 80" dur="40s" repeatCount="indefinite" />
+            <Emoji at={[0, -160]} size={15}>
+              🐦
+            </Emoji>
+            <Emoji at={[24, -148]} size={12}>
+              🐦
+            </Emoji>
+          </g>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="900 120; -900 -60" dur="90s" repeatCount="indefinite" />
+            <Emoji at={[0, 200]} size={30}>
+              🎈
+            </Emoji>
+          </g>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="-900 300; 900 200" dur="70s" begin="-30s" repeatCount="indefinite" />
+            <Emoji at={[0, 300]} size={16}>
+              🦅
+            </Emoji>
+          </g>
+        </>
+      )}
     </g>
   );
-}
-
-function MiniCar({ x, y, along, color }: { x: number; y: number; along: 'x' | 'y'; color: string }) {
-  const [w, d] = along === 'x' ? [0.5, 0.28] : [0.28, 0.5];
-  return (
-    <g>
-      <Box x={x} y={y} w={w} d={d} h={6} color={color} />
-      <Box x={x + (along === 'x' ? 0.1 : 0.04)} y={y + (along === 'x' ? 0.04 : 0.1)} w={along === 'x' ? 0.26 : 0.2} d={along === 'x' ? 0.2 : 0.26} h={5} z={6} color="#cfe8f5" />
-    </g>
-  );
-}
-
-/** Cars on both lanes of each road, people on the pavements, birds overhead. */
-export function Traffic({ roads, from, to }: { roads: number[]; from: number; to: number }) {
-  const cars = ['#e8584a', '#4b8fe2', '#ffc23d', '#5cb85c', '#f5f5f5', '#8b5cf6'];
-  const out: ReactNode[] = [];
-  roads.forEach((r, i) => {
-    // Along y (road column r): one lane each way.
-    out.push(
-      <Mover key={`ya${r}`} from={[r + 0.12, from]} to={[r + 0.12, to]} dur={26 + i * 5} delay={i * 7}>
-        <MiniCar x={r + 0.12} y={from} along="y" color={cars[i % cars.length]} />
-      </Mover>,
-      <Mover key={`yb${r}`} from={[r + 0.6, to]} to={[r + 0.6, from]} dur={31 + i * 3} delay={i * 11 + 4}>
-        <MiniCar x={r + 0.6} y={to} along="y" color={cars[(i + 2) % cars.length]} />
-      </Mover>,
-      // Along x (road row r).
-      <Mover key={`xa${r}`} from={[from, r + 0.12]} to={[to, r + 0.12]} dur={29 + i * 4} delay={i * 9 + 2}>
-        <MiniCar x={from} y={r + 0.12} along="x" color={cars[(i + 4) % cars.length]} />
-      </Mover>,
-      <Mover key={`xb${r}`} from={[to, r + 0.6]} to={[from, r + 0.6]} dur={34 + i * 2} delay={i * 13 + 6}>
-        <MiniCar x={to} y={r + 0.6} along="x" color={cars[(i + 1) % cars.length]} />
-      </Mover>,
-    );
-    // People walking on the pavement edges.
-    const people = ['🚶', '🚶‍♀️', '🧒', '🚴'];
-    out.push(
-      <Mover key={`py${r}`} from={[r - 0.15, from + 2]} to={[r - 0.15, to - 2]} dur={70 + i * 9} delay={i * 17}>
-        <Emoji at={P(r - 0.15, from + 2, 8)} size={13}>
-          {people[i % people.length]}
-        </Emoji>
-      </Mover>,
-      <Mover key={`px${r}`} from={[to - 2, r + 1.15]} to={[from + 2, r + 1.15]} dur={80 + i * 7} delay={i * 23 + 10}>
-        <Emoji at={P(to - 2, r + 1.15, 8)} size={13}>
-          {people[(i + 2) % people.length]}
-        </Emoji>
-      </Mover>,
-    );
-  });
-  // Birds crossing the sky.
-  out.push(
-    <g key="birds">
-      <animateTransform attributeName="transform" type="translate" from="-900 -40" to="900 60" dur="38s" repeatCount="indefinite" />
-      <Emoji at={[0, -120]} size={14}>
-        🐦
-      </Emoji>
-      <Emoji at={[22, -110]} size={11}>
-        🐦
-      </Emoji>
-    </g>,
-  );
-  return <g style={{ pointerEvents: 'none' }}>{out}</g>;
 }
 
 /** Night or dusk tint over the whole town. */
@@ -130,7 +112,7 @@ export function SkyTint({ phase, view }: { phase: DayPhase; view: { x: number; y
   );
 }
 
-/** Street lamps along the roads; they glow at night (drawn above the night tint). */
+/** Lanterns; they glow at night (drawn above the night tint). */
 export function StreetLamps({ spots, glow }: { spots: [number, number][]; glow: boolean }) {
   return (
     <g style={{ pointerEvents: 'none' }}>
@@ -155,20 +137,6 @@ export const LampGlowDef = () => (
   </radialGradient>
 );
 
-/** Today's path: a glowing trail from home through today's quest buildings to the chest. */
-export function PathTrail({ points, reduced }: { points: Pt[]; reduced: boolean }) {
-  if (points.length < 2) return null;
-  const d = `M${points.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L')}`;
-  return (
-    <g style={{ pointerEvents: 'none' }}>
-      <path d={d} fill="none" stroke="#fff3c4" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} />
-      <path d={d} fill="none" stroke="#f59e0b" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10 9">
-        {!reduced && <animate attributeName="stroke-dashoffset" from="38" to="0" dur="1.6s" repeatCount="indefinite" />}
-      </path>
-    </g>
-  );
-}
-
 /** Numbered stop badge on today's path (✓ when done). */
 export function StopBadge({ at, label, done }: { at: Pt; label: string; done: boolean }) {
   const w = Math.max(22, label.length * 8 + 12);
@@ -184,7 +152,7 @@ export function StopBadge({ at, label, done }: { at: Pt; label: string; done: bo
 
 export type ChestState = 'locked' | 'ready' | 'opened';
 
-/** Today's treasure chest in the town square. */
+/** Today's treasure chest on the middle island. */
 export function Chest({ x, y, state, progress, onOpen }: { x: number; y: number; state: ChestState; progress: string; onOpen: () => void }) {
   const [sx, sy] = P(x, y);
   const wood = '#a8662f';
@@ -225,18 +193,6 @@ export function Chest({ x, y, state, progress, onOpen }: { x: number; y: number;
   );
 }
 
-/** A soft haze around the base of a world he hasn't explored yet (the building itself is drawn pale). */
-export function Fog({ x, y, size }: { x: number; y: number; size: number }) {
-  const [cx, cy] = P(x + size / 2, y + size / 2);
-  const rx = (size * 64) / 1.25;
-  return (
-    <g style={{ pointerEvents: 'none' }}>
-      <ellipse cx={cx} cy={cy - 6} rx={rx} ry={rx * 0.45} fill="url(#town-haze)" />
-      <ellipse cx={cx - rx * 0.25} cy={cy - 22} rx={rx * 0.55} ry={rx * 0.22} fill="url(#town-haze)" opacity={0.7} />
-    </g>
-  );
-}
-
 export const HazeDefs = () => (
   <>
     <radialGradient id="town-haze">
@@ -255,20 +211,6 @@ export const HazeDefs = () => (
     </filter>
   </>
 );
-
-/** Wear on a building whose topics are due for review: cracks and a wilting flower. */
-export function Wear({ at }: { at: Pt }) {
-  const [x, y] = at;
-  return (
-    <g style={{ pointerEvents: 'none' }}>
-      <path d={`M${x - 14},${y - 26} l6,8 l-5,6 l7,9`} fill="none" stroke={INK} strokeWidth={2} strokeLinecap="round" opacity={0.7} />
-      <path d={`M${x + 12},${y - 18} l-5,7 l6,5`} fill="none" stroke={INK} strokeWidth={2} strokeLinecap="round" opacity={0.7} />
-      <Emoji at={[x + 26, y - 4]} size={16}>
-        🥀
-      </Emoji>
-    </g>
-  );
-}
 
 /** Builders at work when a building has just grown. */
 export function Builders({ at }: { at: Pt }) {

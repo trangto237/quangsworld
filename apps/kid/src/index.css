@@ -26,6 +26,14 @@ html { background: var(--paper-2); }
   --sand: #f3dca0;
   --sea: #7cc9e6;
   --sea-2: #9ad7ee;
+  --sky-top: #3f9be3;
+  --sky-bottom: #b9e3fb;
+  --cloud: #ffffff;
+  --cloud-2: #dcecf8;
+  --cliff: #b07a4a;
+  --cliff-2: #8a5a35;
+  --soil: #7a4f2c;
+  --grass-hi: #c7e88c;
 }
 .dark {
   --paper: #34283f;
@@ -44,6 +52,14 @@ html { background: var(--paper-2); }
   --sand: #6b5a3f;
   --sea: #17324d;
   --sea-2: #1f4263;
+  --sky-top: #0f2147;
+  --sky-bottom: #2b4a80;
+  --cloud: #c9d6ea;
+  --cloud-2: #9fb2cf;
+  --cliff: #6e4d33;
+  --cliff-2: #573b27;
+  --soil: #4a3220;
+  --grass-hi: #5b7f4a;
 }
 @theme inline {
   --color-paper: var(--paper);
@@ -59,13 +75,27 @@ html { background: var(--paper-2); }
   --color-tint-pink: var(--tint-pink);
 }
 
-/* Sea around the town island: soft wave marks. */
-.town-sea {
-  background-color: var(--sea);
-  background-image:
-    radial-gradient(ellipse 14px 4px at 20% 30%, var(--sea-2) 60%, transparent 62%),
-    radial-gradient(ellipse 10px 3px at 70% 75%, var(--sea-2) 60%, transparent 62%);
-  background-size: 90px 60px;
+/* Sky around the floating islands. */
+.town-sky {
+  background: linear-gradient(var(--sky-top), var(--sky-bottom));
+}
+/* Islands bob gently; water falls; loose rocks drift. */
+.isle-float { animation: isle-float 6s ease-in-out infinite alternate; }
+@keyframes isle-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-9px); }
+}
+.isle-water { animation: isle-water 0.9s linear infinite; }
+@keyframes isle-water {
+  to { stroke-dashoffset: -36; }
+}
+.isle-crumble { animation: isle-crumble 4s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+@keyframes isle-crumble {
+  from { transform: translateY(0) rotate(0deg); }
+  to { transform: translateY(8px) rotate(4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .isle-float, .isle-water, .isle-crumble { animation: none; }
 }
 
 /* A soft diamond pattern, like fields seen from above. */
