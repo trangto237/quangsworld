@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { playScreen } from '../lib/islands';
 import type { StudentProfile } from '@atlas/db';
 import { isDue, levelFromXp, stars, studyStreak } from '@atlas/engine';
 import { DAY_MS } from '@atlas/shared';
@@ -155,6 +156,7 @@ export function Town({ student }: { student: StudentProfile }) {
     else if (s.kind === 'home') go({ name: 'hero' });
     else if (s.kind === 'code-lab') go({ name: 'code' });
     else if (s.kind === 'arcade') go({ name: 'arcade' });
+    else if (s.id === 'word-forest') go({ name: 'garden' });
     else if (!spots.out[s.id]?.hidden) go({ name: 'world', worldId: s.id });
   };
 
@@ -225,7 +227,7 @@ export function Town({ student }: { student: StudentProfile }) {
               </span>
             </button>
             {next && (
-              <TownButton tone="green" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
+              <TownButton tone="green" onClick={() => go(playScreen(next, true))}>
                 <TB en="▶ Play" />
               </TownButton>
             )}

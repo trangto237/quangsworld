@@ -4,6 +4,7 @@ import type { StudentProfile } from '@atlas/db';
 import { MissionSession, battleReward, historyFromAttempts, levelFromXp } from '@atlas/engine';
 import { battleConfigFor, type TowerKind } from '@atlas/game';
 import { gameOf } from '../lib/islands';
+import { INVASION_ID, beatInvasion, gardenKey, normalize, type GardenState } from '../lib/garden';
 import { getQuestion, present } from '@atlas/knowledge';
 import type { Mission } from '@atlas/shared';
 import { DAY_MS, dayKey } from '@atlas/shared';
@@ -56,6 +57,11 @@ export function Battle({ student, mission, fromPlan }: { student: StudentProfile
           }),
           'saving the game',
         );
+        // The Word Garden's bug invasion: beating it clears the bugs and wins a golden seed.
+        if (victory && mission.id.startsWith(INVASION_ID)) {
+          const key = gardenKey(student.id);
+          await repo.setKv(key, beatInvasion(normalize(repo.getKv<GardenState>(key)), now));
+        }
         if (fromPlan && (victory || session.answered >= 8)) {
           const key = doneKey(student.id, dayKey(now));
           await repo.setKv(key, [...new Set([...(repo.getKv<string[]>(key) ?? []), mission.id])]);

@@ -1,6 +1,6 @@
 import type { StudentProfile } from '@atlas/db';
 import { isDue, stars } from '@atlas/engine';
-import { gameOf } from '../lib/islands';
+import { gameOf, playScreen } from '../lib/islands';
 import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { startOfDay } from '@atlas/shared';
 import { cx, useQuery } from '@atlas/ui';
@@ -38,12 +38,12 @@ export function Quests({ student }: { student: StudentProfile }) {
         </div>
         <ol className="mt-4 grid gap-3 sm:grid-cols-2">
           {plan.missions.map((m, i) => {
-            const mode = gameOf(m);
+            const mode = playScreen(m, true).name === 'garden' ? { emoji: '🌱', name: 'Word Garden' } : gameOf(m);
             return (
               <li key={m.id}>
                 <button
                   disabled={m.done}
-                  onClick={() => go({ name: 'battle', mission: m, fromPlan: true })}
+                  onClick={() => go(playScreen(m, true))}
                   className={cx(
                     'town-btn flex h-full w-full items-start gap-3 rounded-2xl p-3 text-left',
                     m.done ? 'bg-tint-green' : m === next ? 'bg-tint-amber' : 'bg-paper hover:bg-paper-3',
@@ -66,7 +66,7 @@ export function Quests({ student }: { student: StudentProfile }) {
           })}
         </ol>
         {next && (
-          <TownButton tone="green" size="lg" className="mt-4 w-full sm:w-auto" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
+          <TownButton tone="green" size="lg" className="mt-4 w-full sm:w-auto" onClick={() => go(playScreen(next, true))}>
             <TB en="▶ Play: {title}" vars={{ title: next.title }} />
           </TownButton>
         )}

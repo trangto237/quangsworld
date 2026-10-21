@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { WORLDS } from '@atlas/knowledge';
-import { ISLAND_GAMES, gameOf, placeOf } from './islands';
+import { ISLAND_GAMES, gameOf, placeOf, playScreen } from './islands';
 
-const m = (concepts: string[], extra: Partial<{ kind: 'learn' | 'review' | 'boss'; mode: 'race' }> = {}) => ({ id: 'x', concepts, kind: 'learn' as const, ...extra });
+const m = (concepts: string[], extra: Partial<{ kind: 'learn' | 'review' | 'boss'; mode: 'race' | 'meteor' }> = {}) => ({ id: 'x', concepts, kind: 'learn' as const, ...extra });
 
 describe('island games', () => {
   it('knows which island a mission is on', () => {
@@ -27,5 +27,15 @@ describe('island games', () => {
   it('every world except My Textbook has a game, and every game points at a real world', () => {
     for (const w of WORLDS) if (w.id !== 'my-textbook') expect(ISLAND_GAMES[w.id], w.id).toBeDefined();
     for (const id of Object.keys(ISLAND_GAMES)) expect(WORLDS.some((w) => w.id === id)).toBe(true);
+  });
+
+  it("vocabulary quests are played in the garden; the garden's bug invasion is Pest Patrol", () => {
+    const quest = { id: 'q1', concepts: ['en.vocab.synonyms'], duration: 5, kind: 'learn' as const, title: 'x', reward: { coins: 1, gems: 0, xp: 1 } };
+    expect(playScreen(quest, true)).toEqual({ name: 'garden', quest });
+    expect(playScreen({ ...quest, concepts: ['en.grammar.passive'] }, true).name).toBe('battle');
+    expect(playScreen({ ...quest, kind: 'boss' }, true).name).toBe('battle');
+    const invasion = gameOf({ id: 'garden-invasion-1', concepts: ['en.vocab.synonyms'], kind: 'review', mode: 'meteor' });
+    expect(invasion.name).toBe('Pest Patrol');
+    expect(invasion.dress?.falling).toBeDefined();
   });
 });

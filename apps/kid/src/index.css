@@ -228,3 +228,6 @@ html { background: var(--paper-2); }
   .garden-sway, .garden-bubble, .garden-spin, .garden-bees, .garden-butterfly, .garden-splash, .garden-clouds { animation: none; }
   .garden-drop, .garden-reap { animation-duration: 0.01s; }
 }
+.garden-bug { animation: garden-bug 0.9s ease-in-out infinite alternate; }
+@keyframes garden-bug { from { transform: translate(-3px, 1px); } to { transform: translate(3px, -2px); } }
+@media (prefers-reduced-motion: reduce) { .garden-bug { animation: none; } }

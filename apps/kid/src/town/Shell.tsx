@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { playScreen } from '../lib/islands';
 import type { StudentProfile } from '@atlas/db';
 import { levelFromXp, studyStreak } from '@atlas/engine';
 import { DAY_MS } from '@atlas/shared';
@@ -135,7 +136,7 @@ export function BottomNav({ student, active, play = true }: { student: StudentPr
         {NAV.slice(0, 2).map(item)}
         {play && (
         <button
-          onClick={() => (next ? go({ name: 'battle', mission: next, fromPlan: true }) : go({ name: 'quests' }))}
+          onClick={() => (next ? go(playScreen(next, true)) : go({ name: 'quests' }))}
           className="town-btn -mt-7 grid size-16 shrink-0 place-items-center rounded-full bg-[#e8584a] font-display text-white"
           aria-label={next ? tr(lang, '▶ Play: {title}', { title: next.title }) : tr(lang, 'Quests')}
         >

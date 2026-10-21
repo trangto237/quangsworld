@@ -3,11 +3,12 @@ import type { StudentProfile } from '@atlas/db';
 import { getConcept } from '@atlas/knowledge';
 import type { GameMode } from '@atlas/game';
 import { gameOf } from '../lib/islands';
+import { INVASION_ID } from '../lib/garden';
 import { useRepo } from '@atlas/ui';
 import { MistakeReview } from '../components/MistakeReview';
 import { T, TB } from '../i18n';
 import type { BattleResult } from '../store';
-import { useKid } from '../store';
+import { useKid, type Screen } from '../store';
 import { TownScreen } from '../town/Shell';
 import { TownButton } from '../town/ui';
 
@@ -37,6 +38,8 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
   const [reviewed, setReviewed] = useState(false);
   const acc = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
   const game = gameOf(r.mission);
+  // After the garden's bug invasion, back to the garden.
+  const home: Screen = r.mission.id.startsWith(INVASION_ID) ? { name: 'garden' } : { name: 'hub' };
   const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : (game.loss ?? LOSS[game.mode]);
   const sub = r.victory ? '{name}, the realm is safe!' : r.retreated ? 'Rest up, hero. The Glitches will be back.' : 'Every hero loses sometimes. You still grew stronger.';
 
@@ -128,7 +131,7 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
             <TownButton tone="amber" className="mt-3 w-full py-2.5" onClick={() => setReviewing(true)} autoFocus>
               <TB en="Review my mistakes →" />
             </TownButton>
-            <button className="mt-2 w-full text-center text-xs text-ink-soft hover:underline" onClick={() => go({ name: 'hub' })}>
+            <button className="mt-2 w-full text-center text-xs text-ink-soft hover:underline" onClick={() => go(home)}>
               <T en="Later (they'll wait in the Mistake Book)" />
             </button>
           </div>
@@ -139,7 +142,7 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
                 <T en="✓ Reviewed. Fix them for good in the Mistake Book to earn coins." />
               </p>
             )}
-            <TownButton tone="green" size="lg" className="mt-6 w-full" onClick={() => go({ name: 'hub' })}>
+            <TownButton tone="green" size="lg" className="mt-6 w-full" onClick={() => go(home)}>
               <TB en="Continue →" />
             </TownButton>
           </>

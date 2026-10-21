@@ -10,7 +10,6 @@ import { TownButton } from '../town/ui';
 import { useKid } from '../store';
 import { LESSONS_VI } from '@atlas/knowledge';
 import { T, TB, useLang } from '../i18n';
-import { GardenBanner } from './Garden';
 import { ISLAND_GAMES } from '../lib/islands';
 
 export function WorldScreen({ student, worldId }: { student: StudentProfile; worldId: string }) {
@@ -47,16 +46,6 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
             ✍️ <TB en="Writing studio" /> — nghị luận văn học & xã hội
           </TownButton>
         </div>
-      )}
-      {world.id === 'word-forest' && (
-        <>
-          <div className="mt-4">
-            <GardenBanner student={student} />
-          </div>
-          <h2 className="mx-auto mt-6 max-w-md text-center font-display text-xl font-bold">
-            📖 <T en="Learn words → earn 💧" />
-          </h2>
-        </>
       )}
       {/* A winding path of mission nodes */}
       <ol className="relative mx-auto mt-6 max-w-md">

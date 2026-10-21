@@ -54,6 +54,8 @@ function Screens() {
     case 'placement':
       return <Placement student={student} />;
     case 'world':
+      // The Word Garden island is the garden itself.
+      if (screen.worldId === 'word-forest') return <GardenScreen student={student} />;
       return <WorldScreen student={student} worldId={screen.worldId} />;
     case 'battle':
       return <Battle key={screen.mission.id} student={student} mission={screen.mission} fromPlan={screen.fromPlan} />;
@@ -74,7 +76,7 @@ function Screens() {
     case 'writing':
       return <Writing student={student} />;
     case 'garden':
-      return <GardenScreen student={student} />;
+      return <GardenScreen key={screen.quest?.id ?? 'garden'} student={student} quest={screen.quest} />;
     case 'arcade':
       return <Arcade student={student} />;
     case 'code':

@@ -2,13 +2,14 @@ import { getConcept } from '@atlas/knowledge';
 import type { Attempt } from '@atlas/shared';
 
 /**
- * Vườn ươm Từ vựng — the Word Garden.
- *
- * Everything he earns comes from vocabulary practice, worked out from his answer history (so it syncs and
- * can't drift): every right answer gives 💧 water, a word he gets right for the first time gives more.
- * Bonuses give special seeds: 🌟 a rare seed for every 10 right answers in a row, 👑 a golden seed for every
- * 25 new words. Water buys seed packets and grows plants; grown plants are harvested for coins and go into
- * the catalogue.
+ * Vườn ươm Từ vựng — the Word Garden. A farming game where tending the garden IS learning:
+ * - every seed packet is a vocabulary topic; he plants it in a bed;
+ * - watering a bed = a word card from its topic; each right answer makes it grow;
+ * - a grown plant asks one last word to harvest it (coins, and new plants go into the catalogue);
+ * - bugs show up on beds whose topic is due for review; answer to chase them off;
+ * - now and then (every few harvests, or after a few days) the bugs invade: a Pest Patrol boss fight.
+ * Bonus seeds come from his answers: 🌟 for 10 right in a row, 👑 for every 25 new words. More beds open
+ * as he learns more words.
  */
 
 export type Tier = 'common' | 'uncommon' | 'rare' | 'legendary';
@@ -52,21 +53,18 @@ export const PLANTS: Plant[] = [
   { id: 'word-tree', en: 'Dictionary tree', vi: 'Cây Từ điển', emoji: '🌳', tier: 'legendary', badge: '📖' },
 ];
 
-export const plantOf = (id: string) => PLANTS.find((p) => p.id === id)!;
+export const plantOf = (id: string) => PLANTS.find((p) => p.id === id) ?? PLANTS[0];
 
-export const TIER: Record<Tier, { label: string; vi: string; color: string; water: number; coins: number; gems: number }> = {
-  common: { label: 'Common', vi: 'Thường', color: '#8a9a5b', water: 6, coins: 10, gems: 0 },
-  uncommon: { label: 'Uncommon', vi: 'Khá hiếm', color: '#2f8a3a', water: 9, coins: 18, gems: 0 },
-  rare: { label: 'Rare', vi: 'Hiếm', color: '#2563eb', water: 15, coins: 35, gems: 0 },
-  legendary: { label: 'Legendary', vi: 'Huyền thoại', color: '#c48a00', water: 24, coins: 70, gems: 1 },
+/** Right answers a plant needs to grow, and what it pays at harvest. */
+export const TIER: Record<Tier, { label: string; vi: string; color: string; need: number; coins: number; gems: number }> = {
+  common: { label: 'Common', vi: 'Thường', color: '#8a9a5b', need: 3, coins: 12, gems: 0 },
+  uncommon: { label: 'Uncommon', vi: 'Khá hiếm', color: '#2f8a3a', need: 4, coins: 20, gems: 0 },
+  rare: { label: 'Rare', vi: 'Hiếm', color: '#2563eb', need: 5, coins: 35, gems: 0 },
+  legendary: { label: 'Legendary', vi: 'Huyền thoại', color: '#c48a00', need: 6, coins: 70, gems: 1 },
 };
 
-/** Growth stages: seed → sprout → bud → grown. Each step costs a third of the plant's water. */
+/** Drawn growth stages: seed → sprout → young plant → grown. */
 export const STAGES = 3;
-export const stepCost = (p: Plant) => TIER[p.tier].water / STAGES;
-
-export const PACKET_COST = 5;
-export const START_WATER = 12;
 export const STREAK_FOR_RARE = 10;
 export const WORDS_FOR_GOLDEN = 25;
 export const WORDS_PER_PLOT = 20;
@@ -74,6 +72,10 @@ export const MIN_PLOTS = 4;
 export const MAX_PLOTS = 9;
 /** Chance that a harvest drops a bonus rare seed. */
 export const DROP_CHANCE = 0.1;
+/** The bugs invade after this many harvests, or after this long with something growing. */
+export const INVASION_HARVESTS = 5;
+export const INVASION_DAYS = 3;
+const DAY = 86_400_000;
 
 /** Which concepts count as vocabulary: the Vocabulary world, his textbook's vocabulary units, IELTS word topics. */
 export const isVocab = (conceptId: string) =>
@@ -82,7 +84,6 @@ export const isVocab = (conceptId: string) =>
 export interface Earned {
   /** Distinct vocabulary questions he has got right at least once. */
   words: number;
-  water: number;
   rare: number;
   golden: number;
   plots: number;
@@ -90,11 +91,10 @@ export interface Earned {
   run: number;
 }
 
-/** What his vocabulary practice has earned so far. */
+/** What his vocabulary answers (in the garden or anywhere else) have earned so far. */
 export function earned(attempts: Attempt[]): Earned {
   const vocab = attempts.filter((a) => a.context !== 'placement' && isVocab(a.conceptId)).sort((a, b) => a.createdAt - b.createdAt);
   const seen = new Set<string>();
-  let water = START_WATER;
   let rare = 0;
   let run = 0;
   for (const a of vocab) {
@@ -102,7 +102,6 @@ export function earned(attempts: Attempt[]): Earned {
       run = 0;
       continue;
     }
-    water += seen.has(a.questionId) ? 1 : 3;
     seen.add(a.questionId);
     if (++run === STREAK_FOR_RARE) {
       rare++;
@@ -110,47 +109,72 @@ export function earned(attempts: Attempt[]): Earned {
     }
   }
   const words = seen.size;
-  return { words, water, rare, golden: Math.floor(words / WORDS_FOR_GOLDEN), run, plots: Math.min(MAX_PLOTS, MIN_PLOTS + Math.floor(words / WORDS_PER_PLOT)) };
+  return { words, rare, golden: Math.floor(words / WORDS_FOR_GOLDEN), run, plots: Math.min(MAX_PLOTS, MIN_PLOTS + Math.floor(words / WORDS_PER_PLOT)) };
 }
 
 export type SeedKind = 'packet' | 'rare' | 'golden';
 
 export interface Bed {
   plant: string;
-  /** 0 just planted … STAGES grown. */
-  stage: number;
+  /** The vocabulary topic (concept) this bed grows from. */
+  topic: string;
+  /** Right answers so far, of `need`. */
+  grown: number;
+  need: number;
   plantedAt: number;
-  /** A word he learned, on the plant's little tag. */
-  word?: string;
+  /** Older saves: a stage instead of answers. */
+  stage?: number;
 }
 
 export interface GardenState {
   beds: (Bed | null)[];
-  spent: { water: number; rare: number; golden: number };
+  spent: { rare: number; golden: number };
   /** Rare seeds dropped by harvests. */
   dropped: number;
   /** Harvest count per plant: the catalogue. */
   found: Record<string, number>;
-  /** Water he had when he last opened the garden (for "+N since last time"). */
-  seenWater: number;
   /** Catalogue rows he has completed (each gives a 👑 golden seed once). */
   tiersDone?: Tier[];
+  /** Harvests ever. */
+  harvests?: number;
+  /** When he first planted. */
+  startedAt?: number;
+  /** The last bug invasion he beat: when, and at how many harvests. */
+  boss?: { at: number; harvests: number; wins: number };
 }
 
 export const gardenKey = (studentId: string) => `garden:${studentId}`;
-export const emptyGarden = (): GardenState => ({ beds: [], spent: { water: 0, rare: 0, golden: 0 }, dropped: 0, found: {}, seenWater: 0 });
+export const emptyGarden = (): GardenState => ({ beds: [], spent: { rare: 0, golden: 0 }, dropped: 0, found: {} });
+
+/** Reads a saved garden, filling in what older saves don't have. */
+export function normalize(g: Partial<GardenState> | undefined | null): GardenState {
+  const base = emptyGarden();
+  if (!g) return base;
+  return {
+    ...base,
+    ...g,
+    spent: { rare: g.spent?.rare ?? 0, golden: g.spent?.golden ?? 0 },
+    beds: (g.beds ?? []).map((b) => {
+      if (!b) return null;
+      const need = b.need ?? TIER[plantOf(b.plant).tier].need;
+      return { ...b, topic: b.topic ?? 'en.vocab.everyday', need, grown: b.grown ?? Math.round(((b.stage ?? 0) / STAGES) * need) };
+    }),
+  };
+}
 
 export interface Wallet {
-  water: number;
   rare: number;
   golden: number;
 }
 
 export const walletOf = (e: Earned, g: GardenState): Wallet => ({
-  water: e.water - g.spent.water,
   rare: e.rare + g.dropped - g.spent.rare,
-  golden: e.golden + (g.tiersDone?.length ?? 0) - g.spent.golden,
+  golden: e.golden + (g.tiersDone?.length ?? 0) + (g.boss?.wins ?? 0) - g.spent.golden,
 });
+
+/** Drawn stage of a bed (0 seed … STAGES grown). */
+export const stageOf = (b: Bed) => (b.grown >= b.need ? STAGES : Math.min(STAGES - 1, Math.floor((b.grown / b.need) * STAGES)));
+export const isReady = (b: Bed) => b.grown >= b.need;
 
 /** Pick a plant from a seed: packets give common (mostly) or uncommon; rare seeds rare (1 in 8 legendary); golden seeds legendary or rare. */
 export function rollPlant(kind: SeedKind, found: Record<string, number>, rand = Math.random): Plant {
@@ -172,25 +196,26 @@ const setBed = (beds: (Bed | null)[], i: number, b: Bed | null) => {
   return out;
 };
 
-export function plant(g: GardenState, w: Wallet, plots: number, i: number, kind: SeedKind, word: string | undefined, now: number, rand = Math.random): Act {
+export function plant(g: GardenState, w: Wallet, plots: number, i: number, kind: SeedKind, topic: string, now: number, rand = Math.random): Act {
   if (i >= plots) return { ok: false, why: 'That bed is still locked.' };
   if (g.beds[i]) return { ok: false, why: 'Something is already growing there.' };
-  if (kind === 'packet' && w.water < PACKET_COST) return { ok: false, why: `A seed packet costs ${PACKET_COST} 💧.` };
   if (kind !== 'packet' && w[kind] < 1) return { ok: false, why: 'No seeds of that kind yet.' };
   const p = rollPlant(kind, g.found, rand);
   const spent = { ...g.spent };
-  if (kind === 'packet') spent.water += PACKET_COST;
-  else spent[kind] += 1;
-  return { ok: true, plant: p, garden: { ...g, spent, beds: setBed(g.beds, i, { plant: p.id, stage: 0, plantedAt: now, word }) } };
+  if (kind !== 'packet') spent[kind] += 1;
+  return {
+    ok: true,
+    plant: p,
+    garden: { ...g, spent, startedAt: g.startedAt ?? now, beds: setBed(g.beds, i, { plant: p.id, topic, grown: 0, need: TIER[p.tier].need, plantedAt: now }) },
+  };
 }
 
-export function water(g: GardenState, w: Wallet, i: number): Act {
+/** A right answer on a bed's word card: it grows one step. */
+export function grow(g: GardenState, i: number): Act {
   const b = g.beds[i];
   if (!b) return { ok: false, why: 'Nothing planted there.' };
-  if (b.stage >= STAGES) return { ok: false, why: 'Already grown — harvest it!' };
-  const cost = stepCost(plantOf(b.plant));
-  if (w.water < cost) return { ok: false, why: `Needs ${cost} 💧 — learn more words to get water.` };
-  return { ok: true, garden: { ...g, spent: { ...g.spent, water: g.spent.water + cost }, beds: setBed(g.beds, i, { ...b, stage: b.stage + 1 }) } };
+  if (isReady(b)) return { ok: false, why: 'Already grown — harvest it!' };
+  return { ok: true, garden: { ...g, beds: setBed(g.beds, i, { ...b, grown: b.grown + 1 }) } };
 }
 
 export interface Harvest {
@@ -206,7 +231,7 @@ export interface Harvest {
 
 export function harvest(g: GardenState, i: number, rand = Math.random): { garden: GardenState; result: Harvest } | { why: string } {
   const b = g.beds[i];
-  if (!b || b.stage < STAGES) return { why: 'Not ready yet.' };
+  if (!b || !isReady(b)) return { why: 'Not ready yet.' };
   const p = plantOf(b.plant);
   const first = !g.found[p.id];
   const drop = rand() < DROP_CHANCE;
@@ -215,7 +240,25 @@ export function harvest(g: GardenState, i: number, rand = Math.random): { garden
   const done = g.tiersDone ?? [];
   const tierDone = first && !done.includes(p.tier) && PLANTS.filter((x) => x.tier === p.tier).every((x) => found[x.id]) ? p.tier : undefined;
   return {
-    garden: { ...g, beds: setBed(g.beds, i, null), found, dropped: g.dropped + (drop ? 1 : 0), tiersDone: tierDone ? [...done, tierDone] : done },
+    garden: { ...g, beds: setBed(g.beds, i, null), found, dropped: g.dropped + (drop ? 1 : 0), tiersDone: tierDone ? [...done, tierDone] : done, harvests: (g.harvests ?? 0) + 1 },
     result: { plant: p, first, drop, coins: t.coins, gems: t.gems + (first ? 1 : 0), bed: b, tierDone },
   };
 }
+
+/**
+ * Time for a bug invasion (the garden's boss): after INVASION_HARVESTS harvests since the last one he beat,
+ * or after INVASION_DAYS days with at least two beds growing.
+ */
+export function invasionDue(g: GardenState, now: number): boolean {
+  const since = (g.harvests ?? 0) - (g.boss?.harvests ?? 0);
+  if (since >= INVASION_HARVESTS) return true;
+  const growing = g.beds.filter(Boolean).length;
+  const last = g.boss?.at ?? g.startedAt;
+  return last != null && growing >= 2 && now - last >= INVASION_DAYS * DAY;
+}
+
+/** He beat the invasion: the clock restarts and he wins a golden seed. */
+export const beatInvasion = (g: GardenState, now: number): GardenState => ({ ...g, boss: { at: now, harvests: g.harvests ?? 0, wins: (g.boss?.wins ?? 0) + 1 } });
+
+/** The bug invasion's mission id starts with this, so the battle knows to report back to the garden. */
+export const INVASION_ID = 'garden-invasion-';

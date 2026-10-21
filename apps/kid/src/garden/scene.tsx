@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Box, Crown, Cylinder, Emoji, GableRoof, Ground, INK, P, PyramidRoof, ShadeDefs, Tree, Windows, type Pt } from '../town/iso';
 import { Lake } from '../town/buildings';
 import { Cloud, IslandBase, IslandDefs, islandShape } from '../town/island';
-import { MAX_PLOTS, STAGES, plantOf, type Bed, type Plant } from '../lib/garden';
+import { MAX_PLOTS, plantOf, stageOf, type Bed, type Plant } from '../lib/garden';
 
 /**
  * The Word Garden drawn as a little isometric farm on a floating island: raised soil beds with the
@@ -320,7 +320,7 @@ const SPOTS: [number, number][] = [
   [1.55, 1.55],
 ];
 
-function BedDrawing({ i, bed, locked, toUnlock, onTap }: { i: number; bed: Bed | null; locked: boolean; toUnlock?: number; onTap: () => void }) {
+function BedDrawing({ i, bed, locked, toUnlock, pest, label, onTap }: { i: number; bed: Bed | null; locked: boolean; toUnlock?: number; pest?: boolean; label?: string; onTap: () => void }) {
   const { x, y } = bedAt(i);
   if (locked) {
     const [sx, sy] = P(x + BED / 2, y + BED / 2);
@@ -376,8 +376,37 @@ function BedDrawing({ i, bed, locked, toUnlock, onTap }: { i: number; bed: Bed |
         bed &&
         SPOTS.map(([ox, oy], k) => {
           const [cx, cy] = P(x + ox, y + oy, BED_H);
-          return <Crop key={k} x={cx} y={cy} p={p} stage={Math.min(bed.stage, STAGES)} />;
+          return <Crop key={k} x={cx} y={cy} p={p} stage={stageOf(bed)} />;
         })}
+      {pest &&
+        [
+          [0.7, 0.9, '🐛'],
+          [1.5, 1.3, '🐞'],
+          [1.1, 1.7, '🐛'],
+        ].map(([ox, oy, bug], k) => {
+          const [cx, cy] = P(x + (ox as number), y + (oy as number), BED_H + 4);
+          return (
+            <text key={`p${k}`} className="garden-bug" x={cx} y={cy} fontSize={13} textAnchor="middle" style={{ animationDelay: `${k * 0.3}s` }}>
+              {bug}
+            </text>
+          );
+        })}
+      {label && <TopicTag at={P(x + BED, y + BED)} text={label} />}
+    </g>
+  );
+}
+
+/** A little wooden tag in front of a bed with its topic. */
+function TopicTag({ at, text }: { at: Pt; text: string }) {
+  const [x, y] = at;
+  const t = text.length > 16 ? text.slice(0, 15) + '…' : text;
+  const w = Math.max(34, t.length * 4.6 + 10);
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <rect x={x - w / 2} y={y + 3} width={w} height={13} rx={3} fill="#f3dfb6" stroke={INK} strokeWidth={1} />
+      <text x={x} y={y + 12.5} fontSize={8} fontWeight={800} textAnchor="middle" fill="#4a2e18">
+        {t}
+      </text>
     </g>
   );
 }
@@ -512,16 +541,22 @@ export interface SceneProps {
   toUnlock: (i: number) => number;
   found: number;
   /** What each bed's bubble shows. */
-  bubble: (i: number) => { icon: string; tone: 'blue' | 'gold' | 'green' | 'grey' } | null;
+  bubble: (i: number) => { icon: string; tone: 'blue' | 'gold' | 'green' | 'grey' | 'red' } | null;
   onBed: (i: number) => void;
   /** Bed being watered / harvested right now (for the effect). */
   splash?: number | null;
   reaped?: { i: number; emoji: string; filter?: string } | null;
+  /** Beds with bugs on them (topics due for review). */
+  pest?: (i: number) => boolean;
+  /** Each bed's topic, for its tag. */
+  label?: (i: number) => string | undefined;
+  /** Bug invasion: bugs swarm the whole garden. */
+  invasion?: boolean;
 }
 
-const BUBBLE_FILL = { blue: '#d7ecff', gold: '#ffe9a8', green: '#dcf5d0', grey: '#ece7dd' };
+const BUBBLE_FILL = { blue: '#d7ecff', gold: '#ffe9a8', green: '#dcf5d0', grey: '#ece7dd', red: '#ffd9d2' };
 
-export function GardenScene({ beds, plots, toUnlock, found, bubble, onBed, splash, reaped, tall }: SceneProps & { tall?: boolean }) {
+export function GardenScene({ beds, plots, toUnlock, found, bubble, onBed, splash, reaped, tall, pest, label, invasion }: SceneProps & { tall?: boolean }) {
   const v = tall ? VIEW_TALL : VIEW;
   const decor = DECOR.filter((d) => found >= d.at);
   const back = decor.filter((d) => d.x < 2.2 || d.y < 2.2);
@@ -532,7 +567,7 @@ export function GardenScene({ beds, plots, toUnlock, found, bubble, onBed, splas
       const { x, y } = bedAt(i);
       return {
         key: x + y + BED,
-        el: <BedDrawing key={`b${i}`} i={i} bed={beds[i] ?? null} locked={i >= plots} toUnlock={toUnlock(i)} onTap={() => onBed(i)} />,
+        el: <BedDrawing key={`b${i}`} i={i} bed={beds[i] ?? null} locked={i >= plots} toUnlock={toUnlock(i)} pest={pest?.(i)} label={label?.(i)} onTap={() => onBed(i)} />,
       };
     }),
     ...rest.map((d) => ({ key: d.x + d.y + d.s * 2, el: <g key={d.id}>{d.draw()}</g> })),
@@ -570,6 +605,7 @@ export function GardenScene({ beds, plots, toUnlock, found, bubble, onBed, splas
           ))}
         <Fence />
         {items.map((it) => it.el)}
+        {invasion && <Swarm />}
         {/* Effects */}
         {splash != null && <Watering at={bedTop(splash)} />}
         {reaped && <Reap at={bedTop(reaped.i)} emoji={reaped.emoji} filter={reaped.filter} />}
@@ -602,6 +638,36 @@ export function GardenScene({ beds, plots, toUnlock, found, bubble, onBed, splas
         </g>
       </g>
     </svg>
+  );
+}
+
+/** The bug invasion: bugs crawling all over the garden. */
+function Swarm() {
+  const bugs: [number, number, string][] = [
+    [3.2, 3.4, '🐛'],
+    [5.8, 3.0, '🐞'],
+    [8.6, 3.6, '🦗'],
+    [3.6, 6.2, '🐌'],
+    [6.4, 6.0, '🐛'],
+    [9.0, 6.4, '🐞'],
+    [3.0, 9.0, '🦗'],
+    [6.0, 8.8, '🐛'],
+    [8.8, 9.2, '🐞'],
+    [1.6, 5.0, '🐛'],
+    [5.0, 1.6, '🐌'],
+    [10.6, 5.6, '🐛'],
+  ];
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      {bugs.map(([x, y, b], k) => {
+        const [sx, sy] = P(x, y, 10);
+        return (
+          <text key={k} className="garden-bug" x={sx} y={sy} fontSize={18} textAnchor="middle" style={{ animationDelay: `${(k % 5) * 0.2}s` }}>
+            {b}
+          </text>
+        );
+      })}
+    </g>
   );
 }
 

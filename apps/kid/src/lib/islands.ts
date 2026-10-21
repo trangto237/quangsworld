@@ -1,6 +1,7 @@
 import { MODES, modeFor, type GameMode } from '@atlas/game';
 import { worldOfConcept } from '@atlas/knowledge';
 import type { Mission } from '@atlas/shared';
+import type { Screen } from '../store';
 
 /**
  * Every island has its own game, dressed to fit the place: bugs attack the plants in the Word Garden,
@@ -206,8 +207,9 @@ export interface PlayedGame {
  */
 export function gameOf(m: Pick<Mission, 'concepts' | 'kind' | 'id' | 'mode'>): PlayedGame {
   const generic = (mode: GameMode): PlayedGame => ({ mode, ...MODES[mode] });
-  if (m.mode) return generic(m.mode);
   const island = ISLAND_GAMES[placeOf(m) ?? ''];
+  // His own pick; on the island's own game it keeps the island's look (the garden's bug invasion).
+  if (m.mode) return island?.mode === m.mode ? island : generic(m.mode);
   if (m.kind === 'boss')
     return island?.mode === 'duel'
       ? island
@@ -216,4 +218,13 @@ export function gameOf(m: Pick<Mission, 'concepts' | 'kind' | 'id' | 'mode'>): P
           dress: island?.dress?.bg ? { bg: island.dress.bg } : undefined,
         };
   return island ?? generic(modeFor(m.concepts, m.kind, m.id));
+}
+
+/**
+ * Where a mission is played. Vocabulary quests are played in the Word Garden itself (its word cards count
+ * towards the quest); everything else is a battle with the island's game.
+ */
+export function playScreen(m: Mission, fromPlan: boolean): Screen {
+  if (fromPlan && m.kind !== 'boss' && !m.mode && placeOf(m) === 'word-forest') return { name: 'garden', quest: m };
+  return { name: 'battle', mission: m, fromPlan };
 }
