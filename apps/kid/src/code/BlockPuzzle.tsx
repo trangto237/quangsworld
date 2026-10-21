@@ -58,7 +58,11 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
   const add = (t: BlockKind) => {
     if (used >= puzzle.max) return;
     reset();
-    setProg((p) => editAt(p, target, (l) => [...l, newBlock(t)]));
+    const b = newBlock(t);
+    const at = bodyAt(prog, target).length;
+    setProg((p) => editAt(p, target, (l) => [...l, b]));
+    // A new repeat / if: the next blocks go inside it.
+    if ('body' in b) setTarget([...target, at]);
   };
   const remove = (path: Path) => {
     reset();
@@ -96,13 +100,10 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
   const walls = new Set(puzzle.walls.map(([x, y]) => `${x},${y}`));
   const trailSet = new Set(trail.map((s) => `${s.x},${s.y}`));
 
+  const same = (a: Path, b: Path) => a.length === b.length && a.every((x, i) => x === b[i]);
   const renderList = (list: Block[], path: Path) => (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        setTarget(path);
-      }}
-      className={cx('min-h-9 space-y-1 rounded-lg p-1', path.length > 0 && 'ml-4 border-l-4', JSON.stringify(path) === JSON.stringify(target) && 'bg-amber-200/60 ring-2 ring-amber-400 dark:bg-amber-900/40')}
+      className={cx('space-y-1 rounded-lg p-1', path.length > 0 && 'ml-4 border-l-4')}
       style={path.length ? { borderColor: LABEL[(bodyAt(prog, path.slice(0, -1))[path[path.length - 1]] as Block)?.t ?? 'repeat'].color } : undefined}
     >
       {list.map((b, i) => {
@@ -131,11 +132,25 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
           </div>
         );
       })}
-      {!list.length && (
-        <p className="px-2 py-1 text-xs text-ink-soft">
-          {path.length ? <T en="Tap here, then add blocks inside" /> : <T en="Add blocks from above" />}
-        </p>
-      )}
+      {/* Where new blocks go: a slot at the end of every list (inside each repeat, and after it). */}
+      <button
+        type="button"
+        onClick={() => setTarget(path)}
+        className={cx(
+          'block w-full rounded-md border-2 border-dashed px-2 py-1 text-left text-xs font-bold transition',
+          same(path, target) ? 'border-[#f59e0b] bg-[#ffe7a8] text-[#7a4a00] dark:bg-amber-900/50 dark:text-amber-100' : 'border-ink/20 text-ink-soft hover:border-ink/40',
+        )}
+      >
+        {same(path, target) ? (
+          <>
+            ⬇ <T en={path.length ? 'New blocks go here (inside)' : 'New blocks go here'} />
+          </>
+        ) : (
+          <>
+            ＋ <T en={path.length ? 'Tap to add inside here' : 'Tap to add here (after everything)'} />
+          </>
+        )}
+      </button>
     </div>
   );
 
@@ -162,15 +177,6 @@ export function BlockPuzzle({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: ()
         </div>
         <p className="text-xs font-semibold text-ink-soft">
           <T en="Blocks used" />: {used}/{puzzle.max}
-          {target.length > 0 && (
-            <>
-              {' '}
-              · <T en="adding inside the highlighted block" />{' '}
-              <button className="underline" onClick={() => setTarget([])}>
-                <T en="(add at the end instead)" />
-              </button>
-            </>
-          )}
         </p>
         <div className="rounded-xl bg-paper-2 p-2">{renderList(prog, [])}</div>
         <div className="flex gap-2">

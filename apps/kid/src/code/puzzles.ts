@@ -214,6 +214,9 @@ export function runProgram(p: Puzzle, prog: Block[]): RunResult {
 }
 
 /** The same program as real code. */
+/** Loop counters by how deep the loop is, so loops inside loops don't share a name. */
+const COUNTER = ['i', 'j', 'k', 'm'];
+
 export function toCode(prog: Block[], lang: 'js' | 'py'): string {
   const out: string[] = [];
   const pad = (d: number) => (lang === 'js' ? '  ' : '    ').repeat(d);
@@ -227,8 +230,8 @@ export function toCode(prog: Block[], lang: 'js' | 'py'): string {
         const head =
           b.t === 'repeat'
             ? lang === 'js'
-              ? `for (let i = 0; i < ${b.n}; i++) {`
-              : `for i in range(${b.n}):`
+              ? `for (let ${COUNTER[d] ?? 'i'} = 0; ${COUNTER[d] ?? 'i'} < ${b.n}; ${COUNTER[d] ?? 'i'}++) {`
+              : `for ${COUNTER[d] ?? 'i'} in range(${b.n}):`
             : b.t === 'until'
               ? lang === 'js'
                 ? 'while (!atApple()) {'
@@ -290,16 +293,24 @@ export function explainCode(prog: Block[], lang: 'js' | 'py'): CodeNote[] {
         });
         continue;
       }
-      if (b.t === 'repeat')
+      if (b.t === 'repeat') {
+        const v = COUNTER[depth] ?? 'i';
         add('repeat', {
-          code: js ? `for (let i = 0; i < ${b.n}; i++) {` : `for i in range(${b.n}):`,
+          code: js ? `for (let ${v} = 0; ${v} < ${b.n}; ${v}++) {` : `for ${v} in range(${b.n}):`,
           en: js
-            ? `A loop that counts. i starts at 0; it keeps going while i < ${b.n}; i++ adds 1 each time. So it runs ${b.n} times: i = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
+            ? `A loop that counts. ${v} starts at 0; it keeps going while ${v} < ${b.n}; ${v}++ adds 1 each time. So it runs ${b.n} times: ${v} = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
             : `A loop that counts. range(${b.n}) gives the numbers 0 to ${b.n - 1}, so the lines inside run ${b.n} times.`,
           vi: js
-            ? `Vòng lặp đếm. i bắt đầu từ 0; lặp tiếp khi i < ${b.n}; i++ cộng thêm 1 mỗi lần. Vậy nó chạy ${b.n} lần: i = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
+            ? `Vòng lặp đếm. ${v} bắt đầu từ 0; lặp tiếp khi ${v} < ${b.n}; ${v}++ cộng thêm 1 mỗi lần. Vậy nó chạy ${b.n} lần: ${v} = 0, 1${b.n > 2 ? ', …' : ''}, ${b.n - 1}.`
             : `Vòng lặp đếm. range(${b.n}) cho các số từ 0 đến ${b.n - 1}, nên các dòng bên trong chạy ${b.n} lần.`,
         });
+        if (depth > 0)
+          add('nested', {
+            code: v,
+            en: `A loop inside a loop gets its own counter (${v}, not i), so the two counts don't get mixed up. The inside loop runs all the way through every time the outside loop goes round once.`,
+            vi: `Vòng lặp nằm trong vòng lặp có biến đếm riêng (${v}, không phải i) để hai lần đếm không bị lẫn. Vòng trong chạy hết mỗi lần vòng ngoài quay một vòng.`,
+          });
+      }
       if (b.t === 'until')
         add('until', {
           code: js ? 'while (!atApple()) {' : 'while not at_apple():',

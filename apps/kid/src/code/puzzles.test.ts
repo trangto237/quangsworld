@@ -54,5 +54,9 @@ describe('why the real code looks like this', () => {
     expect(py[3].en).toContain('indented');
     expect(explainCode([{ t: 'until', body: [] }], 'py').map((n) => n.code)).toContain('pass');
     expect(explainCode([], 'js')).toEqual([]);
+    const nested = [{ t: 'repeat' as const, n: 3, body: [{ t: 'repeat' as const, n: 2, body: [{ t: 'move' as const }] }] }];
+    expect(toCode(nested, 'js')).toContain('for (let j = 0; j < 2; j++) {');
+    expect(toCode(nested, 'py')).toContain('for j in range(2):');
+    expect(explainCode(nested, 'js').map((n) => n.code)).toContain('j');
   });
 });
