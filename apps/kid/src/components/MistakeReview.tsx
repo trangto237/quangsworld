@@ -35,7 +35,7 @@ export function MistakeReview({ mistakes, onDone }: { mistakes: Mistake[]; onDon
         </p>
       )}
       <p className="mt-2 font-display text-xl font-semibold leading-snug">
-        <GlossText text={q.prompt} enabled={lang !== 'en' && !q.conceptId.startsWith('lit.')} />
+        <GlossText text={q.prompt} enabled={lang !== 'en' && !q.conceptId.startsWith('lit.') && !q.conceptId.startsWith('custom.lit.')} />
       </p>
       {promptVi && (
         <p lang="vi" className="mt-1 text-sm text-rose-900 dark:text-rose-200">

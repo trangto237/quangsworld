@@ -3,7 +3,7 @@ import initSqlJs from 'sql.js';
 import { AtlasDb } from './database';
 import { Repo } from './repo';
 import { MemoryStore } from './store';
-import { getConcept, allConcepts, autoImport, GLOBAL_SUCCESS_9, pickQuestion, staticQuestions } from '@atlas/knowledge';
+import { getConcept, allConcepts, autoImport, conceptsInWorld, GLOBAL_SUCCESS_9, NGU_VAN_9, WORLDS, pickQuestion, staticQuestions } from '@atlas/knowledge';
 import { createPlacement, isPlacementDone, nextPlacementQuestion, recordPlacementAnswer, scorePlacement } from '@atlas/engine';
 import { rng } from '@atlas/shared';
 
@@ -270,6 +270,23 @@ describe('Repo', () => {
     expect(getConcept('custom.tb.gs9-u7.grammar')).toBeUndefined();
     expect(repo.listMaterials()).toHaveLength(1);
     await expect(repo.importQuestions({ unit, materialName: 'x', kind: 'text', drafts: [], via: 'offline' })).rejects.toThrow(/Nothing to save/);
+  });
+
+  it('Ngữ văn imports become Vietnamese missions in the Story Library', async () => {
+    const repo = new Repo(await AtlasDb.open(SQL, new MemoryStore(), 'lit'));
+    const unit = { ...NGU_VAN_9[0], title: 'Bài 1 · Thế giới kì ảo' };
+    const drafts = [
+      { type: 'mcq' as const, part: 'reading' as const, prompt: 'Chi tiết nào là chi tiết kì ảo?', options: ['Nhân vật sống dưới thuỷ cung', 'Nhân vật đi lính', 'Người mẹ ốm', 'Đứa trẻ hỏi cha'], answer: 0, difficulty: 3, explanation: 'Thuỷ cung là yếu tố kì ảo.' },
+      { type: 'input' as const, part: 'vocabulary' as const, prompt: 'Thể loại của văn bản là truyện …', options: ['truyền kì'], answer: 0, accept: ['truyện truyền kì'], difficulty: 2 },
+    ];
+    const res = await repo.importQuestions({ unit, materialName: 'Ngữ văn — bai1.pdf', kind: 'pdf', drafts, via: 'ai', subject: 'literature' });
+    expect(res.concepts.map((c) => c.id).sort()).toEqual(['custom.lit.nv9-b1.reading', 'custom.lit.nv9-b1.vocabulary']);
+    const c = getConcept('custom.lit.nv9-b1.reading')!;
+    expect(c.subject).toBe('literature');
+    expect(c.missionName).toBe('📖 Bài 1 · Đọc hiểu văn bản');
+    const library = WORLDS.find((w) => w.id === 'story-library')!;
+    expect(conceptsInWorld(library).map((x) => x.id)).toContain('custom.lit.nv9-b1.reading');
+    expect(staticQuestions('custom.lit.nv9-b1.vocabulary')[0].type).toBe('input');
   });
 
   it('a concept shared by two imports survives deleting the one that created it', async () => {

@@ -45,7 +45,7 @@ export const WORLDS: World[] = [
   { id: 'algebra-peaks', name: 'Algebra Peaks', emoji: '⛰️', color: '#2563eb', subject: 'math', domains: ['Algebra', 'Mathematical Reasoning'], blurb: 'Climb by balancing the unknown.' },
   { id: 'geometry-isles', name: 'Geometry Isles', emoji: '🔺', color: '#0d9488', subject: 'math', domains: ['Geometry'], blurb: 'Chart islands of angles and shapes.' },
   { id: 'logic-labyrinth', name: 'Logic Labyrinth', emoji: '♞', color: '#d97706', subject: 'logic', domains: ['Pattern recognition', 'Deduction', 'Spatial reasoning', 'Chess puzzles', 'Sequence'], blurb: 'A maze only the sharpest minds escape.' },
-  { id: 'story-library', name: 'Story Library', emoji: '📜', color: '#db2777', subject: 'literature', domains: ['Đọc hiểu', 'Từ ngữ', 'Nghị luận', 'Viết'], blurb: 'Every book hides a guardian.' },
+  { id: 'story-library', name: 'Story Library', emoji: '📜', color: '#db2777', subject: 'literature', domains: ['Sách Ngữ văn', 'Đọc hiểu', 'Từ ngữ', 'Nghị luận', 'Viết'], blurb: 'Every book hides a guardian.' },
 ];
 
 export const PLACEMENT_SECTIONS: PlacementSection[] = [

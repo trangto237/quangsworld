@@ -53,6 +53,17 @@ export const PART_LABEL: Record<DraftPart, { en: string; emoji: string }> = {
   questions: { en: 'Practice questions', emoji: '✏️' },
 };
 
+/** Ngữ văn parts (same four slots, named after the book's sections). */
+export const LIT_PART_LABEL: Record<DraftPart, { en: string; emoji: string }> = {
+  reading: { en: 'Đọc hiểu văn bản', emoji: '📖' },
+  grammar: { en: 'Thực hành tiếng Việt', emoji: '🧩' },
+  vocabulary: { en: 'Kiến thức văn học', emoji: '📚' },
+  questions: { en: 'Câu hỏi trong sách', emoji: '✏️' },
+};
+
+/** Ngữ văn 9: ten bài; the parent can add the bài's name. */
+export const NGU_VAN_9: TextbookUnit[] = Array.from({ length: 10 }, (_, i) => ({ id: `nv9-b${i + 1}`, title: `Bài ${i + 1}`, vi: `Bài ${i + 1}` }));
+
 // ── Whole book → units ──────────────────────────────────────────
 
 export interface BookSection {

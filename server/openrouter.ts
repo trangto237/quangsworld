@@ -8,7 +8,7 @@
  * - OpenRouter's servers call the model, so the "User location is not supported" problem doesn't arise.
  */
 import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/import-validate';
-import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
+import { GenerateError, systemFor, taskFor } from './prompt';
 import type { GenerateRequest } from './generate-core';
 
 const BASE = 'https://openrouter.ai/api/v1';
@@ -172,8 +172,8 @@ export async function generateWithOpenRouter(
   if (req.pdfBase64) content.push({ type: 'file', file: { filename: 'pages.pdf', file_data: `data:application/pdf;base64,${req.pdfBase64}` } });
   for (const im of req.images ?? []) content.push({ type: 'image_url', image_url: { url: `data:${im.mediaType};base64,${im.data}` } });
   if (req.text) content.push({ type: 'text', text: `<material>\n${req.text}\n</material>` });
-  content.push({ type: 'text', text: `${taskText(req)}\nAnswer with JSON only: {"questions": [...]}.` });
-  const { result, model } = await withModel(configured, fetchFn, (m) => chat(key, m, SYSTEM_PROMPT, content, QUESTIONS_JSON, fetchFn));
+  content.push({ type: 'text', text: `${taskFor(req)}\nAnswer with JSON only: {"questions": [...]}.` });
+  const { result, model } = await withModel(configured, fetchFn, (m) => chat(key, m, systemFor(req), content, QUESTIONS_JSON, fetchFn));
   const { drafts, dropped } = validateDrafts((result as { questions?: unknown }).questions, 80);
   return { drafts, dropped: dropped.length, model };
 }

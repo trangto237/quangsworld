@@ -6,7 +6,7 @@
  * - The answer is constrained to a JSON schema, then validated item by item like the Claude path.
  */
 import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/import-validate';
-import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
+import { GenerateError, systemFor, taskFor } from './prompt';
 import type { GenerateRequest } from './generate-core';
 
 /** Used only if the model list can't be fetched: Google's alias for its current Flash model. */
@@ -196,9 +196,9 @@ export function buildGeminiBody(req: Req) {
   if (req.pdfBase64) parts.push({ inlineData: { mimeType: 'application/pdf', data: req.pdfBase64 } });
   for (const im of req.images ?? []) parts.push({ inlineData: { mimeType: im.mediaType, data: im.data } });
   if (req.text) parts.push({ text: `<material>\n${req.text}\n</material>` });
-  parts.push({ text: taskText(req) });
+  parts.push({ text: taskFor(req) });
   return {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    systemInstruction: { parts: [{ text: systemFor(req) }] },
     contents: [{ role: 'user', parts }],
     generationConfig: { responseMimeType: 'application/json', responseSchema: GEMINI_SCHEMA, temperature: 0.4, maxOutputTokens: 32768 },
   };

@@ -103,6 +103,10 @@ describe('AI question generation (Pages Function)', () => {
 
   it('validates the request body', () => {
     expect(parseRequest({}).ok).toBe(false);
+    const lit = parseRequest({ text: 'Văn bản', subject: 'literature' });
+    expect(lit.ok && lit.req.subject).toBe('literature');
+    const en = parseRequest({ text: 'Text', subject: 'nonsense' });
+    expect(en.ok && en.req.subject).toBe('english');
     expect(parseRequest({ text: 'x'.repeat(60_001) }).ok).toBe(false);
     expect(parseRequest({ images: [{ mediaType: 'image/tiff', data: 'aa' }] }).ok).toBe(false);
     expect(parseRequest({ images: new Array(9).fill({ mediaType: 'image/png', data: 'a' }) }).ok).toBe(false);

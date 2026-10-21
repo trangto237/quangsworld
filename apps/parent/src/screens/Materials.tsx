@@ -3,6 +3,7 @@ import { flashcardsToConcept } from '@atlas/knowledge';
 import { Button, Card, Field, inputClass, useQuery, useRepo } from '@atlas/ui';
 import { ImportWizard } from '../components/ImportWizard';
 import { ExamImport } from '../components/ExamImport';
+import { LitImport } from '../components/LitImport';
 
 const SAMPLE = 'term,meaning\nabundant,existing in large quantities\nbrief,lasting a short time\ncautious,careful to avoid risk\ndiligent,showing care and effort\neager,wanting to do something very much';
 
@@ -30,6 +31,7 @@ export function Materials() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <ImportWizard />
+      <LitImport />
       <ExamImport />
 
       <Card title="Flashcard deck (CSV)">

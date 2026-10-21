@@ -110,7 +110,7 @@ const RULES: Rule[] = [
 
 /** Vietnamese version of a prompt's instruction, or null when there is nothing useful to add. */
 export function translatePrompt(prompt: string, conceptId: string): string | null {
-  if (conceptId.startsWith('lit.')) return null; // already Vietnamese
+  if (conceptId.startsWith('lit.') || conceptId.startsWith('custom.lit.')) return null; // already Vietnamese
   for (const [re, out] of RULES) {
     const m = prompt.match(re);
     if (m) return typeof out === 'string' ? out.replace(/\$(\d)/g, (_x, i) => m[+i] ?? '') : out(...m);

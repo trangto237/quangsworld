@@ -12,7 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { validateDrafts, type DraftQuestion } from '../packages/knowledge/src/import-validate';
 import { geminiFetch, generateWithGemini, withGeminiModel } from './gemini';
 import { generateWithOpenRouter } from './openrouter';
-import { GenerateError, SYSTEM_PROMPT, taskText } from './prompt';
+import { GenerateError, systemFor, taskFor } from './prompt';
 
 export { GenerateError, SYSTEM_PROMPT } from './prompt';
 
@@ -50,6 +50,8 @@ export interface GenerateRequest {
   focus?: ('vocabulary' | 'grammar' | 'reading')[];
   /** How many questions to aim for. */
   count?: number;
+  /** Which book: the English textbook (default) or Ngữ văn. */
+  subject?: 'english' | 'literature';
 }
 
 export const MODEL = 'claude-opus-5-5';
@@ -145,7 +147,8 @@ export function parseRequest(body: unknown): { ok: true; req: Required<Pick<Gene
   const focus = (Array.isArray(b.focus) ? b.focus : []).filter((f) => f === 'vocabulary' || f === 'grammar' || f === 'reading');
   const count = Math.min(LIMITS.maxCount, Math.max(LIMITS.minCount, Math.round(Number(b.count) || 20)));
   const unitTitle = typeof b.unitTitle === 'string' ? b.unitTitle.slice(0, 120) : undefined;
-  return { ok: true, req: { text, pdfBase64: pdf || undefined, images, unitTitle, focus: focus.length ? focus : ['vocabulary', 'grammar', 'reading'], count } };
+  const subject = b.subject === 'literature' ? 'literature' : 'english';
+  return { ok: true, req: { text, pdfBase64: pdf || undefined, images, unitTitle, focus: focus.length ? focus : ['vocabulary', 'grammar', 'reading'], count, subject } };
 }
 
 /** Structured-output schema for Claude (Gemini uses the equivalent GEMINI_SCHEMA in server/gemini.ts). */
@@ -184,7 +187,7 @@ export function buildContent(req: GenerateRequest & { count: number; focus: stri
   if (req.pdfBase64) content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: req.pdfBase64 } });
   for (const im of req.images ?? []) content.push({ type: 'image', source: { type: 'base64', media_type: im.mediaType as ImageType, data: im.data } });
   if (req.text) content.push({ type: 'text', text: `<material>\n${req.text}\n</material>` });
-  content.push({ type: 'text', text: taskText(req) });
+  content.push({ type: 'text', text: taskFor(req) });
   return content;
 }
 
@@ -203,7 +206,7 @@ export async function generateQuestions(client: Pick<Anthropic, 'beta'>, req: Ge
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
     output_config: { effort: 'medium', format: { type: 'json_schema', schema: QUESTIONS_SCHEMA as unknown as Record<string, unknown> } },
-    system: SYSTEM_PROMPT,
+    system: systemFor(req),
     messages: [{ role: 'user', content: buildContent(req) }],
   });
   const message = await stream.finalMessage();

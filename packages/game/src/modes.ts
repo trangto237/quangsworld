@@ -41,7 +41,7 @@ function category(id: string): keyof typeof SUITED {
     if (id.endsWith('.questions')) return 'grammar';
     return 'fast';
   }
-  if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') return 'calm';
+  if (id.startsWith('en.reading') || id.startsWith('en.listening.details') || id.startsWith('en.listening.main') || id.startsWith('lit.') || id.startsWith('custom.lit.') || id.startsWith('en.ielts') || id === 'en.exam.transformation' || id === 'en.exam.combination') return 'calm';
   if (id === 'en.exam.communication' || id === 'en.exam.arrange') return 'dialogue';
   if (id === 'en.exam.signs') return 'fast';
   if (id.startsWith('en.vocab') || id.startsWith('custom.') || id.startsWith('en.listening.numbers') || id.startsWith('en.pron')) return 'fast';

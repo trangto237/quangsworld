@@ -3,7 +3,7 @@ import type {
   Attempt, ConceptDef, ConceptState, Goal, GoalKind, PlacementScores, Question, Reward, Student, StudySession, Wallet,
 } from '@atlas/shared';
 import { hashString, uid } from '@atlas/shared';
-import { PART_LABEL, allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept, type DraftPart, type DraftQuestion } from '@atlas/knowledge';
+import { LIT_PART_LABEL, PART_LABEL, allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept, type DraftPart, type DraftQuestion } from '@atlas/knowledge';
 import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, type ImportedExam, type PlacementState } from '@atlas/engine';
 import type { AtlasDb } from './database';
 import * as t from './schema';
@@ -608,6 +608,8 @@ export class Repo {
     size?: number;
     /** A short excerpt shown as the reading mission's lesson. */
     excerpt?: string;
+    /** Ngữ văn imports become missions in the Story Library (in Vietnamese). */
+    subject?: 'english' | 'literature';
   }): Promise<{ concepts: ConceptDef[]; added: number; skipped: number; materialId: string }> {
     const { unit, drafts } = input;
     if (!drafts.length) throw new Error('Nothing to save: no questions were selected.');
@@ -620,18 +622,19 @@ export class Repo {
     const byPart = new Map<DraftPart, DraftQuestion[]>();
     for (const d of drafts) byPart.set(d.part, [...(byPart.get(d.part) ?? []), d]);
     for (const [part, list] of byPart) {
-      const cid = `custom.tb.${unit.id}.${part}`;
-      const label = PART_LABEL[part];
+      const lit = input.subject === 'literature';
+      const cid = `custom.${lit ? 'lit' : 'tb'}.${unit.id}.${part}`;
+      const label = lit ? LIT_PART_LABEL[part] : PART_LABEL[part];
       const prev = existing.get(cid)?.data as ConceptDef | undefined;
       concepts.set(cid, {
         id: cid,
-        subject: 'english',
-        domain: 'My textbook',
+        subject: lit ? 'literature' : 'english',
+        domain: lit ? 'Sách Ngữ văn' : 'My textbook',
         skill: unit.title,
         name: `${unit.title} — ${label.en.toLowerCase()}`,
         missionName: `${label.emoji} ${unitShort} · ${label.en}`,
-        description: `From your textbook: ${unit.title}.`,
-        cefr: 'B1',
+        description: lit ? `Từ sách Ngữ văn của em: ${unit.title}.` : `From your textbook: ${unit.title}.`,
+        cefr: lit ? undefined : 'B1',
         lesson: prev?.lesson ?? (part === 'reading' && input.excerpt ? input.excerpt.slice(0, 600) : undefined),
       });
       for (const d of list) {
@@ -656,7 +659,8 @@ export class Repo {
         });
       }
     }
-    const counts = [...byPart.keys()].map((p) => `${questions.filter((q) => q.conceptId.endsWith(`.${p}`)).length} ${PART_LABEL[p].en.toLowerCase()}`).join(', ');
+    const labels = input.subject === 'literature' ? LIT_PART_LABEL : PART_LABEL;
+    const counts = [...byPart.keys()].map((p) => `${questions.filter((q) => q.conceptId.endsWith(`.${p}`)).length} ${labels[p].en.toLowerCase()}`).join(', ');
     if (input.bytes) await this.db.putFile(materialId, input.bytes);
     await this.db.write((o) => {
       o.insert(t.materials)

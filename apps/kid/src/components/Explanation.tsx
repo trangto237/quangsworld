@@ -13,7 +13,9 @@ export function Explanation({ question: q, picked }: { question: Question; picke
   const concept = getConcept(q.conceptId);
   const right = q.options[q.answer];
   const help = lang !== 'en';
-  const explanationVi = help ? (q.explanationVi ?? translateExplanation(q.explanation)) : null;
+  // Literature is already in Vietnamese: no translation line, no English word tips.
+  const viet = q.conceptId.startsWith('lit.') || q.conceptId.startsWith('custom.lit.');
+  const explanationVi = help && !viet ? (q.explanationVi ?? translateExplanation(q.explanation)) : null;
   const lessonVi = help ? LESSONS_VI[q.conceptId] : undefined;
   const [coachOpen, setCoachOpen] = useState(false);
   const canCoach = q.conceptId.startsWith('en.');
@@ -98,7 +100,7 @@ export function Explanation({ question: q, picked }: { question: Question; picke
       )}
       {q.explanation && !(mistake && q.conceptId.startsWith('en.pron')) && (
         <p className="text-slate-700 dark:text-slate-200">
-          💡 <GlossText text={q.explanation} enabled={help} />
+          💡 <GlossText text={q.explanation} enabled={help && !viet} />
           {explanationVi && (
             <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">
               🇻🇳 {explanationVi}

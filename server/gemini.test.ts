@@ -162,3 +162,15 @@ describe('Gemini model choice', () => {
     expect((e as Error).message).toMatch(/Remove GEMINI_MODEL/);
   });
 });
+
+describe('Ngữ văn questions', () => {
+  it('asks in Vietnamese, about the book\'s sections', () => {
+    const body = buildGeminiBody({ text: 'Văn bản…', unitTitle: 'Ngữ văn 9 — Bài 1', focus: ['reading', 'grammar'], count: 10, subject: 'literature' } as never);
+    const system = (body.systemInstruction.parts[0] as { text: string }).text;
+    expect(system).toMatch(/Ngữ văn 9/);
+    const task = (body.contents[0].parts.at(-1) as { text: string }).text;
+    expect(task).toMatch(/đọc hiểu văn bản, thực hành tiếng Việt/);
+    const en = buildGeminiBody({ text: 'Unit 7', focus: ['reading'], count: 10 } as never);
+    expect((en.systemInstruction.parts[0] as { text: string }).text).toMatch(/English/);
+  });
+});

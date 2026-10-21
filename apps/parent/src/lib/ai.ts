@@ -34,7 +34,7 @@ export async function aiStatus(): Promise<AiStatus> {
 export async function generateWithAI(
   token: string,
   src: Extracted,
-  opts: { unitTitle: string; focus: ('vocabulary' | 'grammar' | 'reading')[]; count: number },
+  opts: { unitTitle: string; focus: ('vocabulary' | 'grammar' | 'reading')[]; count: number; subject?: 'english' | 'literature' },
 ): Promise<{ drafts: DraftQuestion[]; dropped: number }> {
   const res = await fetch('/api/generate', {
     method: 'POST',
