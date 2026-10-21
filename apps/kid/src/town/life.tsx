@@ -71,12 +71,15 @@ export function SkyLife({ view, phase, reduced }: { view: { x: number; y: number
         <>
           <g>
             <animateTransform attributeName="transform" type="translate" from="-1000 -40" to="1000 80" dur="40s" repeatCount="indefinite" />
-            <Emoji at={[0, -160]} size={15}>
-              🐦
-            </Emoji>
-            <Emoji at={[24, -148]} size={12}>
-              🐦
-            </Emoji>
+            {/* The emoji faces left; flip it so the birds fly forwards. */}
+            <g transform="scale(-1 1)">
+              <Emoji at={[0, -160]} size={15}>
+                🐦
+              </Emoji>
+              <Emoji at={[-24, -148]} size={12}>
+                🐦
+              </Emoji>
+            </g>
           </g>
           <g>
             <animateTransform attributeName="transform" type="translate" values="900 120; -900 -60" dur="90s" repeatCount="indefinite" />
@@ -86,9 +89,11 @@ export function SkyLife({ view, phase, reduced }: { view: { x: number; y: number
           </g>
           <g>
             <animateTransform attributeName="transform" type="translate" values="-900 300; 900 200" dur="70s" begin="-30s" repeatCount="indefinite" />
-            <Emoji at={[0, 300]} size={16}>
-              🦅
-            </Emoji>
+            <g transform="scale(-1 1)">
+              <Emoji at={[0, 300]} size={16}>
+                🦅
+              </Emoji>
+            </g>
           </g>
         </>
       )}
