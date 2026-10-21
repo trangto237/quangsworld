@@ -77,7 +77,7 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
     let o = (i - index) % n;
     if (o > n / 2) o -= n;
     if (o < -n / 2) o += n;
-    return o - drag / step;
+    return o + drag / step;
   };
 
   return (
