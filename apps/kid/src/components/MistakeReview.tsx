@@ -16,7 +16,7 @@ export function MistakeReview({ mistakes, onDone }: { mistakes: Mistake[]; onDon
   const q = m.question;
   const last = i === mistakes.length - 1;
   const lang = useLang();
-  const promptVi = lang !== 'en' ? translatePrompt(q.prompt, q.conceptId) : null;
+  const promptVi = lang !== 'en' ? (q.promptVi ?? translatePrompt(q.prompt, q.conceptId)) : null;
   return (
     <div className="w-full max-w-xl animate-pop rounded-3xl bg-white p-6 text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-slate-100">
       <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-500">

@@ -26,7 +26,7 @@ describe('Vietnamese help', () => {
         for (let s = 1; s <= 20; s++) {
           const g = gen(d, rng(s * 13 + d));
           const hasEnglish = /[a-zA-Z]{3,}/.test(g.prompt.replace(/Simplify|Solve|Expand/g, ''));
-          if (hasEnglish && !translatePrompt(g.prompt, id)) missing.add(`${id}: ${g.prompt}`);
+          if (hasEnglish && !g.promptVi && !translatePrompt(g.prompt, id)) missing.add(`${id}: ${g.prompt}`);
         }
     }
     expect([...missing]).toEqual([]);

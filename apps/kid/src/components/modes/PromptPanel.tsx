@@ -19,7 +19,7 @@ export function useGloss(q: PresentedQuestion | null, allowed = true) {
 export function PromptPanel({ q, glossary = true, className, children }: { q: PresentedQuestion; glossary?: boolean; className?: string; children?: React.ReactNode }) {
   const lang = useLang();
   const [showVi, setShowVi] = useState(lang === 'vi');
-  const vi = lang !== 'en' ? translatePrompt(q.prompt, q.conceptId) : null;
+  const vi = lang !== 'en' ? (q.promptVi ?? translatePrompt(q.prompt, q.conceptId)) : null;
   const gloss = useGloss(q, glossary);
   useEffect(() => setShowVi(lang === 'vi'), [q, lang]);
   return (

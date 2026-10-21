@@ -139,7 +139,7 @@ export function RunnerArena(p: ModeProps) {
   const gateTop = 12 + eased * 62; // % from top
   const spread = 0.28 + 0.72 * eased; // road widens toward the viewer
   const laneX = (i: number, s: number) => 50 + ((i + 0.5) / n - 0.5) * 100 * s * 0.92;
-  const vi = question && lang !== 'en' ? translatePrompt(question.prompt, question.conceptId) : null;
+  const vi = question && lang !== 'en' ? (question.promptVi ?? translatePrompt(question.prompt, question.conceptId)) : null;
   const gloss = !!question && lang !== 'en' && (p.glossary ? p.glossary(question) : true) && !question.conceptId.startsWith('en.vocab') && !question.conceptId.startsWith('custom.');
 
   const scene = SCENES[look.gear('runner.scene')?.id ?? ''] ?? (p.dress?.bg && p.dress.road && p.dress.decor ? { bg: p.dress.bg, road: p.dress.road, decor: p.dress.decor } : undefined);

@@ -93,7 +93,7 @@ export const PLACEMENT_SECTIONS: PlacementSection[] = [
     questionCount: 20,
     concepts: [
       'math.number.integers', 'math.number.fractions', 'math.number.percent', 'math.number.powers',
-      'math.algebra.expressions', 'math.algebra.linear', 'math.algebra.inequalities', 'math.algebra.quadratics',
+      'math.algebra.expressions', 'math.algebra.linear', 'math.algebra.inequalities', 'math.algebra.systems', 'math.algebra.radicals', 'math.algebra.quadratics',
       'math.geometry.angles', 'math.geometry.area', 'math.geometry.pythagoras',
       'logic.patterns', 'logic.deduction', 'logic.spatial', 'logic.sequence',
     ],
@@ -187,6 +187,8 @@ function generate(conceptId: string, difficulty: number, seed: number): Question
     options,
     answer: 0,
     explanation: g.explanation,
+    promptVi: g.promptVi,
+    explanationVi: g.explanationVi,
     audio: g.audio,
     passage: g.passage,
     figure: g.figure,

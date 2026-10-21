@@ -15,50 +15,15 @@ export interface Generated {
   /** A diagram drawn with the question (geometry). */
   figure?: Figure;
   passage?: string;
+  /** The prompt and explanation in Vietnamese, when the generator writes them itself. */
+  promptVi?: string;
+  explanationVi?: string;
 }
 
 export type Generator = (difficulty: number, r: () => number) => Generated;
 
-const int = (r: () => number, lo: number, hi: number) => lo + Math.floor(r() * (hi - lo + 1));
-const pick = <T>(r: () => number, a: readonly T[]): T => a[Math.floor(r() * a.length)];
-const nz = (r: () => number, lo: number, hi: number) => {
-  let v = 0;
-  while (v === 0) v = int(r, lo, hi);
-  return v;
-};
-const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
-
-/** Build numeric distractors: plausible mistakes first, then nearby values, all distinct from the answer. */
-function numeric(answer: number, mistakes: number[], r: () => number, fmt: (n: number) => string = String): Omit<Generated, 'prompt'> {
-  const out = new Set<string>();
-  const a = fmt(answer);
-  for (const m of mistakes) {
-    const s = fmt(m);
-    if (s !== a && Number.isFinite(m)) out.add(s);
-    if (out.size === 3) break;
-  }
-  let step = 1;
-  while (out.size < 3) {
-    const cand = answer + (r() < 0.5 ? -1 : 1) * step * int(r, 1, 3);
-    const s = fmt(cand);
-    if (s !== a) out.add(s);
-    step++;
-  }
-  return { answer: a, distractors: [...out].slice(0, 3) };
-}
-
-function frac(n: number, d: number): string {
-  if (d < 0) {
-    n = -n;
-    d = -d;
-  }
-  const g = gcd(n, d) || 1;
-  n /= g;
-  d /= g;
-  return d === 1 ? String(n) : `${n}/${d}`;
-}
-
-const signed = (n: number) => (n < 0 ? `− ${-n}` : `+ ${n}`);
+import { frac, int, nz, numeric, pick, signed } from './util';
+import { grade9Generators } from './grade9';
 
 const raw: Record<string, Generator> = {
   'math.number.integers': (d, r) => {
@@ -160,36 +125,6 @@ const raw: Record<string, Generator> = {
     };
   },
 
-  'math.algebra.expressions': (d, r) => {
-    if (d <= 2) {
-      const a = int(r, 2, 9), b = int(r, 2, 9), c = int(r, 1, 9);
-      return {
-        prompt: `Simplify: ${a}x + ${b}x + ${c}`,
-        answer: `${a + b}x + ${c}`,
-        distractors: [`${a + b + c}x`, `${a * b}x + ${c}`, `${a + b}x + ${c + 1}`],
-      };
-    }
-    if (d === 3) {
-      const a = int(r, 2, 6), b = int(r, 1, 9);
-      return {
-        prompt: `Expand: ${a}(x + ${b})`,
-        answer: `${a}x + ${a * b}`,
-        distractors: [`${a}x + ${b}`, `x + ${a * b}`, `${a + b}x`],
-      };
-    }
-    if (d === 4) {
-      const a = int(r, 2, 5), b = nz(r, -6, 6), x = int(r, -4, 5);
-      const ans = a * x * x + b;
-      return { prompt: `If x = ${x}, find ${a}x² ${signed(b)}`, ...numeric(ans, [(a * x) ** 2 + b, a * x * 2 + b, a * x + b], r) };
-    }
-    const p = int(r, 1, 6), q = int(r, 1, 6);
-    return {
-      prompt: `Expand: (x + ${p})(x + ${q})`,
-      answer: `x² + ${p + q}x + ${p * q}`,
-      distractors: [`x² + ${p * q}x + ${p + q}`, `x² + ${p * q}`, `2x + ${p + q}`],
-    };
-  },
-
   'math.algebra.linear': (d, r) => {
     const x = nz(r, d <= 2 ? 1 : -9, 12);
     if (d <= 1) {
@@ -211,46 +146,6 @@ const raw: Record<string, Generator> = {
       prompt: `Solve: ${a}x ${signed(b)} = ${c}x ${signed(rhsConst)}`,
       ...numeric(ans, [(rhsConst - b) / (a + c), -ans, (rhsConst + b) / (a - c)], r, (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2))),
       explanation: 'Collect the x terms on one side and the numbers on the other.',
-    };
-  },
-
-  'math.algebra.inequalities': (d, r) => {
-    const x = int(r, -5, 9);
-    const a = d >= 4 ? -int(r, 2, 6) : int(r, 2, 6);
-    const b = int(r, -10, 10);
-    const sign = pick(r, ['<', '>'] as const);
-    const flip = a < 0;
-    const outSign = flip ? (sign === '<' ? '>' : '<') : sign;
-    const other = outSign === '<' ? '>' : '<';
-    return {
-      prompt: `Solve: ${a}x ${signed(b)} ${sign} ${a * x + b}`,
-      answer: `x ${outSign} ${x}`,
-      distractors: [`x ${other} ${x}`, `x ${outSign} ${-x || x + 1}`, `x ${outSign} ${x + 1}`],
-      explanation: flip ? 'Dividing by a negative number flips the inequality sign.' : undefined,
-    };
-  },
-
-  'math.algebra.systems': (d, r) => {
-    const x = int(r, -4, 8), y = int(r, -4, 8);
-    const a = d >= 4 ? int(r, 2, 4) : 1, b = d >= 4 ? int(r, 1, 3) : 1;
-    return {
-      prompt: `Solve: ${a === 1 ? '' : a}x + ${b === 1 ? '' : b}y = ${a * x + b * y} and x − y = ${x - y}`,
-      answer: `x = ${x}, y = ${y}`,
-      distractors: [`x = ${y}, y = ${x}`, `x = ${x + 1}, y = ${y + 1}`, `x = ${x}, y = ${-y || y + 2}`].filter((s) => s !== `x = ${x}, y = ${y}`),
-    };
-  },
-
-  'math.algebra.quadratics': (d, r) => {
-    const p = nz(r, d <= 3 ? 1 : -7, 7), q = nz(r, -7, 7);
-    const b = -(p + q), c = p * q;
-    const eq = `x² ${b === 0 ? '' : signed(b) + 'x '}${signed(c)} = 0`;
-    const roots = (u: number, v: number) => `x = ${Math.min(u, v)} or x = ${Math.max(u, v)}`;
-    const ans = p === q ? `x = ${p}` : roots(p, q);
-    return {
-      prompt: `Solve: ${eq}`,
-      answer: ans,
-      distractors: [roots(-p, -q), roots(p, -q), roots(p + 1, q)].filter((s) => s !== ans),
-      explanation: `Factorise: (x ${signed(-p)})(x ${signed(-q)}) = 0.`,
     };
   },
 
@@ -388,5 +283,5 @@ export function sanitize(g: Generated): Generated {
 }
 
 export const generators: Record<string, Generator> = Object.fromEntries(
-  Object.entries(raw).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]),
+  Object.entries({ ...raw, ...grade9Generators }).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]),
 );

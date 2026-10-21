@@ -121,9 +121,9 @@ export function MistakeBook({ student }: { student: StudentProfile }) {
           <div>
             {viewing.question.passage && <p className="mb-2 max-h-36 overflow-y-auto rounded-xl bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">{viewing.question.passage}</p>}
             <p className="mb-3 font-semibold">{viewing.question.prompt}</p>
-            {lang !== 'en' && translatePrompt(viewing.question.prompt, viewing.conceptId) && (
+            {lang !== 'en' && (viewing.question.promptVi ?? translatePrompt(viewing.question.prompt, viewing.conceptId)) && (
               <p lang="vi" className="-mt-2 mb-3 text-sm text-rose-900 dark:text-rose-200">
-                🇻🇳 {translatePrompt(viewing.question.prompt, viewing.conceptId)}
+                🇻🇳 {(viewing.question.promptVi ?? translatePrompt(viewing.question.prompt, viewing.conceptId))}
               </p>
             )}
             <Explanation question={viewing.question} picked={viewing.picked} />

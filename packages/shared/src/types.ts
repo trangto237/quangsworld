@@ -77,6 +77,8 @@ export interface Question {
   options: string[];
   answer: number;
   explanation?: string;
+  /** Vietnamese prompt written with the question (maths generators); otherwise it is translated by rules. */
+  promptVi?: string;
   /** Vietnamese explanation written with the question (family imports, AI-generated items). */
   explanationVi?: string;
   /** Text read aloud (speech synthesis) for listening questions. */

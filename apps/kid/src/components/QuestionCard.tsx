@@ -43,7 +43,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
   /** Order questions: indices into q.shown, in the order the tiles were placed. */
   const [built, setBuilt] = useState<number[]>([]);
   const hasAudio = !!(q.audio || q.script?.length);
-  const instructionVi = lang === 'en' ? null : translatePrompt(q.prompt, q.conceptId);
+  const instructionVi = lang === 'en' ? null : (q.promptVi ?? translatePrompt(q.prompt, q.conceptId));
   const [showVi, setShowVi] = useState(lang === 'vi');
   const gloss = glossary && lang !== 'en' && !q.conceptId.startsWith('en.vocab') && !q.conceptId.startsWith('custom.') && !q.conceptId.startsWith('lit.');
   const [showPassage, setShowPassage] = useState(true);
