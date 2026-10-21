@@ -50,6 +50,8 @@ export const SPOTS: Spot[] = [
   { id: 'algebra-peaks', kind: 'algebra-peaks', x: 21.6, y: 3.9, lot: 3 },
   { id: 'geometry-isles', kind: 'geometry-isles', x: 21.0, y: 12.1, lot: 3 },
   { id: 'logic-labyrinth', kind: 'logic-labyrinth', x: 20.4, y: 20.4, lot: 3 },
+  // Coding: unlocked by a parent.
+  { id: 'code-lab', kind: 'code-lab', x: 27.4, y: 17.2, lot: 3 },
 ];
 
 /** The hero knight as drawn on the map. */
@@ -81,6 +83,8 @@ export interface SpotState {
   stops?: { n: number; done: boolean }[];
   /** Just grew a level (or was explored): builders and a celebration bubble. */
   grew?: string;
+  /** Locked until a parent opens it (the Code Lab). */
+  locked?: boolean;
 }
 
 interface Isle {
@@ -141,7 +145,7 @@ const LAMPS: [number, number][] = [
   [8.2, 15.0],
   [11.8, 8.1],
 ];
-const VIEW = { x: -960, y: -420, w: 1920, h: 1340 };
+const VIEW = { x: -960, y: -420, w: 2000, h: 1340 };
 
 /** Screen point (in map pixels) of a spot's centre, for centring the view. */
 export const spotCenter = (s: Spot): Pt => {
@@ -215,7 +219,7 @@ function Body({ s, st, tap }: { s: Spot; st: SpotState; tap: Pointing }) {
     >
       <Ground x={s.x} y={s.y} w={s.lot} d={s.lot} fill="transparent" />
       <Contact x={fp.bx - 0.2} y={fp.by - 0.2} w={fp.size + 0.4} d={fp.size + 0.4} />
-      <g filter={st.unexplored && !st.grew ? 'url(#town-mist)' : faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
+      <g filter={(st.unexplored && !st.grew) || st.locked ? 'url(#town-mist)' : faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
       {st.level >= 3 && !st.unexplored && <Flowers s={s} />}
       {st.level >= 2 && !st.unexplored && !SERVICE.includes(s.kind) && <Flag x={d.top[0]} y={d.top[1]} z={d.top[2]} color={st.color} gold={st.level >= 4} />}
       {st.level >= 4 && !st.unexplored && (
@@ -223,7 +227,12 @@ function Body({ s, st, tap }: { s: Spot; st: SpotState; tap: Pointing }) {
           ✨
         </Emoji>
       )}
-      {faded && !st.unexplored && (
+      {st.locked && (
+        <Emoji at={[top[0], top[1] + 34]} size={34}>
+          🔒
+        </Emoji>
+      )}
+      {faded && !st.unexplored && !st.locked && (
         <Emoji at={[top[0] + 20, top[1] + 4]} size={18}>
           🏗️
         </Emoji>
@@ -329,6 +338,7 @@ function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotS
 function Tags({ top, st, hero }: { top: Pt; st: SpotState; hero?: boolean }) {
   const at: Pt = [top[0], top[1] - 4];
   if (st.grew) return <Bubble at={at} text={st.grew} color="#f59e0b" bob />;
+  if (st.locked) return <Bubble at={at} text="🔒 Locked" color="#64748b" />;
   if (st.quest) return <Bubble at={at} text={`⚔️ Quest${st.due ? ` · 🔁 ${st.due}` : ''}`} color="#e8584a" bob />;
   if (hero) return <Bubble at={at} text="🏠 Home" color="#f59e0b" />;
   if (st.due) return <Bubble at={at} text={`🔁 ${st.due} crumbling`} color="#8b5cf6" />;

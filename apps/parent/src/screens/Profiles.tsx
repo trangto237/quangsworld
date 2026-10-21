@@ -32,6 +32,22 @@ function LanguageSelect({ studentId }: { studentId: string }) {
   );
 }
 
+/** The Code Lab island (coding with blocks, JavaScript, Python) stays locked until a parent switches it on. */
+function CodeLabSwitch({ studentId }: { studentId: string }) {
+  const repo = useRepo();
+  const on = useQuery((r) => !!r.getKv<boolean>(`code-unlocked:${studentId}`), [studentId]);
+  const done = useQuery((r) => r.getKv<string[]>(`code-done:${studentId}`)?.length ?? 0, [studentId]);
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs">
+      <input type="checkbox" checked={on} onChange={(e) => void repo.setKv(`code-unlocked:${studentId}`, e.target.checked ? true : null)} />
+      <span>
+        <span className="font-semibold text-slate-600 dark:text-slate-300">💻 Code Lab island</span>
+        <span className="block text-slate-500">{on ? `Unlocked · ${done} lessons done` : 'Locked — tick to let them learn coding by making games'}</span>
+      </span>
+    </label>
+  );
+}
+
 export function Profiles() {
   const repo = useRepo();
   const students = useQuery((r) => r.listStudents());
@@ -55,6 +71,7 @@ export function Profiles() {
                 </div>
                 <div className="text-xs text-slate-500">{s.placementDone ? 'Placement complete' : 'Placement not taken yet'}</div>
                 <LanguageSelect studentId={s.id} />
+                <CodeLabSwitch studentId={s.id} />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

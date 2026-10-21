@@ -180,9 +180,11 @@ export function TownScreen({
   className?: string;
   children: ReactNode;
 }) {
+  // Every place has a way back: its own (e.g. the Mistake Book → Quests), else the map.
+  const go = useKid((s) => s.go);
   return (
     <div className="town-bg min-h-dvh text-ink-text">
-      <HeroBar student={student} back={back} showPowers={showPowers} />
+      <HeroBar student={student} back={back ?? (() => go({ name: 'hub' }))} showPowers={showPowers} />
       <main className={cx('mx-auto max-w-5xl px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-2 sm:px-4', className)}>{children}</main>
       <BottomNav student={student} active={tab} />
     </div>

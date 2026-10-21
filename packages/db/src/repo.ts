@@ -343,7 +343,11 @@ export class Repo {
    * already opened today.
    */
   async openDailyChest(studentId: string, date: string, reward: Reward): Promise<boolean> {
-    const key = `chest:${studentId}:${date}`;
+    return this.claimOnce(`chest:${studentId}:${date}`, studentId, reward);
+  }
+
+  /** Pays a reward once for `key` (a finished coding lesson, today's chest…). False if already paid. */
+  async claimOnce(key: string, studentId: string, reward: Reward): Promise<boolean> {
     return this.db.write((o) => {
       if (o.select().from(t.kv).where(eq(t.kv.key, key)).get()) return false;
       o.insert(t.kv).values({ key, value: { openedAt: Date.now(), reward } }).run();

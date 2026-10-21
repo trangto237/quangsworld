@@ -24,6 +24,8 @@ export function Town({ student }: { student: StudentProfile }) {
   const played = useQuery((r) => new Set(r.listAttempts(student.id).filter((a) => a.context !== 'placement').map((a) => a.conceptId)), [student.id]);
   const chestOpened = useQuery((r) => !!r.getKv(`chest:${student.id}:${plan.date}`), [student.id, plan.date]);
   const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
+  const codeOpen = useQuery((r) => !!r.getKv<boolean>(`code-unlocked:${student.id}`), [student.id]);
+  const codeProgress = useQuery((r) => r.getKv<string[]>(`code-done:${student.id}`) ?? [], [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
   const hero = { armour: inSlot(slots, 'armour')?.id, emblem: student.avatar, hat: inSlot(slots, 'hat')?.emoji, pet: inSlot(slots, 'pet')?.emoji };
   const next = plan.missions.find((m) => !m.done);
@@ -75,9 +77,13 @@ export function Town({ student }: { student: StudentProfile }) {
       color: '#ffc23d',
       blurb: tr(lang, 'Your hero: powers, badges and settings.'),
     };
+    const codeDone = codeProgress.length;
+    out['code-lab'] = codeOpen
+      ? { level: Math.min(4, 1 + Math.floor(codeDone / 6)), title: tr(lang, 'Code Lab'), sub: `💻 ${codeDone}`, icon: '💻', color: '#0ea5e9', blurb: tr(lang, 'Make games with blocks, JavaScript and Python.') }
+      : { level: 0, title: tr(lang, 'Code Lab'), sub: tr(lang, '🔒 Ask a parent'), icon: '💻', color: '#64748b', locked: true, blurb: tr(lang, 'Learn to code by making games. A parent can unlock it.') };
     out['exam-hall'].stops = stopsAt('exam-hall');
     return { out, questWorld, path };
-  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played]);
+  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress]);
 
   // Level-up moments: compare with what this device last showed; celebrate one building that grew.
   const seenKey = `atlas-town-seen:${student.id}`;
@@ -87,7 +93,7 @@ export function Town({ student }: { student: StudentProfile }) {
     if (checked.current) return;
     checked.current = true;
     const now: Record<string, { level: number; explored: boolean }> = {};
-    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !['exam-hall', 'coach', 'shop', 'home'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
+    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !['exam-hall', 'coach', 'shop', 'home', 'code-lab'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
     let before: typeof now | null = null;
     try {
       before = JSON.parse(localStorage.getItem(seenKey) ?? 'null');
@@ -146,6 +152,7 @@ export function Town({ student }: { student: StudentProfile }) {
     else if (s.kind === 'coach') go({ name: 'coach' });
     else if (s.kind === 'shop') go({ name: 'shop' });
     else if (s.kind === 'home') go({ name: 'hero' });
+    else if (s.kind === 'code-lab') go({ name: 'code' });
     else if (!spots.out[s.id]?.hidden) go({ name: 'world', worldId: s.id });
   };
 
