@@ -38,7 +38,7 @@ export function HeroAvatar({ student, size = 'md' }: { student: StudentProfile; 
   );
 }
 
-/** Top bar: the hero card (tap → hero sheet), coins, gems, streak, and the five power stats. */
+/** Top bar: the hero card (tap → hero sheet) with level, streak and the five powers; coins and gems beside it. */
 export function HeroBar({ student, back, showPowers = true }: { student: StudentProfile; back?: () => void; showPowers?: boolean }) {
   const go = useKid((s) => s.go);
   const lang = useLang();
@@ -49,35 +49,52 @@ export function HeroBar({ student, back, showPowers = true }: { student: Student
   // Part of the page: it scrolls away with the content instead of covering it.
   return (
     <header className="relative z-30 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1">
-      <div className="mx-auto max-w-5xl space-y-1.5">
+      <div className="mx-auto max-w-5xl">
         <div className="flex items-center gap-2">
           {back && (
             <button onClick={back} className="town-btn grid size-10 shrink-0 place-items-center rounded-xl bg-paper font-display text-xl font-bold text-ink-text" aria-label={tr(lang, 'Back')}>
               ←
             </button>
           )}
-          <button onClick={() => go({ name: 'hero' })} className="town-panel flex min-w-0 flex-1 items-center gap-2.5 py-1 pl-1.5 pr-3 text-left sm:flex-none" aria-label={tr(lang, 'Hero profile')}>
-            <HeroAvatar student={student} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-lg font-bold leading-tight">{student.name}</span>
-              <span className="block truncate text-xs font-semibold text-ink-soft">
-                Lv {lvl.level} · <T en={rankFor(lvl.level)} /> · 🔥 {streak}
+          <button
+            onClick={() => go({ name: 'hero' })}
+            className="town-panel flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 py-1 pl-1.5 pr-3 text-left sm:flex-none sm:flex-nowrap"
+            aria-label={tr(lang, 'Hero profile')}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+              <HeroAvatar student={student} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-display text-lg font-bold leading-tight">{student.name}</span>
+                <span className="block truncate text-xs font-semibold text-ink-soft">
+                  Lv {lvl.level} · <T en={rankFor(lvl.level)} /> · 🔥 {streak}
+                </span>
+                <Meter value={lvl.into} max={lvl.needed} color="#ffc23d" className="mt-0.5 h-2.5 w-full sm:w-32" />
               </span>
-              <Meter value={lvl.into} max={lvl.needed} color="#ffc23d" className="mt-0.5 h-2.5 w-full sm:w-36" />
             </span>
+            {/* The five powers, inside the card: under the name on phones, beside it on wider screens. */}
+            {showPowers && (
+              <span className="flex w-full justify-between gap-1 border-t-2 border-dashed border-ink/20 pb-0.5 pt-1 sm:w-auto sm:justify-start sm:gap-2 sm:border-l-2 sm:border-t-0 sm:pb-0 sm:pl-3 sm:pt-0">
+                {powers.map((p) => (
+                  <span key={p.id} title={tr(lang, p.name)} className="flex w-10 flex-col items-center leading-none">
+                    <span className="flex items-center gap-0.5">
+                      <span className="text-sm" aria-hidden>
+                        {p.icon}
+                      </span>
+                      <span className="font-display text-xs font-bold tabular-nums">{p.value}</span>
+                    </span>
+                    <span className="mt-1 block h-1.5 w-9 overflow-hidden rounded-full border border-ink/40 bg-paper-3">
+                      <span className="block h-full rounded-full" style={{ width: `${Math.max(4, Math.min(100, p.value))}%`, background: p.color }} />
+                    </span>
+                  </span>
+                ))}
+              </span>
+            )}
           </button>
-          <button onClick={() => go({ name: 'shop' })} className="ml-auto flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center" aria-label={tr(lang, 'Coins and gems')}>
+          <button onClick={() => go({ name: 'shop' })} className="ml-auto flex shrink-0 flex-col items-end gap-1 self-start sm:flex-row sm:items-center sm:self-center" aria-label={tr(lang, 'Coins and gems')}>
             <Chip icon="🪙" value={wallet.coins} title={tr(lang, 'Coins')} />
             <Chip icon="💎" value={wallet.gems} color="#4b8fe2" title={tr(lang, 'Gems')} />
           </button>
         </div>
-        {showPowers && (
-          <button onClick={() => go({ name: 'hero' })} className="grid w-full grid-cols-5 gap-1 sm:flex sm:w-auto" aria-label={tr(lang, 'Hero profile')}>
-            {powers.map((p) => (
-              <Chip key={p.id} icon={p.icon} value={p.value} bar={p.value} color={p.color} title={tr(lang, p.name)} className="justify-center pr-1.5 sm:pr-2.5" />
-            ))}
-          </button>
-        )}
       </div>
     </header>
   );
