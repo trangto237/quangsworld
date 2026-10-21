@@ -10,7 +10,7 @@ import { TownButton } from '../town/ui';
 import { useKid } from '../store';
 import { LESSONS_VI } from '@atlas/knowledge';
 import { T, TB, useLang } from '../i18n';
-import { WordGarden } from './Garden';
+import { GardenBanner } from './Garden';
 import { ISLAND_GAMES } from '../lib/islands';
 
 export function WorldScreen({ student, worldId }: { student: StudentProfile; worldId: string }) {
@@ -51,7 +51,7 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
       {world.id === 'word-forest' && (
         <>
           <div className="mt-4">
-            <WordGarden student={student} />
+            <GardenBanner student={student} />
           </div>
           <h2 className="mx-auto mt-6 max-w-md text-center font-display text-xl font-bold">
             📖 <T en="Learn words → earn 💧" />

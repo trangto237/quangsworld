@@ -22,6 +22,7 @@ import { CoachCorner } from './screens/CoachCorner';
 import { CodeLab } from './code/CodeLab';
 import { Writing } from './screens/Writing';
 import { Arcade } from './screens/Arcade';
+import { GardenScreen } from './screens/Garden';
 
 export function App() {
   const studentId = useKid((s) => s.studentId);
@@ -72,6 +73,8 @@ function Screens() {
       return <Hero student={student} />;
     case 'writing':
       return <Writing student={student} />;
+    case 'garden':
+      return <GardenScreen student={student} />;
     case 'arcade':
       return <Arcade student={student} />;
     case 'code':

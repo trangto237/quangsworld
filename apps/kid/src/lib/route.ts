@@ -2,7 +2,7 @@ import type { CoachTopic, Screen } from '../store';
 
 /**
  * Screens ↔ web addresses, so the browser's Back button works and a reload keeps your place:
- * /quests, /hero, /shop, /mistakes, /code, /arcade, /coach, /coach/stress, /exams, /exams/<paper>, /world/<world>.
+ * /quests, /hero, /shop, /mistakes, /code, /arcade, /garden, /coach, /coach/stress, /exams, /exams/<paper>, /world/<world>.
  * A battle and its results can't be rebuilt from an address: reloading there goes back to the quests.
  * (The trial is shown automatically until it's done, so its address isn't needed to get back.)
  */
@@ -18,6 +18,7 @@ export function pathOf(s: Screen): string {
     case 'code':
     case 'writing':
     case 'arcade':
+    case 'garden':
       return `/${s.name}`;
     case 'exam-hall':
       return '/exams';
@@ -51,6 +52,7 @@ export function screenOf(path: string): Screen {
     case 'code':
     case 'writing':
     case 'arcade':
+    case 'garden':
       return { name: a };
     case 'exams':
       return b ? { name: 'exam', examId: b } : { name: 'exam-hall' };

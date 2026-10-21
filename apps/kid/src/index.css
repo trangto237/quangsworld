@@ -202,16 +202,29 @@ html { background: var(--paper-2); }
 }
 
 /* Word Garden */
-.garden-soil {
-  background-color: #8a5a34;
-  background-image: repeating-linear-gradient(170deg, rgba(0, 0, 0, 0.13) 0 6px, transparent 6px 15px), radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.16), transparent 60%);
+.garden-sway { animation: garden-sway 3.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes garden-sway { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+.garden-bubble { animation: town-bob 1s ease-in-out infinite alternate; }
+.garden-spin { animation: garden-spin 7s linear infinite; }
+@keyframes garden-spin { to { transform: rotate(360deg); } }
+.garden-bees { animation: garden-bees 2.4s ease-in-out infinite alternate; }
+@keyframes garden-bees { from { transform: translate(-4px, 2px); } to { transform: translate(5px, -4px); } }
+.garden-drop { animation: garden-drop 0.5s ease-in infinite; }
+@keyframes garden-drop { from { transform: translateY(0); opacity: 1; } to { transform: translateY(30px); opacity: 0; } }
+.garden-reap { animation: garden-reap 0.8s ease-out forwards; }
+@keyframes garden-reap { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-70px); opacity: 0; } }
+.garden-butterfly { animation: garden-butterfly 9s ease-in-out infinite alternate; }
+@keyframes garden-butterfly {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(60px, -30px); }
+  66% { transform: translate(120px, 10px); }
+  100% { transform: translate(200px, -20px); }
 }
-@keyframes garden-drop {
-  from { transform: translateY(-10px); opacity: 0; }
-  30% { opacity: 1; }
-  to { transform: translateY(60px); opacity: 0; }
-}
-.garden-drop { animation: garden-drop 0.6s ease-in forwards; }
+.garden-splash { animation: garden-splash 0.7s ease-in-out infinite alternate; }
+@keyframes garden-splash { from { opacity: 0.5; } to { opacity: 1; } }
+.garden-clouds { animation: garden-clouds 30s ease-in-out infinite alternate; }
+@keyframes garden-clouds { from { transform: translateX(-20px); } to { transform: translateX(30px); } }
 @media (prefers-reduced-motion: reduce) {
-  .garden-drop { animation-duration: 0.01s; }
+  .garden-sway, .garden-bubble, .garden-spin, .garden-bees, .garden-butterfly, .garden-splash, .garden-clouds { animation: none; }
+  .garden-drop, .garden-reap { animation-duration: 0.01s; }
 }

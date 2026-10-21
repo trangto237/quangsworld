@@ -3,9 +3,12 @@ import type { StudentProfile } from '@atlas/db';
 import { getQuestion } from '@atlas/knowledge';
 import type { Attempt } from '@atlas/shared';
 import { cx, useQuery, useRepo } from '@atlas/ui';
-import { T, TB } from '../i18n';
+import { T, TB, tr, useLang } from '../i18n';
+import { useKid } from '../store';
+import { DECOR, GardenScene } from '../garden/scene';
 import {
   MAX_PLOTS,
+  MIN_PLOTS,
   PACKET_COST,
   PLANTS,
   STAGES,
@@ -23,14 +26,13 @@ import {
   stepCost,
   walletOf,
   water,
-  type Bed,
   type GardenState,
   type Harvest,
   type Plant,
   type SeedKind,
   type Tier,
 } from '../lib/garden';
-import { Chip, Panel, TownButton } from '../town/ui';
+import { Chip, Meter, Panel, TownButton } from '../town/ui';
 
 /** Words he got right lately (the answer of each vocabulary question), for the plants' name tags. */
 function recentWords(attempts: Attempt[]): string[] {
@@ -55,24 +57,76 @@ export function PlantIcon({ p, className, hidden }: { p: Plant; className?: stri
   );
 }
 
-const STAGE_ICON = ['🫘', '🌱', '🌿'];
 
-/**
- * Vườn ươm Từ vựng: the garden at the top of the Word Garden island. Learning words earns water and seeds;
- * he plants, waters and harvests, and every new plant goes into the catalogue.
- */
-export function WordGarden({ student }: { student: StudentProfile }) {
-  const repo = useRepo();
+/** The Word Garden's state and wallet, shared by the garden screen and its banner. */
+function useGarden(student: StudentProfile) {
   const attempts = useQuery((r) => r.listAttempts(student.id), [student.id]);
   const garden = useQuery((r) => r.getKv<GardenState>(gardenKey(student.id)) ?? emptyGarden(), [student.id]);
   const e = useMemo(() => earned(attempts), [attempts]);
+  return { attempts, garden, e, w: walletOf(e, garden) };
+}
+
+/** On the Word Garden island page: a big door into the garden. */
+export function GardenBanner({ student }: { student: StudentProfile }) {
+  const go = useKid((s) => s.go);
+  const { garden, e, w } = useGarden(student);
+  const ready = garden.beds.filter((b) => b && b.stage >= STAGES).length;
+  const found = PLANTS.filter((p) => garden.found[p.id]).length;
+  return (
+    <button onClick={() => go({ name: 'garden' })} className="town-btn mx-auto block w-full max-w-md overflow-hidden rounded-2xl text-left">
+      <div className="relative bg-[linear-gradient(180deg,#9fd8ff,#d9f2c4)] px-4 pb-3 pt-4 dark:bg-[linear-gradient(180deg,#1d3a52,#22371f)]">
+        <div className="pointer-events-none absolute -right-2 -top-1 text-6xl opacity-90" aria-hidden>
+          🌻
+        </div>
+        <div className="font-display text-2xl font-bold leading-tight">
+          🌱 <T en="Enter your garden" />
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Chip icon="💧" value={w.water} color="#4b8fe2" />
+          <Chip icon="🌟" value={w.rare} color="#2563eb" />
+          <Chip icon="👑" value={w.golden} color="#f5a623" />
+          <Chip icon="📗" value={`${found}/${PLANTS.length}`} color="#5cb85c" />
+        </div>
+        {ready > 0 && (
+          <div className="mt-2 inline-block animate-pop rounded-full border-2 border-ink bg-[#ffe9a8] px-3 py-0.5 font-display text-sm font-bold">
+            🧺 <T en="{n} ready to harvest!" vars={{ n: ready }} />
+          </div>
+        )}
+        {e.words === 0 && (
+          <p className="mt-2 text-xs font-semibold text-ink-soft">
+            <T en="Learn words below to earn water for your garden." />
+          </p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Vườn ươm Từ vựng, full screen: the farm on its floating island, with bubbles over the beds and the
+ * wallet, tips and buttons around it. Learning words earns water and seeds; he plants, waters and
+ * harvests, and every new plant goes into the catalogue.
+ */
+export function GardenScreen({ student }: { student: StudentProfile }) {
+  const repo = useRepo();
+  const go = useKid((s) => s.go);
+  const { attempts, garden, e, w } = useGarden(student);
   const words = useMemo(() => recentWords(attempts), [attempts]);
-  const w = walletOf(e, garden);
   const [picking, setPicking] = useState<number | null>(null);
   const [splash, setSplash] = useState<number | null>(null);
+  const [reaped, setReaped] = useState<{ i: number; emoji: string; filter?: string } | null>(null);
   const [harvested, setHarvested] = useState<Harvest | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [tab, setTab] = useState<'beds' | 'book'>('beds');
+  const [sheet, setSheet] = useState<'book' | 'help' | null>(null);
+  const [tip, setTip] = useState(0);
+  const [tall, setTall] = useState(() => typeof matchMedia !== 'undefined' && matchMedia('(max-aspect-ratio: 4/5)').matches);
+  useEffect(() => {
+    const mq = matchMedia('(max-aspect-ratio: 4/5)');
+    const on = () => setTall(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  const lang = useLang();
   // Water earned since he last came, shown once.
   const [gained] = useState(() => (garden.seenWater > 0 ? e.water - garden.seenWater : 0));
 
@@ -80,9 +134,20 @@ export function WordGarden({ student }: { student: StudentProfile }) {
     if (garden.seenWater !== e.water) void repo.setKv(gardenKey(student.id), { ...garden, seenWater: e.water });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [e.water]);
+  useEffect(() => {
+    const t = setInterval(() => setTip((n) => n + 1), 4500);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 2600);
+    return () => clearTimeout(t);
+  }, [note]);
 
   const fresh = () => repo.getKv<GardenState>(gardenKey(student.id)) ?? emptyGarden();
   const save = (g: GardenState) => repo.setKv(gardenKey(student.id), { ...g, seenWater: e.water });
+  const found = PLANTS.filter((p) => garden.found[p.id]).length;
+  const toUnlock = (i: number) => Math.max(1, (i - MIN_PLOTS + 1) * WORDS_PER_PLOT - e.words);
 
   const sow = async (i: number, kind: SeedKind) => {
     const g = fresh();
@@ -92,7 +157,6 @@ export function WordGarden({ student }: { student: StudentProfile }) {
     setPicking(null);
     if (!r.ok) return setNote(r.why);
     await save(r.garden);
-    setNote(null);
   };
 
   const pour = async (i: number) => {
@@ -100,85 +164,161 @@ export function WordGarden({ student }: { student: StudentProfile }) {
     const r = water(g, walletOf(e, g), i);
     if (!r.ok) return setNote(r.why);
     setSplash(i);
-    setTimeout(() => setSplash((s) => (s === i ? null : s)), 700);
+    setTimeout(() => setSplash((s) => (s === i ? null : s)), 900);
     await save(r.garden);
-    setNote(null);
   };
 
   const reap = async (i: number) => {
     const r = harvest(fresh(), i);
     if ('why' in r) return setNote(r.why);
+    setReaped({ i, emoji: r.result.plant.emoji, filter: r.result.plant.filter });
     await save(r.garden);
     await repo.claimOnce(`garden-harvest:${student.id}:${r.result.bed.plantedAt}`, student.id, { coins: r.result.coins, gems: r.result.gems, xp: 5 });
-    setHarvested(r.result);
+    setTimeout(() => {
+      setReaped(null);
+      setHarvested(r.result);
+    }, 800);
   };
 
-  const found = PLANTS.filter((p) => garden.found[p.id]).length;
-  const toPlot = e.plots >= MAX_PLOTS ? null : WORDS_PER_PLOT - (e.words % WORDS_PER_PLOT);
+  const canPlant = w.water >= PACKET_COST || w.rare > 0 || w.golden > 0;
+  const bubble = (i: number) => {
+    if (i >= e.plots) return null;
+    const b = garden.beds[i];
+    if (!b) return { icon: '🌱', tone: canPlant ? ('green' as const) : ('grey' as const) };
+    if (b.stage >= STAGES) return { icon: '🧺', tone: 'gold' as const };
+    return { icon: '💧', tone: w.water >= stepCost(plantOf(b.plant)) ? ('blue' as const) : ('grey' as const) };
+  };
+  const onBed = (i: number) => {
+    if (i >= e.plots) return setNote(tr(lang, 'Learn {n} more new words to open this bed.', { n: toUnlock(i) }));
+    const b = garden.beds[i];
+    if (!b) return setPicking(i);
+    if (b.stage >= STAGES) return void reap(i);
+    void pour(i);
+  };
+
+  const nextDecor = DECOR.find((d) => found < d.at);
+  const tips = [
+    gained > 0 && tr(lang, '+{n} 💧 since your last visit — well learned!', { n: gained }),
+    e.plots < MAX_PLOTS && tr(lang, '🟫 {n} more new words → a new bed', { n: toUnlock(e.plots) }),
+    nextDecor && tr(lang, '🏡 Find {n} more plants → {thing}', { n: nextDecor.at - found, thing: tr(lang, nextDecor.name) }),
+    tr(lang, '🌟 {a}/{b} right in a row → rare seed', { a: e.run, b: STREAK_FOR_RARE }),
+    tr(lang, '👑 {a}/{b} new words → golden seed', { a: e.words % WORDS_FOR_GOLDEN, b: WORDS_FOR_GOLDEN }),
+    tr(lang, '📗 Catalogue: {a}/{b} plants found', { a: found, b: PLANTS.length }),
+  ].filter(Boolean) as string[];
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <Panel className="overflow-hidden !p-0">
-        <div className="bg-[linear-gradient(180deg,#bfe6ff,#e6f6d5)] px-4 pb-3 pt-4 dark:bg-[linear-gradient(180deg,#1d3a52,#22371f)]">
-          <div className="flex flex-wrap items-center gap-2">
-            <Chip icon="💧" value={w.water} color="#4b8fe2" title="Water: earned by learning words" />
-            <Chip icon="🌟" value={w.rare} color="#2563eb" title="Rare seeds" />
-            <Chip icon="👑" value={w.golden} color="#f5a623" title="Golden seeds" />
-            <Chip icon="📖" value={e.words} color="#5cb85c" title="Words learned" />
-            {gained > 0 && <span className="animate-pop rounded-full border-2 border-ink bg-[#d7ecff] px-2 py-0.5 font-display text-sm font-bold text-[#1d4f8f]">+{gained} 💧</span>}
-          </div>
-          <p className="mt-2 text-xs font-semibold text-ink-soft">
-            <T en="New word ✓ = 3 💧 · Known word ✓ = 1 💧" />
-          </p>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs font-semibold text-ink-soft">
-            <span>
-              🌟 {e.run}/{STREAK_FOR_RARE} <T en="right in a row" />
-            </span>
-            <span>
-              👑 {e.words % WORDS_FOR_GOLDEN}/{WORDS_FOR_GOLDEN} <T en="new words" />
-            </span>
-            {toPlot != null && (
-              <span>
-                🟫 <T en="{n} more words → new bed" vars={{ n: toPlot }} />
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex border-t-2 border-ink">
-          {(['beds', 'book'] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)} className={cx('flex-1 py-2 font-display font-bold', tab === t ? 'bg-paper' : 'bg-paper-3 text-ink-soft')}>
-              {t === 'beds' ? (
-                <TB en="🌱 Garden" />
-              ) : (
-                <>
-                  <TB en="📗 Catalogue" /> <span className="text-xs">({found}/{PLANTS.length})</span>
-                </>
-              )}
-            </button>
-          ))}
-        </div>
-      </Panel>
+    <div className="fixed inset-0 overflow-hidden text-ink-text" style={{ background: 'linear-gradient(var(--sky-top), var(--sky-bottom))' }}>
+      <div className="absolute inset-x-0 bottom-[7.5rem] top-[4.5rem] sm:bottom-24 sm:top-16">
+        <GardenScene tall={tall} beds={garden.beds} plots={e.plots} toUnlock={toUnlock} found={found} bubble={bubble} onBed={onBed} splash={splash} reaped={reaped} />
+      </div>
 
-      {tab === 'beds' ? (
-        <>
-          <div className="mt-3 grid grid-cols-3 gap-2.5">
-            {Array.from({ length: MAX_PLOTS }, (_, i) => (
-              <BedTile
-                key={i}
-                bed={garden.beds[i] ?? null}
-                locked={i >= e.plots}
-                splash={splash === i}
-                canWater={(b) => w.water >= stepCost(plantOf(b.plant))}
-                onEmpty={() => setPicking(i)}
-                onWater={() => void pour(i)}
-                onHarvest={() => void reap(i)}
-              />
+      {/* Top: back, title, wallet */}
+      <div className="absolute inset-x-0 top-0 flex items-start gap-2 p-2 sm:p-3">
+        <button onClick={() => go({ name: 'world', worldId: 'word-forest' })} className="town-btn grid size-11 shrink-0 place-items-center rounded-xl bg-paper text-xl" aria-label="Back">
+          ←
+        </button>
+        <div className="town-panel min-w-0 flex-1 px-3 py-1.5 sm:max-w-xs sm:flex-none">
+          <div className="truncate font-display text-lg font-bold leading-tight">
+            🌱 <T en="Word Garden" />
+          </div>
+          <div className="mt-0.5 flex items-center gap-2">
+            <Meter value={found} max={PLANTS.length} color="#5cb85c" className="h-2.5 flex-1" />
+            <span className="text-xs font-bold tabular-nums">
+              {found}/{PLANTS.length}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row">
+          <Chip icon="💧" value={w.water} color="#4b8fe2" title="Water" />
+          <Chip icon="🌟" value={w.rare} color="#2563eb" title="Rare seeds" />
+          <Chip icon="👑" value={w.golden} color="#f5a623" title="Golden seeds" />
+        </div>
+      </div>
+
+      {note && (
+        <div className="absolute inset-x-0 top-20 z-20 flex justify-center px-4">
+          <div className="town-panel animate-pop px-4 py-2 text-center text-sm font-bold">{note}</div>
+        </div>
+      )}
+
+      {/* Bottom: tips, catalogue, learn words */}
+      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-end sm:p-3">
+        <div className="town-panel flex min-h-12 flex-1 items-center gap-2 px-3 py-2 text-sm font-semibold sm:max-w-md">
+          <span className="text-2xl" aria-hidden>
+            🐸
+          </span>
+          <span key={tip} className="animate-pop">
+            {tips[tip % tips.length]}
+          </span>
+        </div>
+        <div className="flex gap-2 sm:ml-auto">
+          <TownButton tone="paper" className="!px-3" onClick={() => setSheet('help')} aria-label="How it works">
+            ❓
+          </TownButton>
+          <TownButton tone="green" className="flex-1 sm:flex-none" onClick={() => go({ name: 'world', worldId: 'word-forest' })}>
+            <TB en="📖 Learn words" />
+          </TownButton>
+          <TownButton tone="amber" className="flex-1 sm:flex-none" onClick={() => setSheet('book')}>
+            <span className="text-2xl leading-none">📗</span>
+            <span className="leading-tight">
+              <TB en="Catalogue" />
+            </span>
+            <span className="rounded-full bg-paper px-1.5 text-xs">
+              {found}/{PLANTS.length}
+            </span>
+          </TownButton>
+        </div>
+      </div>
+
+      {sheet === 'book' && (
+        <Sheet onClose={() => setSheet(null)} wide>
+          <h2 className="font-display text-2xl font-bold">
+            📗 <T en="Catalogue" />
+          </h2>
+          <Catalogue found={garden.found} />
+          <h3 className="mt-4 font-display text-lg font-bold">
+            🏡 <T en="Garden decorations" />
+          </h3>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {DECOR.map((d) => (
+              <div key={d.id} className={cx('rounded-xl border-2 p-2 text-center text-sm', found >= d.at ? 'border-ink bg-paper' : 'border-dashed border-ink/40 bg-paper-3 text-ink-soft')}>
+                <div className="font-display font-bold">{found >= d.at ? <T en={d.name} /> : '???'}</div>
+                <div className="text-xs">{found >= d.at ? '✓' : tr(lang, '{n} plants', { n: d.at })}</div>
+              </div>
             ))}
           </div>
-          {note && <p className="mt-2 text-center text-sm font-bold text-[#b4432f] dark:text-[#ff9a8a]">{note}</p>}
-        </>
-      ) : (
-        <Catalogue found={garden.found} />
+        </Sheet>
+      )}
+
+      {sheet === 'help' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <h2 className="font-display text-xl font-bold">
+            <T en="How the garden grows" />
+          </h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              💧 <T en="New word right = 3 water · known word right = 1 water" />
+            </li>
+            <li>
+              🌟 <T en="10 right answers in a row = a rare seed" />
+            </li>
+            <li>
+              👑 <T en="Every 25 new words = a golden seed" />
+            </li>
+            <li>
+              🟫 <T en="Every 20 new words opens another bed" />
+            </li>
+            <li>
+              🌱 <T en="Tap a bed: plant, then water it 3 times, then harvest for coins" />
+            </li>
+            <li>
+              📗 <T en="New plants go in the catalogue; a full row = a golden seed" />
+            </li>
+          </ul>
+          <TownButton tone="green" className="mt-4 w-full" onClick={() => setSheet(null)}>
+            <TB en="Got it" />
+          </TownButton>
+        </Sheet>
       )}
 
       {picking != null && (
@@ -191,13 +331,22 @@ export function WordGarden({ student }: { student: StudentProfile }) {
             <SeedRow icon="🌟" name="Rare seed" sub="Rare plant — sometimes legendary!" cost={`1 🌟 (${w.rare})`} ok={w.rare > 0} onClick={() => void sow(picking, 'rare')} />
             <SeedRow icon="👑" name="Golden seed" sub="Most likely a legendary plant" cost={`1 👑 (${w.golden})`} ok={w.golden > 0} onClick={() => void sow(picking, 'golden')} />
           </div>
+          {!canPlant && (
+            <p className="mt-3 text-center text-sm font-semibold text-ink-soft">
+              <T en="Out of water — learn some words to earn more!" />
+            </p>
+          )}
         </Sheet>
       )}
 
       {harvested && (
         <Sheet onClose={() => setHarvested(null)}>
           <div className="text-center">
-            {harvested.first && <div className="font-display text-sm font-bold uppercase tracking-wider text-[#c48a00]">✨ <T en="New plant discovered!" /></div>}
+            {harvested.first && (
+              <div className="font-display text-sm font-bold uppercase tracking-wider text-[#c48a00]">
+                ✨ <T en="New plant discovered!" />
+              </div>
+            )}
             <PlantIcon p={harvested.plant} className="town-bob my-3 text-7xl" />
             <div className="font-display text-2xl font-bold">{harvested.plant.en}</div>
             <div className="text-sm text-ink-soft" lang="vi">
@@ -224,82 +373,6 @@ export function WordGarden({ student }: { student: StudentProfile }) {
             </TownButton>
           </div>
         </Sheet>
-      )}
-    </div>
-  );
-}
-
-function BedTile({
-  bed,
-  locked,
-  splash,
-  canWater,
-  onEmpty,
-  onWater,
-  onHarvest,
-}: {
-  bed: Bed | null;
-  locked: boolean;
-  splash: boolean;
-  canWater: (b: Bed) => boolean;
-  onEmpty: () => void;
-  onWater: () => void;
-  onHarvest: () => void;
-}) {
-  if (locked)
-    return (
-      <div className="garden-soil grid aspect-square place-items-center rounded-2xl border-[2.5px] border-dashed border-ink/50 opacity-45">
-        <span className="text-2xl">🔒</span>
-      </div>
-    );
-  if (!bed)
-    return (
-      <button onClick={onEmpty} className="garden-soil town-btn grid aspect-square place-items-center rounded-2xl">
-        <span className="rounded-full bg-paper/85 px-2 py-0.5 font-display text-sm font-bold text-ink-text">
-          ＋ <T en="Plant" />
-        </span>
-      </button>
-    );
-  const p = plantOf(bed.plant);
-  const ready = bed.stage >= STAGES;
-  return (
-    <div className="flex flex-col gap-1">
-      <button
-        onClick={ready ? onHarvest : onWater}
-        className={cx('garden-soil town-btn relative grid aspect-square place-items-center overflow-hidden rounded-2xl', ready && 'ring-4 ring-[#ffc23d]')}
-        aria-label={ready ? `Harvest ${p.en}` : `Water (${stepCost(p)} water)`}
-      >
-        {ready ? (
-          <PlantIcon p={p} className="town-bob text-5xl" />
-        ) : (
-          <span className="text-[2rem] leading-none" style={{ fontSize: `${1.6 + bed.stage * 0.5}rem` }}>
-            {STAGE_ICON[bed.stage]}
-          </span>
-        )}
-        {splash && (
-          <span className="pointer-events-none absolute inset-0" aria-hidden>
-            {[18, 42, 66].map((l, k) => (
-              <span key={k} className="garden-drop absolute top-0 text-lg" style={{ left: `${l}%`, animationDelay: `${k * 90}ms` }}>
-                💧
-              </span>
-            ))}
-          </span>
-        )}
-        {bed.word && <span className="absolute bottom-1 left-1/2 max-w-[92%] -translate-x-1/2 truncate rounded border border-ink/60 bg-[#f3dfb6] px-1 text-[10px] font-bold text-[#4a2e18]">{bed.word}</span>}
-        <span className="absolute left-1.5 top-1.5 flex gap-0.5" aria-hidden>
-          {Array.from({ length: STAGES }, (_, k) => (
-            <span key={k} className={cx('size-1.5 rounded-full border border-ink/60', k < bed.stage ? 'bg-[#4b8fe2]' : 'bg-paper/70')} />
-          ))}
-        </span>
-      </button>
-      {ready ? (
-        <TownButton tone="amber" size="sm" onClick={onHarvest} className="w-full">
-          🧺 <T en="Harvest" />
-        </TownButton>
-      ) : (
-        <TownButton tone="blue" size="sm" onClick={onWater} disabled={!canWater(bed)} className="w-full">
-          💧 {stepCost(p)}
-        </TownButton>
       )}
     </div>
   );
@@ -361,10 +434,10 @@ function SeedRow({ icon, name, sub, cost, ok, onClick }: { icon: string; name: s
   );
 }
 
-function Sheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+function Sheet({ onClose, children, wide }: { onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="town-panel w-full max-w-sm animate-pop p-5" onClick={(ev) => ev.stopPropagation()}>
+      <div className={cx('town-panel max-h-[calc(100dvh-2rem)] w-full animate-pop overflow-y-auto p-5', wide ? 'max-w-2xl' : 'max-w-sm')} onClick={(ev) => ev.stopPropagation()}>
         {children}
       </div>
     </div>
