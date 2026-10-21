@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Bubble, Contact, Emoji, Flag, Ground, NameTag, P, ShadeDefs, Tree, type Pt } from './iso';
-import { KINDS, Lake, Pitch, RiceField, house } from './buildings';
+import { KINDS, house } from './buildings';
+import { footprint, isleOf, layoutFor, spotCenter, type Isle, type Layout, type LayoutId, type Spot } from './layouts';
 import { Builders, Chest, HazeDefs, LampGlowDef, NightContext, SkyLife, SkyTint, StopBadge, StreetLamps, useDayPhase, useReducedMotion, type ChestState } from './life';
 import { Knight } from '../components/Knight';
-import { Cloud, Crumble, IslandDefs, IslandBase, IslandCloud, RopeBridge, edgeToward, islandShape, type IslandShape } from './island';
+import { Cloud, Crumble, IslandDefs, IslandBase, IslandCloud, RopeBridge, edgeToward } from './island';
 
 /**
  * The hero's world: islands floating in the sky. The big island in the middle holds home, the shop,
@@ -11,50 +12,6 @@ import { Cloud, Crumble, IslandDefs, IslandBase, IslandCloud, RopeBridge, edgeTo
  * gently; today's quests are joined to the middle by rope bridges. Drawn in SVG, panned by scrolling
  * (or dragging), zoomed with the buttons or a pinch.
  */
-
-export interface Spot {
-  id: string;
-  /** Building drawing: a world id, or 'exam-hall' | 'coach' | 'shop' | 'home'. */
-  kind: string;
-  /** Lot origin (tiles). */
-  x: number;
-  y: number;
-  /** Lot size: 3×3 for a building, 6×6 for the Exam Hall. */
-  lot: 3 | 6;
-}
-
-/** Where the building stands inside its lot, and its size. */
-const footprint = (s: Spot) => (s.lot === 6 ? { bx: s.x + 1, by: s.y + 1, size: 4 } : { bx: s.x + 0.5, by: s.y + 0.5, size: 2 });
-
-/** The middle island (tiles). */
-const HUB = { x: 3.8, y: 3.8, w: 11.6, d: 11.6 };
-const HUB_SPOTS = ['home', 'shop', 'coach', 'my-textbook', 'exam-hall'];
-
-/** Where everything stands: the middle island, then a ring of world islands around it. */
-export const SPOTS: Spot[] = [
-  { id: 'home', kind: 'home', x: 4.6, y: 4.6, lot: 3 },
-  { id: 'shop', kind: 'shop', x: 8.2, y: 4.4, lot: 3 },
-  { id: 'coach', kind: 'coach', x: 11.8, y: 4.6, lot: 3 },
-  { id: 'my-textbook', kind: 'my-textbook', x: 4.4, y: 8.2, lot: 3 },
-  { id: 'exam-hall', kind: 'exam-hall', x: 8.6, y: 8.6, lot: 6 },
-  // English worlds round the left and top, maths and logic round the right and bottom.
-  { id: 'word-forest', kind: 'word-forest', x: -5.0, y: -5.0, lot: 3 },
-  { id: 'grammar-forge', kind: 'grammar-forge', x: 3.9, y: -6.2, lot: 3 },
-  { id: 'sound-temple', kind: 'sound-temple', x: 12.1, y: -5.6, lot: 3 },
-  { id: 'scholars-academy', kind: 'scholars-academy', x: -6.2, y: 3.9, lot: 3 },
-  { id: 'ielts-tower', kind: 'ielts-tower', x: -5.6, y: 12.1, lot: 3 },
-  { id: 'echo-caves', kind: 'echo-caves', x: -5.0, y: 20.4, lot: 3 },
-  { id: 'reading-ruins', kind: 'reading-ruins', x: 3.9, y: 21.6, lot: 3 },
-  { id: 'story-library', kind: 'story-library', x: 12.1, y: 21.0, lot: 3 },
-  { id: 'number-citadel', kind: 'number-citadel', x: 20.4, y: -5.0, lot: 3 },
-  { id: 'algebra-peaks', kind: 'algebra-peaks', x: 21.6, y: 3.9, lot: 3 },
-  { id: 'geometry-isles', kind: 'geometry-isles', x: 21.0, y: 12.1, lot: 3 },
-  { id: 'logic-labyrinth', kind: 'logic-labyrinth', x: 20.4, y: 20.4, lot: 3 },
-  // Coding: unlocked by a parent.
-  { id: 'code-lab', kind: 'code-lab', x: 27.4, y: 17.2, lot: 3 },
-  // Any game, any time.
-  { id: 'arcade', kind: 'arcade', x: 30.4, y: 8.2, lot: 3 },
-];
 
 /** The hero knight as drawn on the map. */
 export interface HeroLook {
@@ -89,74 +46,7 @@ export interface SpotState {
   locked?: boolean;
 }
 
-interface Isle {
-  id: string;
-  x: number;
-  y: number;
-  w: number;
-  d: number;
-  seed: number;
-  /** How high it floats (px). */
-  lift: number;
-  /** Where a waterfall pours off the front (0 left … 1 right). */
-  falls?: number;
-  /** Spots standing on it. */
-  spots: string[];
-  /** Other things on it. */
-  decor?: (s: IslandShape) => ReactNode;
-  /** Decor islets have nothing to tap. */
-  small?: boolean;
-}
-
-const PAD = 0.95;
-const FALLS: Record<string, number> = { 'echo-caves': 0.3, 'geometry-isles': 0.65, 'word-forest': 0.7, 'sound-temple': 0.35 };
-const LIFTS = [0, 14, 6, 20, 10, 2, 16, 8, 22, 4, 12, 18];
-
-const ISLES: Isle[] = [
-  {
-    id: 'hub',
-    ...HUB,
-    seed: 11,
-    lift: 0,
-    falls: 0.42,
-    spots: HUB_SPOTS,
-    decor: () => <Lake x={4.6} y={12} w={2.6} d={2.6} />,
-  },
-  ...SPOTS.filter((s) => !HUB_SPOTS.includes(s.id)).map(
-    (s, i): Isle => ({ id: s.id, x: s.x - PAD, y: s.y - PAD, w: s.lot + 2 * PAD, d: s.lot + 2 * PAD, seed: 100 + i * 37, lift: LIFTS[i % LIFTS.length], falls: FALLS[s.id], spots: [s.id] }),
-  ),
-  // Little islands just for looks.
-  { id: 'rice', x: -12.5, y: 6.5, w: 3.4, d: 3.2, seed: 7, lift: 30, spots: [], small: true, decor: () => <RiceField x={-12.2} y={6.8} w={2.8} d={2.6} /> },
-  { id: 'pitch', x: -15, y: -9, w: 3.8, d: 3, seed: 9, lift: 24, spots: [], small: true, decor: () => <Pitch x={-14.7} y={-8.7} w={3.2} d={2.4} /> },
-  { id: 'tree1', x: 8.5, y: -12, w: 1.8, d: 1.8, seed: 21, lift: 40, spots: [], small: true, decor: () => <Tree x={9.4} y={-11.1} s={1.1} /> },
-  { id: 'tree2', x: 8.5, y: 29, w: 1.6, d: 1.6, seed: 23, lift: 10, spots: [], small: true, decor: () => <Tree x={9.3} y={29.8} s={1} kind="pine" color="#3f8f3a" /> },
-  { id: 'rock1', x: 28, y: 0, w: 1.2, d: 1.2, seed: 27, lift: 60, spots: [], small: true },
-  { id: 'rock2', x: -11.5, y: 16.5, w: 1.1, d: 1.1, seed: 29, lift: 50, spots: [], small: true },
-];
-
-const SHAPES: Record<string, IslandShape> = Object.fromEntries(ISLES.map((i) => [i.id, islandShape(i.x, i.y, i.w, i.d, i.seed)]));
-const isleOf = (spotId: string) => ISLES.find((i) => i.spots.includes(spotId))!;
-
-/** Today's treasure chest on the middle island. */
-const CHEST: [number, number] = [7.3, 14.2];
-/** Lanterns on the middle island. */
-const LAMPS: [number, number][] = [
-  [8.0, 8.1],
-  [4.3, 7.9],
-  [15.0, 8.2],
-  [8.2, 15.0],
-  [11.8, 8.1],
-];
-const VIEW_TOP = -420;
-/** Tall enough for the lowest cliff tip, plus room for the bobbing and the glow under it. */
-const VIEW_BOTTOM = Math.max(920, ...ISLES.map((i) => SHAPES[i.id].apex[1] - i.lift + 90));
-const VIEW = { x: -960, y: VIEW_TOP, w: 2000, h: Math.ceil(VIEW_BOTTOM - VIEW_TOP) };
-
-/** Screen point (in map pixels) of a spot's centre, for centring the view. */
-export const spotCenter = (s: Spot): Pt => {
-  const [x, y] = P(s.x + s.lot / 2, s.y + s.lot / 2);
-  return [x - VIEW.x, y - VIEW.y - 40 - isleOf(s.id).lift];
-};
+export type { Spot };
 
 /** Level from stars earned out of the possible stars. */
 export const levelFor = (got: number, total: number) =>
@@ -196,7 +86,7 @@ function Flowers({ s }: { s: Spot }) {
   );
 }
 
-const SERVICE = ['exam-hall', 'coach', 'shop', 'home'];
+const SERVICE = ['exam-hall', 'coach', 'shop', 'home', 'gate', 'realm-english', 'realm-maths', 'realm-logic', 'realm-literature', 'arcade', 'writing'];
 
 function drawingFor(s: Spot, st: SpotState) {
   const kind = s.kind === 'home' ? house('#ffe3a3', '#e8584a', 2) : KINDS[s.kind];
@@ -248,9 +138,9 @@ function Body({ s, st, tap }: { s: Spot; st: SpotState; tap: Pointing }) {
 }
 
 /** One floating island with everything on it, bobbing gently. */
-function Island({ isle, states, active, tapFor, reduced, index }: { isle: Isle; states: Record<string, SpotState>; active: string | null; tapFor: (s: Spot) => Pointing; reduced: boolean; index: number }) {
-  const shape = SHAPES[isle.id];
-  const spots = SPOTS.filter((s) => isle.spots.includes(s.id) && states[s.id] && !states[s.id].hidden);
+function Island({ L, isle, states, active, tapFor, reduced, index }: { L: Layout; isle: Isle; states: Record<string, SpotState>; active: string | null; tapFor: (s: Spot) => Pointing; reduced: boolean; index: number }) {
+  const shape = L.shapes[isle.id];
+  const spots = L.spots.filter((s) => isle.spots.includes(s.id) && states[s.id] && !states[s.id].hidden);
   if (!isle.small && !isle.spots.some((id) => states[id] && !states[id].hidden)) return null;
   const solo = spots.length === 1 && isle.id !== 'hub' ? states[spots[0].id] : undefined;
   const cloudy = !!solo?.unexplored && !solo.grew;
@@ -263,7 +153,7 @@ function Island({ isle, states, active, tapFor, reduced, index }: { isle: Isle; 
   ];
   const lifted = solo && active === spots[0].id;
   return (
-    <g style={{ transform: `translateY(${-isle.lift - (lifted ? 6 : 0)}px)`, transition: 'transform 0.2s' }}>
+    <g className={isle.cls} style={{ transform: `translateY(${-isle.lift - (lifted ? 6 : 0)}px)`, transition: 'transform 0.2s' }}>
       <g className={reduced ? undefined : 'isle-float'} style={{ animationDelay: `${-(index * 1.7) % 7}s`, animationDuration: `${5.5 + (index % 4) * 0.8}s` }}>
         <g
           onClick={hit?.onTap}
@@ -293,14 +183,14 @@ function Island({ isle, states, active, tapFor, reduced, index }: { isle: Isle; 
 }
 
 /** Name tag, bubbles and the hero: drawn last so nothing covers them. Also a keyboard target. */
-function Overlay({ s, st, tap, onOpen, hero, active, dim }: { s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: HeroLook; active: boolean; dim: boolean }) {
+function Overlay({ L, s, st, tap, onOpen, hero, active, dim }: { L: Layout; s: Spot; st: SpotState; tap: Pointing; onOpen: () => void; hero?: HeroLook; active: boolean; dim: boolean }) {
   if (st.hidden) return null;
   const d = drawingFor(s, st);
   const top = P(...d.top);
   const { bx, by, size } = footprint(s);
   const front = P(bx + size, by + size);
-  const lift = (st.level >= 2 && !SERVICE.includes(s.kind) ? 26 : 0) + (active && !HUB_SPOTS.includes(s.id) ? 6 : 0);
-  const isle = isleOf(s.id);
+  const lift = (st.level >= 2 && !SERVICE.includes(s.kind) ? 26 : 0) + (active && !L.hubSpots.includes(s.id) ? 6 : 0);
+  const isle = isleOf(L, s.id);
   return (
     <g
       role="button"
@@ -366,6 +256,7 @@ export function TownMap({
   hero,
   path = [],
   chest,
+  layout = 'home',
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
@@ -379,14 +270,17 @@ export function TownMap({
   /** Today's path, in order (spot ids). */
   path?: string[];
   chest?: { state: ChestState; progress: string; onOpen: () => void };
+  /** Home, or one realm's map. */
+  layout?: LayoutId;
 }) {
+  const L = layoutFor(layout);
   const phase = useDayPhase();
   const reduced = useReducedMotion();
   const [hover, setHover] = useState<string | null>(null);
   const lastPointer = useRef<string>('mouse');
   const active = hover ?? selected;
-  const spots = SPOTS.filter((s) => states[s.id]);
-  const questSpot = spots.find((s) => states[s.id].quest) ?? spots.find((s) => s.id === 'home');
+  const spots = L.spots.filter((s) => states[s.id]);
+  const questSpot = spots.find((s) => states[s.id].quest) ?? spots.find((s) => s.id === 'home' || s.id === 'gate');
   const tapFor = (s: Spot): Pointing => ({
     onTap: (e) => {
       e.stopPropagation();
@@ -402,46 +296,47 @@ export function TownMap({
   const bridges = useMemo(() => {
     const out: { from: string; key: string; a: Pt; b: Pt; done: boolean }[] = [];
     const seen = new Set<string>();
-    const hub = SHAPES.hub;
+    const hub = L.shapes.hub;
     path.forEach((id) => {
-      const isle = ISLES.find((i) => i.spots.includes(id));
+      const isle = L.isles.find((i) => i.spots.includes(id));
       if (!isle || isle.id === 'hub' || seen.has(isle.id)) return;
       seen.add(isle.id);
-      const sh = SHAPES[isle.id];
+      const sh = L.shapes[isle.id];
       const a0 = edgeToward(hub, sh.center);
       const b0 = edgeToward(sh, hub.center);
       out.push({ from: isle.id, key: isle.id, a: a0, b: [b0[0], b0[1] - isle.lift], done: !!states[id]?.stops?.every((x) => x.done) });
     });
     return out;
-  }, [path, states]);
+  }, [path, states, L]);
 
   // Back to front; a bridge goes right after the farther of its two islands.
-  const order = [...ISLES].sort((a, b) => a.x + a.w / 2 + a.y + a.d / 2 - (b.x + b.w / 2 + b.y + b.d / 2));
-  const hubDepth = HUB.x + HUB.w / 2 + HUB.y + HUB.d / 2;
+  const order = [...L.isles].sort((a, b) => a.x + a.w / 2 + a.y + a.d / 2 - (b.x + b.w / 2 + b.y + b.d / 2));
+  const hubDepth = L.hub.x + L.hub.w / 2 + L.hub.y + L.hub.d / 2;
   const depthOf = (id: string) => {
-    const i = ISLES.find((x) => x.id === id)!;
+    const i = L.isles.find((x) => x.id === id)!;
     return i.x + i.w / 2 + i.y + i.d / 2;
   };
   const layers: ReactNode[] = [];
   order.forEach((isle, i) => {
-    layers.push(<Island key={isle.id} isle={isle} states={states} active={active} tapFor={tapFor} reduced={reduced} index={i} />);
+    layers.push(<Island key={isle.id} L={L} isle={isle} states={states} active={active} tapFor={tapFor} reduced={reduced} index={i} />);
     for (const br of bridges) {
       const after = depthOf(br.from) < hubDepth ? br.from : 'hub';
       if (after === isle.id) layers.push(<RopeBridge key={`b${br.key}`} a={br.a} b={br.b} done={br.done} />);
     }
-    if (isle.id === 'hub' && chest) layers.push(<Chest key="chest" x={CHEST[0]} y={CHEST[1]} state={chest.state} progress={chest.progress} onOpen={chest.onOpen} />);
+    if (isle.id === 'hub' && chest && L.chest) layers.push(<Chest key="chest" x={L.chest[0]} y={L.chest[1]} state={chest.state} progress={chest.progress} onOpen={chest.onOpen} />);
   });
 
   // The highlighted spot's tag is drawn last, on top of the others.
   const overlays = [...spots].sort((a, b) => (a.id === active ? 1 : 0) - (b.id === active ? 1 : 0));
   return (
     <Viewport
-      focus={SPOTS.find((s) => s.id === focus) ?? SPOTS.find((s) => s.id === 'exam-hall')!}
+      L={L}
+      focus={L.spots.find((s) => s.id === focus) ?? L.spots.find((s) => s.id === L.start)!}
       onPointer={(t) => (lastPointer.current = t)}
       onBackground={() => onSelect(null)}
-      sky={SKY[phase]}
+      sky={L.night ? SKY.night : SKY[phase]}
     >
-      <NightContext.Provider value={phase === 'night'}>
+      <NightContext.Provider value={phase === 'night' || !!L.night}>
         <defs>
           <filter id="town-faded">
             <feColorMatrix type="saturate" values="0.25" />
@@ -451,17 +346,18 @@ export function TownMap({
           <LampGlowDef />
           <HazeDefs />
         </defs>
-        <SkyLife view={VIEW} phase={phase} reduced={reduced} />
+        <SkyLife view={L.view} phase={L.night ? 'night' : phase} reduced={reduced} />
         {layers}
         <g opacity={0.85}>
           <Cloud x={-560} y={640} s={1.3} />
           <Cloud x={620} y={700} s={1.1} />
         </g>
-        <SkyTint phase={phase} view={VIEW} />
-        <StreetLamps spots={LAMPS} glow={phase !== 'day'} />
+        {!L.night && <SkyTint phase={phase} view={L.view} />}
+        <StreetLamps spots={L.lamps} glow={phase !== 'day'} />
         {overlays.map((s) => (
           <Overlay
             key={s.id}
+            L={L}
             s={s}
             st={states[s.id]}
             tap={tapFor(s)}
@@ -486,7 +382,8 @@ const MIN_Z = 0.5;
 const MAX_Z = 1.6;
 
 /** Scrollable, zoomable stage. Drag with the mouse, pinch on touch screens, or use the buttons. */
-function Viewport({ children, focus, onPointer, onBackground, sky }: { children: ReactNode; focus: Spot; onPointer: (type: string) => void; onBackground: () => void; sky: readonly [string, string] }) {
+function Viewport({ L, children, focus, onPointer, onBackground, sky }: { L: Layout; children: ReactNode; focus: Spot; onPointer: (type: string) => void; onBackground: () => void; sky: readonly [string, string] }) {
+  const VIEW = L.view;
   const ref = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 0.95 : 1.1));
   const pending = useRef<{ cx: number; cy: number } | null>(null);
@@ -498,7 +395,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const [fx, fy] = spotCenter(focus);
+    const [fx, fy] = spotCenter(L, focus);
     el.scrollLeft = fx * zoom - el.clientWidth / 2;
     el.scrollTop = PAD_TOP + fy * zoom - mid(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -510,7 +407,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     const el = ref.current;
     if (!el || focus.id === firstFocus.current) return;
     firstFocus.current = focus.id;
-    const [fx, fy] = spotCenter(focus);
+    const [fx, fy] = spotCenter(L, focus);
     el.scrollTo({ left: fx * zoom - el.clientWidth / 2, top: PAD_TOP + fy * zoom - mid(el), behavior: 'smooth' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus.id]);
@@ -537,7 +434,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     <>
       <div
         ref={ref}
-        className="fixed inset-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`fixed inset-0 overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${L.cls ?? ''}`}
         style={{ touchAction: 'pan-x pan-y', background: `linear-gradient(${sky[0]}, ${sky[1]})` }}
         onClick={() => !drag.current?.moved && onBackground()}
         onPointerDown={(e) => {

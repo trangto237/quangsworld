@@ -59,7 +59,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
 
   if (!unlocked)
     return (
-      <TownScreen student={student} tab={null} back={() => go({ name: 'hub' })}>
+      <TownScreen student={student} tab={null} back={() => go({ name: 'realm', realmId: 'logic' })}>
         <Panel className="mx-auto max-w-lg text-center">
           <div className="text-6xl">🔒</div>
           <h1 className="mt-2 font-display text-3xl font-bold">
@@ -83,7 +83,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
   const count = (prefix: string, total: number) => `${done.filter((d) => d.startsWith(prefix)).length}/${total}`;
 
   return (
-    <TownScreen student={student} tab={null} back={() => go({ name: 'hub' })} showPowers={false} className="max-w-6xl">
+    <TownScreen student={student} tab={null} back={() => go({ name: 'realm', realmId: 'logic' })} showPowers={false} className="max-w-6xl">
       <Panel className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-3xl font-bold">

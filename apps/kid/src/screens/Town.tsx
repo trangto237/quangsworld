@@ -11,10 +11,16 @@ import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
 import { BottomNav, HeroBar, rankFor } from '../town/Shell';
 import { TownMap, levelFor, type Spot, type SpotState } from '../town/TownMap';
+import { layoutFor } from '../town/layouts';
+import { REALMS, realmById, realmOf, type RealmId } from '../lib/realms';
+import { writingKey } from './Writing';
 import { Meter, Ribbon, TownButton } from '../town/ui';
 
-/** Home: the town map. Each world is a building that grows as the hero earns stars there. */
-export function Town({ student }: { student: StudentProfile }) {
+/**
+ * The map. Home: the middle island (house, shop, Coach Owl, Exam Hall) with a portal island for each realm.
+ * A realm: its islands round a gate home. Each place is a building that grows as the hero earns stars there.
+ */
+export function Town({ student, realm }: { student: StudentProfile; realm?: RealmId }) {
   const go = useKid((s) => s.go);
   const lang = useLang();
   const plan = useQuery((r) => todayPlan(r, student.id), [student.id]);
@@ -28,6 +34,9 @@ export function Town({ student }: { student: StudentProfile }) {
   const codeOpen = useQuery((r) => !!r.getKv<boolean>(`code-unlocked:${student.id}`), [student.id]);
   const codeProgress = useQuery((r) => r.getKv<string[]>(`code-done:${student.id}`) ?? [], [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
+  const writings = useQuery((r) => (r.getKv<unknown[]>(writingKey(student.id)) ?? []).length, [student.id]);
+  const layout = layoutFor(realm ?? 'home');
+  const here = new Set(layout.spots.map((s) => s.id));
   const hero = { armour: inSlot(slots, 'armour')?.id, emblem: student.avatar, hat: inSlot(slots, 'hat')?.emoji, pet: inSlot(slots, 'pet')?.emoji };
   const next = plan.missions.find((m) => !m.done);
   const doneCount = plan.missions.filter((m) => m.done).length;
@@ -83,19 +92,47 @@ export function Town({ student }: { student: StudentProfile }) {
       ? { level: Math.min(4, 1 + Math.floor(codeDone / 6)), title: tr(lang, 'Code Lab'), sub: `💻 ${codeDone}`, icon: '💻', color: '#0ea5e9', blurb: tr(lang, 'Make games with blocks, JavaScript and Python.') }
       : { level: 0, title: tr(lang, 'Code Lab'), sub: tr(lang, '🔒 Ask a parent'), icon: '💻', color: '#64748b', locked: true, blurb: tr(lang, 'Learn to code by making games. A parent can unlock it.') };
     out.arcade = { level: 2, title: tr(lang, 'Arcade'), sub: tr(lang, 'Any game'), icon: '🕹️', color: '#a855f7', blurb: tr(lang, 'Play any game you like.') };
+    out.writing = {
+      level: Math.min(4, 1 + Math.floor(writings / 2)),
+      title: tr(lang, 'Writing studio'),
+      sub: `✍️ ${writings}`,
+      icon: '✍️',
+      color: '#db2777',
+      blurb: tr(lang, 'Practise the two Ngữ văn exam essays.'),
+    };
     out['exam-hall'].stops = stopsAt('exam-hall');
+    // Each realm's portal on Home sums up its places.
+    for (const r of REALMS) {
+      const members = r.places.map((id) => out[id]).filter((x) => x && !x.hidden);
+      const worlds = members.filter((x) => !x.locked && x.unexplored !== undefined);
+      out[`realm-${r.id}`] = {
+        level: worlds.length ? Math.round(worlds.reduce((a, x) => a + x.level, 0) / worlds.length) : 1,
+        title: tr(lang, r.name),
+        sub: tr(lang, '{n} islands', { n: members.length }),
+        icon: r.emoji,
+        color: r.color,
+        blurb: tr(lang, r.blurb),
+        due: members.reduce((a, x) => a + (x.due ?? 0), 0),
+        quest: members.some((x) => x.quest),
+        stops: members.flatMap((x) => x.stops ?? []).sort((a, b) => a.n - b.n),
+      };
+    }
+    if (realm) {
+      const r = realmById(realm)!;
+      out.gate = { level: 2, title: tr(lang, 'Home'), sub: tr(lang, r.name), icon: '🏠', color: r.color, blurb: tr(lang, 'Fly back to the home island.') };
+    }
     return { out, questWorld, path };
-  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress]);
+  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress, writings, realm]);
 
   // Level-up moments: compare with what this device last showed; celebrate one building that grew.
-  const seenKey = `atlas-town-seen:${student.id}`;
+  const seenKey = `atlas-town-seen:${student.id}:${realm ?? 'home'}`;
   const [grew, setGrew] = useState<{ id: string; text: string; title: string } | null>(null);
   const checked = useRef(false);
   useEffect(() => {
     if (checked.current) return;
     checked.current = true;
     const now: Record<string, { level: number; explored: boolean }> = {};
-    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
+    for (const [id, st] of Object.entries(spots.out)) if (here.has(id) && !st.hidden && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade', 'gate', 'writing'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
     let before: typeof now | null = null;
     try {
       before = JSON.parse(localStorage.getItem(seenKey) ?? 'null');
@@ -146,6 +183,11 @@ export function Town({ student }: { student: StudentProfile }) {
       setChestNote(tr(lang, '🎁 +{c} coins, +{g} 💎, +{x} XP! See you tomorrow.', { c: chestReward.coins, g: chestReward.gems, x: chestReward.xp }));
   };
 
+  // Home shows realms; a realm shows its own places.
+  const toHere = (id: string) => (realm ? (here.has(id) ? id : undefined) : here.has(id) ? id : realmOf(id) ? `realm-${realmOf(id)!.id}` : undefined);
+  const mapPath = spots.path.map(toHere).filter((x): x is string => !!x);
+  const focusSpot = (spots.questWorld && toHere(spots.questWorld)) ?? layout.start;
+
   const [selected, setSelected] = useState<Spot | null>(null);
   const picked = selected ? spots.out[selected.id] : undefined;
 
@@ -157,19 +199,24 @@ export function Town({ student }: { student: StudentProfile }) {
     else if (s.kind === 'code-lab') go({ name: 'code' });
     else if (s.kind === 'arcade') go({ name: 'arcade' });
     else if (s.id === 'word-forest') go({ name: 'garden' });
+    else if (s.kind === 'gate') go({ name: 'hub' });
+    else if (s.kind === 'writing') go({ name: 'writing' });
+    else if (s.kind.startsWith('realm-')) go({ name: 'realm', realmId: s.kind.slice(6) as RealmId });
     else if (!spots.out[s.id]?.hidden) go({ name: 'world', worldId: s.id });
   };
 
   return (
     <div className="text-ink-text">
       <TownMap
+        key={realm ?? 'home'}
+        layout={realm ?? 'home'}
         states={shown}
-        path={spots.path}
-        chest={{ state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
+        path={mapPath}
+        chest={realm ? undefined : { state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
         onOpen={open}
         onSelect={setSelected}
         selected={selected?.id ?? null}
-        focus={grew?.id ?? spots.questWorld ?? 'exam-hall'}
+        focus={grew?.id ?? focusSpot}
         hero={hero}
       />
       {(grew || chestNote) && (
@@ -184,7 +231,7 @@ export function Town({ student }: { student: StudentProfile }) {
         </div>
       )}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-30 [&>*]:pointer-events-auto">
-        <HeroBar student={student} />
+        <HeroBar student={student} back={realm ? () => go({ name: 'hub' }) : undefined} />
       </div>
       {/* A tapped place's card (phones), or today's quest, like a chapter card on the map. */}
       <div className="fixed inset-x-0 z-30 px-2" style={{ bottom: 'calc(96px + max(0.5rem, env(safe-area-inset-bottom)))' }}>

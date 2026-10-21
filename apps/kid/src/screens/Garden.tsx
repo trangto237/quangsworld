@@ -288,7 +288,7 @@ export function GardenScreen({ student, quest }: { student: StudentProfile; ques
 
       {/* Top: back, title, seeds */}
       <div className="absolute inset-x-0 top-0 flex items-start gap-2 p-2 sm:p-3">
-        <button onClick={() => go({ name: 'hub' })} className="town-btn grid size-11 shrink-0 place-items-center rounded-xl bg-paper text-xl" aria-label="Back to the map">
+        <button onClick={() => go({ name: 'realm', realmId: 'english' })} className="town-btn grid size-11 shrink-0 place-items-center rounded-xl bg-paper text-xl" aria-label="Back to the map">
           ←
         </button>
         <div className="town-panel min-w-0 flex-1 px-3 py-1.5 sm:max-w-xs sm:flex-none">

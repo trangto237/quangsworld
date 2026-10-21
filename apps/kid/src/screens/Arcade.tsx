@@ -43,7 +43,7 @@ export function Arcade({ student }: { student: StudentProfile }) {
   };
 
   return (
-    <TownScreen student={student} tab="map" back={() => go({ name: 'hub' })}>
+    <TownScreen student={student} tab="map" back={() => go({ name: 'realm', realmId: 'logic' })}>
       <Panel className="text-center">
         <div className="mx-auto grid size-20 place-items-center rounded-2xl border-[2.5px] border-ink bg-[#c084fc55] text-5xl">🕹️</div>
         <h1 className="mt-2 font-display text-3xl font-bold">

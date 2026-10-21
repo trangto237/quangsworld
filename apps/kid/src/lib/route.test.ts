@@ -14,6 +14,9 @@ describe('screen addresses', () => {
       { name: 'exam', examId: 'exam_ab12' },
       { name: 'world', worldId: 'word-forest' },
       { name: 'coach', topic: 'stress' },
+      { name: 'realm', realmId: 'maths' },
+      { name: 'garden' },
+      { name: 'arcade' },
     ];
     for (const s of screens) expect(screenOf(pathOf(s))).toEqual(s.name === 'coach' ? { name: 'coach', topic: 'stress' } : s);
   });
@@ -22,5 +25,6 @@ describe('screen addresses', () => {
     expect(screenOf('/results')).toEqual({ name: 'quests' });
     expect(screenOf('/nope')).toEqual({ name: 'hub' });
     expect(pathOf({ name: 'exam-hall' })).toBe('/exams');
+    expect(screenOf('/realm/atlantis')).toEqual({ name: 'hub' });
   });
 });

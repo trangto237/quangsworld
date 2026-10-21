@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { RealmId } from './lib/realms';
 import type { Mission } from '@atlas/shared';
 import type { Reward } from '@atlas/shared';
 import { pathOf, screenOf } from './lib/route';
@@ -20,6 +21,7 @@ export type Screen =
   | { name: 'writing' }
   | { name: 'arcade' }
   | { name: 'garden'; quest?: Mission }
+  | { name: 'realm'; realmId: RealmId }
   | { name: 'coach'; topic?: CoachTopic; conceptId?: string };
 
 export type CoachTopic = 'stress' | 'endings' | 'sounds' | 'twins' | 'grammar';

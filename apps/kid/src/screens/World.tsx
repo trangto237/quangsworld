@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { realmOf } from '../lib/realms';
 import type { StudentProfile } from '@atlas/db';
 import { conceptMission, isDue, stars } from '@atlas/engine';
 import { MODES, modeFor, modesFor, type GameMode } from '@atlas/game';
@@ -23,7 +24,7 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const island = ISLAND_GAMES[worldId];
 
   return (
-    <TownScreen student={student} tab="map" back={() => go({ name: 'hub' })}>
+    <TownScreen student={student} tab="map" back={() => go(realmOf(worldId) ? { name: 'realm', realmId: realmOf(worldId)!.id } : { name: 'hub' })}>
       <div className="town-panel mx-auto max-w-md p-4 text-center">
         <div className="mx-auto grid size-20 place-items-center rounded-2xl border-[2.5px] border-ink text-5xl" style={{ background: `${world.color}55` }}>
           {world.emoji}

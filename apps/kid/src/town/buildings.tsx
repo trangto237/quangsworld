@@ -525,7 +525,96 @@ const arcade: Kind = (x, y) => {
   };
 };
 
+/** A magic portal: two stone pillars, a beam, a glowing swirl, and a sign of where it leads. */
+const portal =
+  (glow: string, sign: string, around: string[] = []): Kind =>
+  (x, y, lv, color) => {
+    const big = around.length > 0;
+    const size = big ? 3.6 : 2;
+    const [bx, by] = [x + (big ? 0.2 : 0), y + (big ? 0.2 : 0)];
+    const h = big ? 58 : 40;
+    const yf = by + size * 0.55;
+    const [x1, x2] = [bx + 0.35, bx + size - 0.35];
+    const pw = big ? 0.42 : 0.3;
+    const id = `portal-${sign.codePointAt(0)}-${big ? 'b' : 's'}`;
+    const top = P((x1 + x2) / 2, yf, h + 14);
+    return {
+      el: (
+        <g>
+          <defs>
+            <radialGradient id={id}>
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
+              <stop offset="0.45" stopColor={glow} stopOpacity="0.85" />
+              <stop offset="1" stopColor={color} stopOpacity="0.9" />
+            </radialGradient>
+          </defs>
+          <Ground x={bx + 0.1} y={by + 0.1} w={size - 0.2} d={size - 0.2} fill="#d9cdb4" stroke={INK} sw={1.1} />
+          <Poly p={[P(x1 + pw, yf, 3), P(x2 - pw / 2, yf, 3), P(x2 - pw / 2, yf, h - 4), P(x1 + pw, yf, h - 4)]} fill={`url(#${id})`} sw={1.2} />
+          <g className="portal-swirl" style={{ transformOrigin: `${(P(x1, yf)[0] + P(x2, yf)[0]) / 2}px ${P(x1, yf, h / 2)[1]}px` }}>
+            {[0.3, 0.55, 0.8].map((t, i) => {
+              const [cx, cy] = P(x1 + (x2 - x1) * t, yf, h * (0.3 + 0.2 * i));
+              return <circle key={i} cx={cx} cy={cy} r={2.4} fill="#fff" opacity={0.8} />;
+            })}
+          </g>
+          <Box x={x1 - pw / 2} y={yf - pw / 2} w={pw} d={pw} h={h} color="#cfc6b6" />
+          <Box x={x2 - pw / 2} y={yf - pw / 2} w={pw} d={pw} h={h} color="#cfc6b6" />
+          <Box x={x1 - pw / 2 - 0.1} y={yf - pw / 2 - 0.05} w={x2 - x1 + pw + 0.2} d={pw + 0.1} h={big ? 9 : 7} z={h} color={color} />
+          <text x={top[0]} y={top[1] - (big ? 10 : 4)} fontSize={big ? 30 : 20} textAnchor="middle" dominantBaseline="central">
+            {sign}
+          </text>
+          {around.map((e, i) => {
+            const t = (i + 0.5) / around.length;
+            const [ex, ey] = P(bx + 0.4 + (size - 0.8) * t, by + size - 0.35, 6 + (i % 2) * 6);
+            return (
+              <text key={i} x={ex} y={ey} fontSize={17} textAnchor="middle" dominantBaseline="central" className="town-bob" style={{ animationDelay: `${i * 0.2}s` }}>
+                {e}
+              </text>
+            );
+          })}
+          {lv >= 4 && (
+            <Emoji at={[top[0] + 26, top[1] - 6]} size={14}>
+              ✨
+            </Emoji>
+          )}
+        </g>
+      ),
+      top: [(x1 + x2) / 2, yf, h + 14],
+    };
+  };
+
+/** Xưởng viết: a little red pavilion with lanterns and a quill. */
+const writing: Kind = (x, y) => {
+  const [bx, by, w, d] = [x + 0.35, y + 0.35, 1.3, 1.3];
+  const h = 22;
+  const [sx, sy] = P(bx + w / 2, by + d, h * 0.5);
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#f2e2c4" />
+        <Door x={bx} y={by} w={w} d={d} color="#8c2f2f" />
+        <PyramidRoof x={bx - 0.15} y={by - 0.15} w={w + 0.3} d={d + 0.3} z={h} h={18} color="#c0392b" />
+        <text x={sx + 18} y={sy - 6} fontSize={13}>
+          🏮
+        </text>
+        <text x={sx - 30} y={sy - 6} fontSize={13}>
+          🏮
+        </text>
+        <Emoji at={P(bx + w + 0.3, by + d * 0.4, 8)} size={18}>
+          ✍️
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 18],
+  };
+};
+
 export const KINDS: Record<string, Kind> = {
+  'realm-english': portal('#bbf7d0', '🌿', ['🌱', '⚒️', '🔔', '🗼']),
+  'realm-maths': portal('#fde68a', '📐', ['🏰', '⛰️', '🔺']),
+  'realm-logic': portal('#ddd6fe', '🌌', ['♞', '💻', '🕹️']),
+  'realm-literature': portal('#fbcfe8', '🏮', ['📜', '✍️', '🪷']),
+  gate: portal('#fff7cc', '🏠'),
+  writing,
   arcade,
   'code-lab': codeLab,
   'scholars-academy': school,

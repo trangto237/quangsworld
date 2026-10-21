@@ -231,3 +231,38 @@ html { background: var(--paper-2); }
 .garden-bug { animation: garden-bug 0.9s ease-in-out infinite alternate; }
 @keyframes garden-bug { from { transform: translate(-3px, 1px); } to { transform: translate(3px, -2px); } }
 @media (prefers-reduced-motion: reduce) { .garden-bug { animation: none; } }
+
+/* Realms: each subject's islands have their own colours (light, then dark). */
+.realm-maths {
+  --grass: #e6c77d; --grass-2: #dcb96a; --grass-hi: #f5e2a8; --grass-dark: #b08a3e; --plot: #f3e2b4;
+  --cliff: #c9743f; --cliff-2: #9a522a; --soil: #7a3f1f;
+  --sky-top: #f2a65a; --sky-bottom: #fde4b5;
+}
+.realm-logic {
+  --grass: #8f86d6; --grass-2: #847bcc; --grass-hi: #b4adf2; --grass-dark: #5f56ab; --plot: #d9d3f5;
+  --cliff: #5a5285; --cliff-2: #3e3866; --soil: #2e2950;
+  --sky-top: #141a45; --sky-bottom: #3d3a8c;
+}
+.realm-literature {
+  --grass: #b7d989; --grass-2: #a8cf78; --grass-hi: #dcefb8; --grass-dark: #6f9a46; --plot: #fbe3e8;
+  --cliff: #b46a52; --cliff-2: #8c4a38; --soil: #6e3426;
+  --sky-top: #f28fa0; --sky-bottom: #ffe1cf;
+}
+.dark .realm-maths {
+  --grass: #6b5a2f; --grass-2: #615128; --grass-hi: #857244; --grass-dark: #4a3d1d; --plot: #5c4f3e;
+  --cliff: #6e3f22; --cliff-2: #4f2c17; --soil: #3a1e10;
+  --sky-top: #2a1a2e; --sky-bottom: #5a3a3a;
+}
+.dark .realm-logic {
+  --grass: #3d3870; --grass-2: #36316a; --grass-hi: #524c8f; --grass-dark: #29255a; --plot: #3a3560;
+  --cliff: #2c2850; --cliff-2: #1f1c3e; --soil: #17142e;
+  --sky-top: #070a22; --sky-bottom: #1d1a4a;
+}
+.dark .realm-literature {
+  --grass: #4b5e36; --grass-2: #43552f; --grass-hi: #607a46; --grass-dark: #33421f; --plot: #5c3f46;
+  --cliff: #6a3d30; --cliff-2: #4c2a21; --soil: #331a14;
+  --sky-top: #2a1530; --sky-bottom: #5a2e44;
+}
+.portal-swirl { animation: portal-swirl 4s linear infinite; }
+@keyframes portal-swirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .portal-swirl { animation: none; } }

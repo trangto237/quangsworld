@@ -29,7 +29,7 @@ export function Writing({ student }: { student: StudentProfile }) {
 
   const group = (kind: 'nlvh' | 'nlxh') => WRITING_PROMPTS.filter((p) => p.kind === kind);
   return (
-    <TownScreen student={student} tab={null} back={() => go({ name: 'world', worldId: 'story-library' })} showPowers={false}>
+    <TownScreen student={student} tab={null} back={() => go({ name: 'realm', realmId: 'literature' })} showPowers={false}>
       <Panel>
         <h1 className="font-display text-3xl font-bold">✍️ Xưởng viết</h1>
         <p className="text-sm text-ink-soft">
