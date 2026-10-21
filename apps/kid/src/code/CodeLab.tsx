@@ -5,7 +5,7 @@ import { cx, useQuery, useRepo } from '@atlas/ui';
 import { T, TB, tr, useLang } from '../i18n';
 import { useKid } from '../store';
 import { TownScreen } from '../town/Shell';
-import { Panel, TownButton } from '../town/ui';
+import { Meter, Panel, TownButton } from '../town/ui';
 import { BlockPuzzle } from './BlockPuzzle';
 import { LESSONS, REFERENCE, TEMPLATES, type Lesson } from './lessons';
 import { BUGS, DRAWING } from './courses';
@@ -80,21 +80,45 @@ export function CodeLab({ student }: { student: StudentProfile }) {
     { id: 'draw', label: '🐢 Drawing' },
     { id: 'games', label: '🎮 My games' },
   ];
-  const count = (prefix: string, total: number) => `${done.filter((d) => d.startsWith(prefix)).length}/${total}`;
+  const got = (prefix: string) => done.filter((d) => d.startsWith(prefix)).length;
+  const progress: [string, string, number, number][] = [
+    ['🧩', 'Blocks', done.filter((d) => /^b\d+$/.test(d)).length, PUZZLES.length],
+    ['🟨', 'JavaScript', got('js:'), LESSONS.length],
+    ['🐍', 'Python', got('py:'), LESSONS.length],
+    ['🐞', 'Bugs', got('bug-'), BUGS.length * 2],
+    ['🐢', 'Drawing', got('draw-'), DRAWING.length * 2],
+  ];
 
   return (
     <TownScreen student={student} tab={null} back={() => go({ name: 'realm', realmId: 'logic' })} showPowers={false} className="max-w-6xl">
-      <Panel className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-3xl font-bold">
-            💻 <T en="Code Lab" />
-          </h1>
-          <p className="text-sm text-ink-soft">
-            <T en="Blocks first, then real code. Every lesson builds a piece of your own Snake game." />
-          </p>
+      <Panel>
+        <div className="flex items-center gap-3">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl border-[2.5px] border-ink bg-[#d7ecff] text-3xl" aria-hidden>
+            💻
+          </span>
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl font-bold leading-tight">
+              <T en="Code Lab" />
+            </h1>
+            <p className="text-sm text-ink-soft">
+              <T en="Blocks first, then real code. Every lesson builds a piece of your own Snake game." />
+            </p>
+          </div>
         </div>
-        <div className="text-sm font-bold text-ink-soft">
-          🧩 {`${done.filter((d) => /^b\d+$/.test(d)).length}/${PUZZLES.length}`} · 🟨 {count('js:', LESSONS.length)} · 🐍 {count('py:', LESSONS.length)} · 🐞 {count('bug-', BUGS.length * 2)} · 🐢 {count('draw-', DRAWING.length * 2)}
+        {/* Progress in each course */}
+        <div className="mt-3 grid grid-cols-5 gap-1.5">
+          {progress.map(([icon, label, got, total]) => (
+            <div key={label} className="rounded-xl border-2 border-ink/15 bg-paper-2 px-1 py-1.5 text-center">
+              <div className="text-lg leading-none">{icon}</div>
+              <div className="mt-1 font-display text-sm font-bold tabular-nums leading-none">
+                {got}/{total}
+              </div>
+              <Meter value={got} max={total} color="#5cb85c" className="mx-auto mt-1 h-1.5 w-[80%] border" />
+              <div className="mt-0.5 truncate text-[10px] font-semibold text-ink-soft">
+                <T en={label} />
+              </div>
+            </div>
+          ))}
         </div>
       </Panel>
       <div className="mt-4 flex gap-2 overflow-x-auto px-0.5 pb-2 pt-0.5">
