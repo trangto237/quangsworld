@@ -1,10 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { cx } from '@atlas/ui';
-import { P, ShadeDefs } from './iso';
+import { ShadeDefs } from './iso';
 import { KINDS, house } from './buildings';
 import { IslandBase, IslandDefs, islandShape } from './island';
 import { TB } from '../i18n';
-import { TownButton } from './ui';
 
 /**
  * Choosing a realm, like a level select: the realms go round in a loop. The one in front is a big card
@@ -22,8 +21,10 @@ export interface RealmCard {
   sky: string;
   /** Buildings on the card's island (place kinds), with their levels. */
   buildings: { kind: string; level: number; color: string }[];
-  /** Small lines under the name. */
+  /** Badges under the island in front. */
   info: ReactNode;
+  /** For screen readers. */
+  label: string;
   quest?: boolean;
 }
 
@@ -38,7 +39,7 @@ const LOTS: [number, number][] = [
 /** One floating island with up to four of the realm's buildings. */
 function Preview({ card }: { card: RealmCard }) {
   return (
-    <svg viewBox="-215 -95 430 330" className="h-full w-full" aria-hidden>
+    <svg viewBox="-205 -105 410 330" className="h-full w-full overflow-visible" aria-hidden>
       <defs>
         <ShadeDefs />
         <IslandDefs />
@@ -53,12 +54,12 @@ function Preview({ card }: { card: RealmCard }) {
           })}
         </g>
       </g>
-      <text x={P(5.6, 0.2)[0]} y={P(5.6, 0.2)[1] - 50} fontSize={34} textAnchor="middle" dominantBaseline="central">
-        {card.emoji}
-      </text>
     </svg>
   );
 }
+
+const ARROW =
+  'absolute top-1/2 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full border-2 border-white/90 bg-white/55 text-3xl font-bold text-[#3b2412] shadow-[0_6px_16px_rgba(0,0,0,0.18)] backdrop-blur-md transition hover:bg-white/80';
 
 export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCard[]; index: number; onIndex: (i: number) => void; onEnter: (i: number) => void }) {
   const n = cards.length;
@@ -117,6 +118,28 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
         }
       }}
     >
+      {/* Drifting clouds and sparkles */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <span className="picker-cloud absolute left-[-10%] top-[12%] h-16 w-56 rounded-full bg-white/60 blur-xl" />
+        <span className="picker-cloud absolute right-[-12%] top-[58%] h-20 w-72 rounded-full bg-white/50 blur-xl [animation-delay:-9s]" />
+        <span className="picker-cloud absolute left-[20%] bottom-[8%] h-12 w-40 rounded-full bg-white/40 blur-lg [animation-delay:-4s]" />
+        {[
+          [18, 30],
+          [80, 24],
+          [70, 70],
+          [25, 72],
+        ].map(([x, y], k) => (
+          <span key={k} className="picker-twinkle absolute text-lg" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${k * 0.7}s` }}>
+            ✨
+          </span>
+        ))}
+      </div>
+      <div key={`t${index}`} className="z-20 animate-pop pt-1 text-center">
+        <div className="font-display text-[2rem] font-black leading-none tracking-wide text-white sm:text-5xl" style={{ textShadow: '2px 0 0 #3b2412, -2px 0 0 #3b2412, 0 2px 0 #3b2412, 0 -2px 0 #3b2412, 1.5px 1.5px 0 #3b2412, -1.5px 1.5px 0 #3b2412, 1.5px -1.5px 0 #3b2412, -1.5px -1.5px 0 #3b2412, 0 5px 0 #3b2412, 0 8px 18px rgba(0,0,0,0.3)' }}>
+          {cards[index].emoji} {cards[index].name}
+        </div>
+        <div className="mx-auto mt-2 h-1 w-32 rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${cards[index].color}, transparent)` }} />
+      </div>
       <div className="relative w-full flex-1">
         {cards.map((c, i) => {
           const o = offset(i);
@@ -130,45 +153,63 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
             <button
               key={c.id}
               onClick={() => (front ? onEnter(i) : turn(Math.round(offset(i))))}
-              className={cx('absolute left-1/2 top-1/2 w-[min(72vw,320px)] rounded-3xl border-[3px] border-ink bg-paper p-2 text-left shadow-[0_6px_0_var(--ink)]', front && 'ring-4 ring-[#ffc23d]')}
+              className="absolute left-1/2 top-1/2 w-[min(92vw,460px)] outline-none"
               style={{
                 transform: `translate(-50%, -50%) translateX(${o * step}px) scale(${scale})`,
-                opacity: a > 2.2 ? 0 : a > 1.4 ? 0.45 : 1,
+                opacity: a > 2.2 ? 0 : a > 1.4 ? 0.4 : a > 0.5 ? 0.85 : 1,
                 zIndex: 10 - Math.round(a * 3),
-                transition: drag || jumped ? 'none' : 'transform 0.35s ease, opacity 0.35s ease',
-                filter: a > 0.5 ? 'saturate(0.8)' : undefined,
+                transition: drag || jumped ? 'none' : 'transform 0.45s cubic-bezier(.2,.8,.2,1), opacity 0.45s ease, filter 0.45s ease',
+                filter: a > 0.5 ? 'saturate(0.75) brightness(0.95)' : undefined,
               }}
-              aria-label={typeof c.name === 'string' ? c.name : c.id}
+              aria-label={c.label}
               tabIndex={front ? 0 : -1}
             >
-              <div className="text-center font-display text-2xl font-bold leading-tight">{c.name}</div>
-              <div className={cx('relative mt-1 aspect-[4/3] overflow-hidden rounded-2xl border-2 border-ink', c.cls)} style={{ background: c.sky }}>
+              {/* A soft glow in the realm's colour behind the island in front */}
+              <span
+                className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl transition-opacity duration-500"
+                style={{ background: `radial-gradient(circle, ${c.color}aa 0%, ${c.color}33 45%, transparent 70%)`, opacity: a < 0.5 ? 1 : 0 }}
+              />
+              <span className={cx('relative block aspect-[4/3]', c.cls)} style={{ filter: 'drop-shadow(0 22px 22px rgba(25,15,50,0.35))' }}>
                 <Preview card={c} />
-                {c.quest && (
-                  <span className="absolute left-2 top-2 rounded-full border-2 border-ink bg-[#e8584a] px-2 py-0.5 font-display text-xs font-bold text-white">
-                    ⚔️ <TB en="Quest" />
-                  </span>
-                )}
-              </div>
-              <div className="mt-1.5 text-center text-xs font-semibold text-ink-soft">{c.info}</div>
+              </span>
+              {c.quest && (
+                <span className="town-bob absolute left-1/2 top-[4%] -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-white bg-[linear-gradient(180deg,#ff7a6b,#d9402f)] px-3 py-1 font-display text-sm font-bold text-white shadow-[0_4px_12px_rgba(217,64,47,0.45)]">
+                  ⚔️ <TB en="Today's quest" />
+                </span>
+              )}
+              {a >= 0.5 && <span className="absolute inset-x-0 bottom-[2%] block text-center font-display text-xl font-bold text-white [text-shadow:0_2px_0_rgba(59,36,18,0.8),0_0_10px_rgba(0,0,0,0.3)]">{c.name}</span>}
             </button>
           );
         })}
-        <button data-noswipe onClick={() => turn(-1)} className="town-btn absolute left-2 top-1/2 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-paper text-3xl font-bold text-ink-text" aria-label="Previous realm">
+        <button data-noswipe onClick={() => turn(-1)} className={ARROW + ' left-2'} aria-label="Previous realm">
           ‹
         </button>
-        <button data-noswipe onClick={() => turn(1)} className="town-btn absolute right-2 top-1/2 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-paper text-3xl font-bold text-ink-text" aria-label="Next realm">
+        <button data-noswipe onClick={() => turn(1)} className={ARROW + ' right-2'} aria-label="Next realm">
           ›
         </button>
       </div>
-      <div className="z-20 flex items-center gap-2 pb-2">
+      <div key={`i${index}`} className="z-20 flex animate-pop flex-wrap justify-center gap-2 px-4 pb-2 text-sm font-bold text-[#3b2412]">
+        {cards[index].info}
+      </div>
+      <div className="z-20 flex items-center gap-1.5 pb-3">
         {cards.map((c, i) => (
-          <button data-noswipe key={c.id} onClick={() => onIndex(i)} className={cx('size-2.5 rounded-full border-2 border-ink', i === index ? 'bg-[#ffc23d]' : 'bg-paper')} aria-label={`Realm ${i + 1}`} />
+          <button
+            data-noswipe
+            key={c.id}
+            onClick={() => onIndex(i)}
+            className="h-2.5 rounded-full border border-white/80 shadow transition-all duration-300"
+            style={{ width: i === index ? 26 : 10, background: i === index ? cards[index].color : 'rgba(255,255,255,0.6)' }}
+            aria-label={`Realm ${i + 1}`}
+          />
         ))}
       </div>
-      <TownButton data-noswipe tone="green" size="lg" className="z-20 mb-1 min-w-48" onClick={() => onEnter(index)}>
+      <button
+        data-noswipe
+        onClick={() => onEnter(index)}
+        className="picker-enter relative z-20 mb-1 overflow-hidden rounded-full border-[3px] border-[#1f5f2a] bg-[linear-gradient(180deg,#7fe07a,#3fa54a)] px-12 py-2.5 font-display text-2xl font-bold text-white shadow-[0_5px_0_#1f5f2a,0_12px_24px_rgba(0,0,0,0.25)] [text-shadow:0_2px_0_#1f5f2a] active:translate-y-1 active:shadow-[0_1px_0_#1f5f2a]"
+      >
         <TB en="Enter ▶" />
-      </TownButton>
+      </button>
     </div>
   );
 }

@@ -266,3 +266,10 @@ html { background: var(--paper-2); }
 .portal-swirl { animation: portal-swirl 4s linear infinite; }
 @keyframes portal-swirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .portal-swirl { animation: none; } }
+/* Realm picker */
+.picker-cloud { animation: picker-cloud 22s ease-in-out infinite alternate; }
+@keyframes picker-cloud { from { transform: translateX(-30px); } to { transform: translateX(40px); } }
+.picker-enter::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%); transform: translateX(-120%); animation: picker-shine 3.2s ease-in-out infinite; }
+@keyframes picker-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .picker-cloud, .picker-enter::after { animation: none; } }
+.picker-twinkle { animation: twinkle 2.4s ease-in-out infinite alternate; }

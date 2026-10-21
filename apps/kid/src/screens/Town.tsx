@@ -21,6 +21,8 @@ import { REALMS, realmOf, type RealmId } from '../lib/realms';
 import { writingKey } from './Writing';
 import { Meter, Ribbon, TownButton } from '../town/ui';
 
+const PILL = 'rounded-full border border-white/80 bg-white/70 px-3 py-1 shadow-sm backdrop-blur';
+
 /**
  * The map. Home: the middle island (house, shop, Coach Owl, Exam Hall) with a portal island for each realm.
  * A realm: its islands round a gate home. Each place is a building that grows as the hero earns stars there.
@@ -230,16 +232,19 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
       sky: sl.sky,
       quest: r ? !!st?.quest : false,
       buildings: places.map((id) => ({ kind: id === 'home' ? 'home' : id, level: Math.max(1, shown[id]?.level ?? 2), color: shown[id]?.color ?? '#888' })),
-      info: r ? (
+      label: tr(lang, sl.realm ? sl.name : 'Home Island'),
+      info: (
         <>
-          {tr(lang, '{n} islands', { n: places.length })}
-          {st?.due ? ` · 🔁 ${st.due}` : ''}
-          {' · '}
-          {'⭐'.repeat(Math.max(0, Math.min(4, st?.level ?? 0)))}
-          <span className="opacity-30">{'⭐'.repeat(4 - Math.max(0, Math.min(4, st?.level ?? 0)))}</span>
+          {r && <span className={PILL}>🏝️ {tr(lang, '{n} islands', { n: places.length })}</span>}
+          {r && (
+            <span className={PILL + ' text-[#f5a623]'}>
+              {'★'.repeat(Math.max(0, Math.min(4, st?.level ?? 0)))}
+              <span className="opacity-30">{'★'.repeat(4 - Math.max(0, Math.min(4, st?.level ?? 0)))}</span>
+            </span>
+          )}
+          {!!st?.due && <span className={PILL}>🔁 {tr(lang, '{n} to review', { n: st.due })}</span>}
+          {!r && <span className={PILL}>🏠 🛒 🦉 🏛️ {tr(lang, 'House, shop, Coach Owl, Exam Hall')}</span>}
         </>
-      ) : (
-        tr(lang, 'Your house, the shop, Coach Owl and the Exam Hall')
       ),
     };
   });
