@@ -43,3 +43,4 @@ export { PASSAGE_SETS } from './english/passages';
 export { IELTS_TOPICS } from './english/ielts-topics';
 export { coach, whyNot, mistakeNote, analyseStress, stressWord, wordsForRule, stressDrill, exceptionDrill, stressExceptions, exceptionNote, STRESS_MEMORY, endingDrill, soundDrill, pairsDrill, lastSound, STRESS_RULES, SOUND_TIPS, STRATEGIES } from './english/tutor';
 export type { Bi, CoachChip, CoachStep, CoachPlan, DrillItem, StressRule, StressAnalysis } from './english/tutor';
+export { WRITING_PROMPTS, type WritingPrompt } from './literature/writing';

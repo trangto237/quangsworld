@@ -33,6 +33,13 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
           <T en={world.blurb} />
         </p>
       </div>
+      {world.subject === 'literature' && (
+        <div className="mx-auto mt-4 max-w-md">
+          <TownButton tone="amber" className="w-full py-3" onClick={() => go({ name: 'writing' })}>
+            ✍️ <TB en="Writing studio" /> — nghị luận văn học & xã hội
+          </TownButton>
+        </div>
+      )}
       {/* A winding path of mission nodes */}
       <ol className="relative mx-auto mt-6 max-w-md">
         <div className="absolute bottom-6 left-1/2 top-6 w-1.5 -translate-x-1/2 rounded border-x-2 border-ink" style={{ background: `${world.color}88` }} aria-hidden />

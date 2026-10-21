@@ -1,7 +1,8 @@
 import { makeBank, type ConceptSeed } from '../helpers';
+import { grade9Concepts, grade9Questions } from './grade9';
 
 /** Ngữ văn — content is in Vietnamese, matching the school subject. */
-export const literatureConcepts: ConceptSeed[] = [
+const baseConcepts: ConceptSeed[] = [
   {
     id: 'lit.comprehension',
     domain: 'Đọc hiểu',
@@ -40,6 +41,8 @@ export const literatureConcepts: ConceptSeed[] = [
   },
 ];
 
+export const literatureConcepts: ConceptSeed[] = [...baseConcepts, ...grade9Concepts];
+
 const { add, list } = makeBank('Atlas original');
 
 const Co = 'lit.comprehension';
@@ -77,4 +80,4 @@ add(St, 3, 'Đoạn văn có câu chủ đề đứng ở cuối đoạn là đo
 add(St, 4, 'Nhiệm vụ chính của phần mở bài trong văn nghị luận là…', ['giới thiệu vấn đề cần bàn', 'đưa tất cả bằng chứng', 'tóm tắt lại bài', 'kể chuyện cá nhân dài']);
 add(St, 5, 'Từ nối nào phù hợp để chuyển sang một ý phản bác?', ['Tuy nhiên', 'Hơn nữa', 'Thứ nhất', 'Tóm lại']);
 
-export const literatureQuestions = list;
+export const literatureQuestions = [...list, ...grade9Questions];

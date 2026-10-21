@@ -310,6 +310,8 @@ const VI: Record<string, string> = {
   'Wizard Hat': 'Mũ Phù thuỷ',
   'Robot Visor': 'Kính Robot',
   '{name} unlocked!': 'Đã mở khoá {name}!',
+  'Writing studio': 'Xưởng viết',
+  'Try writing first, then open the outline to compare.': 'Hãy viết trước, rồi mở dàn ý để so sánh.',
   'Code Lab': 'Phòng Lập trình',
   'Learn to code by making games — Snake and more, with blocks, JavaScript and Python. Ask your parent to unlock this island in the parent app.': 'Học lập trình bằng cách làm trò chơi — Rắn săn mồi và nhiều trò khác, với khối lệnh, JavaScript và Python. Nhờ bố mẹ mở khoá hòn đảo này trong ứng dụng phụ huynh.',
   'Blocks first, then real code. Every lesson builds a piece of your own Snake game.': 'Bắt đầu với khối lệnh, rồi đến code thật. Mỗi bài xây một phần trò Rắn săn mồi của riêng em.',

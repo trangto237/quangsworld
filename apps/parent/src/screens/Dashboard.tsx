@@ -1,6 +1,6 @@
 import type { StudentProfile } from '@atlas/db';
 import { EXAMS, computeInsights, dailyMinutes, levelFromXp, planDay } from '@atlas/engine';
-import { getConcept } from '@atlas/knowledge';
+import { WRITING_PROMPTS, getConcept } from '@atlas/knowledge';
 import { DAY_MS } from '@atlas/shared';
 import { Button, Card, Marked, Stat, useQuery } from '@atlas/ui';
 import { MasteryHeatmap, SubjectBars, WeeklyBars } from '../components/charts';
@@ -23,6 +23,8 @@ export function Dashboard({ student }: { student: StudentProfile }) {
         mistakes: r.listMistakes(student.id, { since: now - 30 * DAY_MS }),
         wallet: r.getWallet(student.id),
         exams: r.listExamResults(student.id),
+        realPapers: r.listImportedExams(),
+        writing: r.getKv<{ promptId: string; text: string; words: number; checked: number[]; updatedAt: number }[]>(`lit-writing:${student.id}`) ?? [],
         plan: planDay({ states, goals, now }),
       };
     },
@@ -201,6 +203,27 @@ export function Dashboard({ student }: { student: StudentProfile }) {
       </Card>
 
 
+      <Card title="Writing (Ngữ văn)">
+        {data.writing.length ? (
+          <div className="space-y-2">
+            {data.writing.map((w) => {
+              const p = WRITING_PROMPTS.find((x) => x.id === w.promptId);
+              return (
+                <details key={w.promptId} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+                  <summary className="cursor-pointer text-sm">
+                    <b>{p?.title ?? w.promptId}</b> · {w.words} words · self-check {w.checked.length}/{p?.checklist.length ?? 0} · {new Date(w.updatedAt).toLocaleDateString()}
+                  </summary>
+                  {p && <p className="mt-2 text-xs text-slate-500">{p.task}</p>}
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{w.text || '—'}</p>
+                </details>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">Nothing written yet. {student.name} can practise the exam's writing tasks in the Story Library → Writing studio.</p>
+        )}
+      </Card>
+
       <Card title="Exam Hall results">
         {data.exams.length ? (
           <div className="overflow-x-auto">
@@ -221,7 +244,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                   return (
                     <tr key={r.id} className="border-t border-slate-200 dark:border-slate-800">
                       <td className="py-2">{new Date(r.finishedAt).toLocaleDateString()}</td>
-                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? r.examId}</td>
+                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? data.realPapers.find((e) => e.id === r.examId)?.name ?? 'Removed paper'}</td>
                       <td className="text-right font-bold tabular-nums">{r.score != null ? `${r.score.toFixed(2)} / 10` : r.band != null ? `Band ${r.band.toFixed(1)}` : '—'}</td>
                       <td className="text-right tabular-nums">
                         {r.correct}/{r.total}

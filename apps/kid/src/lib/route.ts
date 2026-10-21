@@ -16,6 +16,7 @@ export function pathOf(s: Screen): string {
     case 'shop':
     case 'mistakes':
     case 'code':
+    case 'writing':
       return `/${s.name}`;
     case 'exam-hall':
       return '/exams';
@@ -47,6 +48,7 @@ export function screenOf(path: string): Screen {
     case 'shop':
     case 'mistakes':
     case 'code':
+    case 'writing':
       return { name: a };
     case 'exams':
       return b ? { name: 'exam', examId: b } : { name: 'exam-hall' };

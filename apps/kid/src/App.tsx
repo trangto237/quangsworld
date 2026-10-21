@@ -20,6 +20,7 @@ import { ExamHall } from './screens/ExamHall';
 import { Exam } from './screens/Exam';
 import { CoachCorner } from './screens/CoachCorner';
 import { CodeLab } from './code/CodeLab';
+import { Writing } from './screens/Writing';
 
 export function App() {
   const studentId = useKid((s) => s.studentId);
@@ -68,6 +69,8 @@ function Screens() {
       return <Quests student={student} />;
     case 'hero':
       return <Hero student={student} />;
+    case 'writing':
+      return <Writing student={student} />;
     case 'code':
       return <CodeLab student={student} />;
     case 'exam':
