@@ -13,7 +13,7 @@ export const MODES: Record<GameMode, { name: string; emoji: string; blurb: strin
   defense: { name: 'Castle Defense', emoji: '🏰', blurb: 'Answers power your chess towers.' },
   runner: { name: 'Word Runner', emoji: '🏃', blurb: 'Steer into the right gate before it reaches you!' },
   knight: { name: "Knight's Quest", emoji: '♞', blurb: 'Every right answer earns a knight move. Hunt the Glitch king.' },
-  duel: { name: 'Boss Duel', emoji: '⚔️', blurb: 'Turn-based duel — take your time, every answer is an attack.' },
+  duel: { name: 'Boss Duel', emoji: '⚔️', blurb: 'Every right answer is an attack — answer before the boss strikes!' },
   sprint: { name: 'Sentence Sprint', emoji: '🧩', blurb: 'Build sentences against the clock to launch your rocket.' },
   meteor: { name: 'Meteor Defense', emoji: '☄️', blurb: 'Blast the right meteor before it hits the city!' },
   penalty: { name: 'Penalty Shootout', emoji: '⚽', blurb: 'Pick the right corner to score — then save their kicks.' },
@@ -210,6 +210,18 @@ export class DuelSim {
     return [{ type: 'bossDown', wave: this.wave }, { type: 'end', victory: true }];
   }
 }
+
+/**
+ * Seconds-to-answer for a duel question, from how much there is to read (and listen to). Calm enough for
+ * reading passages, short enough that the boss is a threat. Running out of time lets the boss strike.
+ */
+export function duelTime(q: { prompt: string; options: string[]; passage?: string; audio?: boolean }): number {
+  const ms = 10_000 + q.prompt.length * 60 + q.options.join('').length * 40 + (q.passage?.length ?? 0) * 45 + (q.audio ? 8000 : 0);
+  return Math.round(Math.min(75_000, Math.max(15_000, ms)) / 1000) * 1000;
+}
+
+/** Answer streak shown as five pips: 3 in a row is a critical hit, the 5th a super strike, then it starts again. */
+export const streakPips = (streak: number) => (streak <= 0 ? 0 : ((streak - 1) % 5) + 1);
 
 /** Boss health sized so a mission lasts about its planned length (~3.5 correct answers a minute). */
 export const duelConfigFor = (minutes: number): DuelConfig => ({ bossHp: Math.max(60, Math.round(minutes * 3.5 * 16)) });

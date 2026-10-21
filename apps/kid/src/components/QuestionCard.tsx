@@ -28,12 +28,14 @@ interface Props {
   glossary?: boolean;
   /** Practice mode: called when the learner opens Coach Owl's hint (fewer hints → more stars). */
   onHint?: () => void;
+  /** Called the moment an answer is picked (before the feedback pause), e.g. to stop a countdown. */
+  onPick?: () => void;
 }
 
 const KEYS = ['1', '2', '3', '4'];
 
 /** One question, rendered as a game action. Keyboard: 1–4 to answer, R to replay audio, Enter for Next. */
-export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, wrongNote, glossary = true, onHint }: Props) {
+export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, wrongNote, glossary = true, onHint, onPick }: Props) {
   const lang = useLang();
   const [picked, setPicked] = useState<number | null>(null);
   const [typed, setTyped] = useState('');
@@ -78,6 +80,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
   const choose = (i: number) => {
     if (done.current) return;
     done.current = true;
+    onPick?.();
     setPicked(i);
     const correct = i === q.correct;
     result.current = { correct, ms: Math.round(performance.now() - shownAt.current), text: q.shown[i] };
@@ -88,6 +91,7 @@ export function QuestionCard({ question: q, onAnswer, mode = 'battle', compact, 
   const submitTyped = (text = typed) => {
     if (done.current || !text.trim()) return;
     done.current = true;
+    onPick?.();
     const correct = isTypedAnswerCorrect(q, text);
     setTypedResult(correct);
     result.current = { correct, ms: Math.round(performance.now() - shownAt.current), text: text.trim() };

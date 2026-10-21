@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Modal } from '@atlas/ui';
 import { T, TB, tr, useLang } from '../../i18n';
 import { useEscape } from './GameArena';
@@ -12,6 +12,7 @@ export function GameShell({
   retreatText,
   onLeave,
   className,
+  fit,
   children,
 }: {
   title: string;
@@ -21,14 +22,25 @@ export function GameShell({
   retreatText?: string;
   onLeave: () => void;
   className?: string;
+  /** Exactly one screen tall: the page never scrolls (the mode scrolls its own panels). */
+  fit?: boolean;
   children: ReactNode;
 }) {
   const lang = useLang();
   const [confirm, setConfirm] = useState(false);
   const escape = useEscape();
+  // Dark behind the phone's status bar and rubber-band scrolling while a game is on.
+  useEffect(() => {
+    const html = document.documentElement;
+    const before = html.style.background;
+    html.style.background = '#020617';
+    return () => {
+      html.style.background = before;
+    };
+  }, []);
   return (
-    <div className={`flex min-h-dvh flex-col text-white ${className ?? 'bg-slate-950'}`}>
-      <header className="flex items-center gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-sm">
+    <div className={`flex flex-col text-white ${fit ? 'h-dvh overflow-hidden' : 'min-h-dvh'} ${className ?? 'bg-slate-950'}`}>
+      <header className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-black/30 px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-sm">
         <button onClick={() => setConfirm(true)} className="rounded-lg px-2 py-1 text-white/70 hover:bg-white/10" aria-label="Leave battle">
           ✕
         </button>
@@ -53,7 +65,7 @@ export function GameShell({
           {stats}
         </div>
       </header>
-      <div className="flex flex-1 flex-col">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       <Modal open={confirm} onClose={() => setConfirm(false)} title={tr(lang, 'Leave the battle?')}>
         <div className="text-sm text-slate-600 dark:text-slate-300">
           <T en={retreatText ?? 'Your answers so far are saved and still count.'} />

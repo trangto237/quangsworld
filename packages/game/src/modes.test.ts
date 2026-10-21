@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DuelSim, KnightSim, RunnerSim, duelConfigFor, knightConfigFor, modeFor, runnerConfigFor } from './modes';
+import { DuelSim, KnightSim, RunnerSim, duelConfigFor, duelTime, streakPips, knightConfigFor, modeFor, runnerConfigFor } from './modes';
 
 const seq = (vals: number[]) => {
   let i = 0;
@@ -40,6 +40,18 @@ describe('Boss Duel', () => {
     const lose = new DuelSim({ bossHp: 200 });
     for (let i = 0; i < 5; i++) lose.answer(false, 0);
     expect(lose.status).toBe('lost');
+  });
+
+  it('gives more time to answer when there is more to read', () => {
+    const short = duelTime({ prompt: 'Lan: "What a beautiful dress you\'re wearing!" Hoa: "___"', options: ["I'm sorry.", "You're welcome.", "Thank you. I'm glad you like it.", "No, it isn't."] });
+    expect(short).toBeGreaterThanOrEqual(15_000);
+    expect(short).toBeLessThanOrEqual(25_000);
+    expect(duelTime({ prompt: 'What is the passage mainly about?', options: ['a', 'b', 'c', 'd'], passage: 'x'.repeat(900) })).toBeGreaterThan(45_000);
+    expect(duelTime({ prompt: 'x'.repeat(5000), options: [] })).toBe(75_000);
+  });
+
+  it('counts the streak in pips of five', () => {
+    expect([0, 1, 3, 5, 6, 10].map(streakPips)).toEqual([0, 1, 3, 5, 1, 5]);
   });
 
   it('trial duels cannot be lost and bring a new boss', () => {
