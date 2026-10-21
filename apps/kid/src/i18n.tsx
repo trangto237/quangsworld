@@ -50,6 +50,7 @@ const VI: Record<string, string> = {
   'Boss Battle': 'Đánh trùm',
   'Word Garden': 'Vườn ươm Từ vựng',
   'Island game': 'Trò chơi của đảo',
+  '👪 Parent': '👪 Phụ huynh',
   '{n} to review': '{n} cần ôn',
   'House, shop, Coach Owl, Exam Hall': 'Nhà, cửa hàng, Thầy Cú, Phòng thi',
   'Home Island': 'Đảo Nhà',

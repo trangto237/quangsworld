@@ -167,9 +167,15 @@ export function Hero({ student }: { student: StudentProfile }) {
           <T en="Day / night" />
           <ThemeToggle mode={mode} onCycle={cycle} />
         </span>
-        <TownButton tone="paper" className="ml-auto" onClick={logout}>
-          <TB en="⇄ Switch player" />
-        </TownButton>
+        <span className="ml-auto flex flex-wrap gap-2">
+          {/* The parent's pages: they open with the parent password. */}
+          <a href="/parent/" className="town-btn inline-flex items-center justify-center gap-2 rounded-xl bg-[#cfe2f7] px-4 py-2 font-display font-bold text-[#3b2412]">
+            <TB en="👪 Parent" />
+          </a>
+          <TownButton tone="paper" onClick={logout}>
+            <TB en="⇄ Switch player" />
+          </TownButton>
+        </span>
       </Panel>
     </TownScreen>
   );
