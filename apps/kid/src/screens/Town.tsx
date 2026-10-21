@@ -201,31 +201,19 @@ export function Town({ student }: { student: StudentProfile }) {
             </div>
           </div>
         ) : (
-          <div className="town-panel mx-auto flex max-w-xl items-center gap-3 px-3 py-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <Ribbon>
-                  <T en="Today's quest" />
-                </Ribbon>
-                <span className="text-xs font-bold text-ink-soft">
-                  {doneCount}/{plan.missions.length}
-                </span>
-              </div>
-              <button onClick={() => go({ name: 'quests' })} className="mt-1 block w-full truncate text-left font-display text-base font-bold leading-tight">
-                {next ? next.title : <T en="All done for today! 🏆" />}
-              </button>
-              <Meter value={doneCount} max={plan.missions.length} className="mt-1 h-2.5" />
-            </div>
-            {next ? (
-              <TownButton tone="green" onClick={() => go({ name: 'battle', mission: next, fromPlan: true })}>
-                <TB en="▶ Play" />
-              </TownButton>
-            ) : (
-              <TownButton tone="amber" onClick={() => go({ name: 'quests' })}>
-                <TB en="Quests" />
-              </TownButton>
-            )}
-          </div>
+          // Today's quest, as a slim strip: tap it for the quest list. The big Play button below starts it.
+          <button onClick={() => go({ name: 'quests' })} className="town-panel mx-auto flex w-full max-w-xl items-center gap-3 px-3 py-1.5 text-left">
+            <Ribbon>
+              <T en="Today's quest" />
+            </Ribbon>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display text-sm font-bold leading-tight">{next ? next.title : <T en="All done for today! 🏆" />}</span>
+              <Meter value={doneCount} max={plan.missions.length} className="mt-0.5 h-2" />
+            </span>
+            <span className="shrink-0 text-xs font-bold text-ink-soft">
+              {doneCount}/{plan.missions.length} ›
+            </span>
+          </button>
         )}
       </div>
       <BottomNav student={student} active="map" />

@@ -463,7 +463,7 @@ export function TownMap({
 
 /** Room above and below the map, so the hero bar and the bottom bars never hide the edge islands. */
 const PAD_TOP = 150;
-const PAD_BOTTOM = 250;
+const PAD_BOTTOM = 200;
 /** The middle of the part of the screen the bars leave free. */
 const mid = (el: HTMLElement) => (el.clientHeight + PAD_TOP - PAD_BOTTOM) / 2;
 
