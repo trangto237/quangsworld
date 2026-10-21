@@ -21,6 +21,8 @@ import { REALMS, realmOf, type RealmId } from '../lib/realms';
 import { writingKey } from './Writing';
 import { Meter, Ribbon, TownButton } from '../town/ui';
 
+/** Above the quest card (which sits above the bottom bar and the phone's home-bar gap). */
+const ABOVE_QUEST = 'calc(96px + max(0.5rem, env(safe-area-inset-bottom)) + 5.25rem)';
 const PILL = 'rounded-full border border-white/80 bg-white/70 px-3 py-1 shadow-sm backdrop-blur';
 
 /**
@@ -104,7 +106,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
       sub: `✍️ ${writings}`,
       icon: '✍️',
       color: '#db2777',
-      blurb: tr(lang, 'Practise the two Ngữ văn exam essays.'),
+      blurb: tr(lang, 'Practise the two literature exam essays.'),
     };
     out['exam-hall'].stops = stopsAt('exam-hall');
     // Each realm's portal on Home sums up its places.
@@ -271,7 +273,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
       <div className={cx('fixed inset-0', (inside ?? slides[index]).cls)} style={{ background: (inside ?? slides[index]).sky, transition: 'background 0.4s' }} />
       {inside ? (
         <>
-          <div className="fixed inset-x-0 bottom-[11.25rem] top-[10.5rem] sm:bottom-[10.5rem] sm:top-[8.5rem]">
+          <div className="fixed inset-x-0 top-[10.5rem] sm:top-[8.5rem]" style={{ bottom: ABOVE_QUEST }}>
             <Carousel
               slides={[inside]}
               index={0}
@@ -305,7 +307,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
           </div>
         </>
       ) : (
-        <div className="fixed inset-x-0 bottom-[11.25rem] top-[7.6rem] sm:bottom-[10.5rem] sm:top-[5.5rem]">
+        <div className="fixed inset-x-0 top-[7.6rem] sm:top-[5.5rem]" style={{ bottom: ABOVE_QUEST }}>
           <RealmPicker cards={cards} index={index} onIndex={setIndex} onEnter={enter} />
         </div>
       )}

@@ -51,7 +51,7 @@ export const REALMS: Realm[] = [
   },
   {
     id: 'literature',
-    name: 'Ngữ văn Realm',
+    name: 'Literature Realm',
     emoji: '🏮',
     color: '#db2777',
     blurb: 'Lantern islands of stories, poems and writing.',
