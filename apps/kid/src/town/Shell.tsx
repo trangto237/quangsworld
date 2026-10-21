@@ -46,9 +46,9 @@ export function HeroBar({ student, back, showPowers = true }: { student: Student
   const streak = useQuery((r) => studyStreak(r.listSessions(student.id, Date.now() - 60 * DAY_MS)), [student.id]);
   const powers = useQuery((r) => getPowers(r, student.id), [student.id]);
   const lvl = levelFromXp(wallet.xp);
-  // Its own solid bar, so nothing scrolls underneath the hero card.
+  // Part of the page: it scrolls away with the content instead of covering it.
   return (
-    <header className="sticky top-0 z-30 border-b-[2.5px] border-ink bg-paper-2 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 shadow-[0_3px_0_rgba(74,46,24,0.15)]">
+    <header className="relative z-30 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1">
       <div className="mx-auto max-w-5xl space-y-1.5">
         <div className="flex items-center gap-2">
           {back && (
