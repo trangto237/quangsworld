@@ -34,7 +34,7 @@ export interface World {
  */
 export const WORLDS: World[] = [
   { id: 'my-textbook', name: 'My Textbook', emoji: '📘', color: '#4f46e5', subject: 'english', domains: ['My textbook'], blurb: 'Missions made from your school book — unit by unit.' },
-  { id: 'word-forest', name: 'Word Forest', emoji: '🌲', color: '#16a34a', subject: 'english', domains: ['Vocabulary'], blurb: 'Hunt rare words among the ancient trees.' },
+  { id: 'word-forest', name: 'Word Garden', emoji: '🌱', color: '#16a34a', subject: 'english', domains: ['Vocabulary'], blurb: 'Learn words, earn water, grow rare plants.' },
   { id: 'grammar-forge', name: 'Grammar Forge', emoji: '⚒️', color: '#ea580c', subject: 'english', domains: ['Grammar'], blurb: 'Hammer sentences into shape.' },
   { id: 'sound-temple', name: 'Sound Temple', emoji: '🔔', color: '#be185d', subject: 'english', domains: ['Pronunciation'], blurb: 'Ring the bells — stress, sounds and endings.' },
   { id: 'scholars-academy', name: "Scholar's Academy", emoji: '🎓', color: '#0f766e', subject: 'english', domains: ['Exam skills'], blurb: 'Train for the grade-10 entrance exam.' },

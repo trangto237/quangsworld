@@ -512,29 +512,42 @@ export const KINDS: Record<string, Kind> = {
   shop: market,
 };
 
-/** Word Forest is a park: more trees as it grows. */
+/** The Word Garden: a glasshouse and soil beds; the beds fill with grown plants as it levels up. */
 export const forest: Kind = (x, y, lv) => {
-  const spots: [number, number, 'round' | 'pine'][] = [
-    [0.5, 0.5, 'pine'],
-    [1.4, 0.45, 'round'],
-    [0.45, 1.35, 'round'],
-    [1.0, 1.0, 'pine'],
-    [1.5, 1.5, 'pine'],
-    [1.55, 1.0, 'round'],
-    [1.0, 1.6, 'round'],
+  const beds: [number, number][] = [
+    [1.15, 0.2],
+    [1.15, 1.05],
+    [0.2, 1.15],
   ];
-  const n = Math.min(spots.length, 3 + lv);
-  const trees = spots.slice(0, n).sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+  const grown = ['🌻', '🍅', '🥕'];
+  const [gx, gy, gw, gd, gh] = [x + 0.15, y + 0.15, 0.85, 0.8, 16];
   return {
     el: (
       <g>
         <Ground x={x + 0.1} y={y + 0.1} w={1.8} d={1.8} fill="#8cc75a" stroke={INK} sw={1.2} />
-        {trees.map(([tx, ty, k], i) => (
-          <Tree key={i} x={x + tx} y={y + ty} s={1.15} kind={k} color={k === 'pine' ? '#3f8f3a' : '#5aa845'} />
-        ))}
+        {/* Glasshouse */}
+        <Box x={gx} y={gy} w={gw} d={gd} h={gh} color="#bfe6ef" />
+        <Windows x={gx} y={gy} w={gw} d={gd} floors={1} floorH={gh} cols={2} color="#e4f7fb" />
+        <GableRoof x={gx} y={gy} w={gw} d={gd} z={gh} h={10} color="#9fd4e2" />
+        {lv >= 4 && <Tree x={x + 0.25} y={y + 0.2} s={0.8} color="#4f9e3e" />}
+        {beds.map(([bx, by], i) => {
+          const [cx, cy] = P(x + bx + 0.32, y + by + 0.32);
+          return (
+            <g key={i}>
+              <Ground x={x + bx} y={y + by} w={0.65} d={0.65} fill="#8a5a34" stroke={INK} sw={1.1} />
+              <Ground x={x + bx + 0.08} y={y + by + 0.25} w={0.5} d={0.12} fill="#734a2a" />
+              <Emoji at={[cx, cy - 6]} size={lv > i ? 15 : 11}>
+                {lv > i ? grown[i] : '🌱'}
+              </Emoji>
+            </g>
+          );
+        })}
+        <Emoji at={P(x + 1.0, y + 1.75, 4)} size={12}>
+          {lv >= 3 ? '🪷' : '🪣'}
+        </Emoji>
       </g>
     ),
-    top: [x + 1, y + 1, 48],
+    top: [gx + gw / 2, gy + gd / 2, gh + 10],
   };
 };
 KINDS['word-forest'] = forest;

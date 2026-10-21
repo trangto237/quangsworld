@@ -53,7 +53,7 @@ export function Materials() {
               disabled={!preview || !deck.trim()}
               onClick={async () => {
                 const res = await repo.importFlashcards(deck.trim(), csv);
-                setMsg({ ok: true, text: `“${deck}” is now a mission in Word Forest (${res.questions.length} questions).` });
+                setMsg({ ok: true, text: `“${deck}” is now a mission in the Word Garden (${res.questions.length} questions).` });
                 setCsv('');
                 setDeck('');
               }}

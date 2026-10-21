@@ -200,3 +200,18 @@ html { background: var(--paper-2); }
   from { opacity: 0.35; }
   to { opacity: 0.8; }
 }
+
+/* Word Garden */
+.garden-soil {
+  background-color: #8a5a34;
+  background-image: repeating-linear-gradient(170deg, rgba(0, 0, 0, 0.13) 0 6px, transparent 6px 15px), radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.16), transparent 60%);
+}
+@keyframes garden-drop {
+  from { transform: translateY(-10px); opacity: 0; }
+  30% { opacity: 1; }
+  to { transform: translateY(60px); opacity: 0; }
+}
+.garden-drop { animation: garden-drop 0.6s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .garden-drop { animation-duration: 0.01s; }
+}
