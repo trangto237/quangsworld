@@ -8,11 +8,12 @@ import { TownScreen } from '../town/Shell';
 import { Panel, TownButton } from '../town/ui';
 import { BlockPuzzle } from './BlockPuzzle';
 import { LESSONS, REFERENCE, TEMPLATES, type Lesson } from './lessons';
+import { BUGS, DRAWING } from './courses';
 import { PUZZLES } from './puzzles';
 import type { Lang } from './runtime';
 import { Sandbox, type SandboxHandle } from './Sandbox';
 
-type Tab = 'blocks' | 'js' | 'py' | 'games';
+type Tab = 'blocks' | 'js' | 'py' | 'bugs' | 'draw' | 'games';
 const REWARD = { coins: 20, gems: 0, xp: 20 };
 
 export const unlockKey = (studentId: string) => `code-unlocked:${studentId}`;
@@ -75,6 +76,8 @@ export function CodeLab({ student }: { student: StudentProfile }) {
     { id: 'blocks', label: '🧩 Blocks' },
     { id: 'js', label: '🟨 JavaScript' },
     { id: 'py', label: '🐍 Python' },
+    { id: 'bugs', label: '🐞 Fix the bug' },
+    { id: 'draw', label: '🐢 Drawing' },
     { id: 'games', label: '🎮 My games' },
   ];
   const count = (prefix: string, total: number) => `${done.filter((d) => d.startsWith(prefix)).length}/${total}`;
@@ -91,7 +94,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
           </p>
         </div>
         <div className="text-sm font-bold text-ink-soft">
-          🧩 {count('b', PUZZLES.length)} · 🟨 {count('js:', LESSONS.length)} · 🐍 {count('py:', LESSONS.length)}
+          🧩 {`${done.filter((d) => /^b\d+$/.test(d)).length}/${PUZZLES.length}`} · 🟨 {count('js:', LESSONS.length)} · 🐍 {count('py:', LESSONS.length)} · 🐞 {count('bug-', BUGS.length * 2)} · 🐢 {count('draw-', DRAWING.length * 2)}
         </div>
       </Panel>
       <div className="mt-4 flex gap-2 overflow-x-auto px-0.5 pb-2 pt-0.5">
@@ -107,7 +110,8 @@ export function CodeLab({ student }: { student: StudentProfile }) {
       </div>
       <div className="mt-3">
         {tab === 'blocks' && <BlocksTab done={done} onSolved={(id) => void finish(id)} />}
-        {(tab === 'js' || tab === 'py') && <CourseTab key={tab} lang={tab} studentId={student.id} done={done} onPassed={(id) => void finish(`${tab}:${id}`)} />}
+        {(tab === 'js' || tab === 'py') && <CourseTab key={tab} lang={tab} lessons={LESSONS} prefix={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
+        {(tab === 'bugs' || tab === 'draw') && <TwoLanguages key={tab} kind={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
         {tab === 'games' && <GamesTab studentId={student.id} />}
       </div>
     </TownScreen>
@@ -210,29 +214,54 @@ function useRunner() {
   return { sandbox, log, setLog, error, loading, handlers, run, started };
 }
 
-function CourseTab({ lang, studentId, done, onPassed }: { lang: Lang; studentId: string; done: string[]; onPassed: (id: string) => void }) {
+/** Fix-the-bug and Drawing: the same course in either language (his choice is remembered). */
+function TwoLanguages({ kind, studentId, done, onPassed }: { kind: 'bugs' | 'draw'; studentId: string; done: string[]; onPassed: (id: string) => void }) {
+  const pref = `atlas-code-lang:${studentId}`;
+  const [lang, setLang] = useState<Lang>(() => (readDraft(pref) === 'py' ? 'py' : 'js'));
+  const lessons = kind === 'bugs' ? BUGS : DRAWING;
+  const prefix = `${kind === 'bugs' ? 'bug' : 'draw'}-${lang}`;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-bold">
+        <T en="Language" />:
+        {(['js', 'py'] as const).map((l) => (
+          <button
+            key={l}
+            onClick={() => (setLang(l), writeDraft(pref, l))}
+            className={cx('rounded-full px-3 py-1 ring-1', lang === l ? 'bg-ink text-paper ring-ink' : 'ring-ink/30')}
+          >
+            {l === 'js' ? '🟨 JavaScript' : '🐍 Python'}
+          </button>
+        ))}
+      </div>
+      <CourseTab key={prefix} lang={lang} lessons={lessons} prefix={prefix} studentId={studentId} done={done} onPassed={onPassed} />
+    </div>
+  );
+}
+
+function CourseTab({ lang, lessons: LESSONS, prefix, studentId, done, onPassed }: { lang: Lang; lessons: Lesson[]; prefix: string; studentId: string; done: string[]; onPassed: (id: string) => void }) {
   const ui = useLang();
-  const firstOpen = LESSONS.findIndex((l) => !done.includes(`${lang}:${l.id}`));
+  const firstOpen = LESSONS.findIndex((l) => !done.includes(`${prefix}:${l.id}`));
   const [i, setI] = useState(firstOpen < 0 ? 0 : firstOpen);
   const lesson = LESSONS[i];
-  const [code, setCodeState] = useState(() => readDraft(draftKey(studentId, `${lang}:${lesson.id}`)) ?? lesson.starter[lang]);
+  const [code, setCodeState] = useState(() => readDraft(draftKey(studentId, `${prefix}:${lesson.id}`)) ?? lesson.starter[lang]);
   const [verdict, setVerdict] = useState<{ ok: boolean; text: string } | null>(null);
   const [checking, setChecking] = useState(false);
   const [hint, setHint] = useState(false);
   const r = useRunner();
-  const open = (k: number) => k === 0 || done.includes(`${lang}:${LESSONS[k - 1].id}`);
+  const open = (k: number) => k === 0 || done.includes(`${prefix}:${LESSONS[k - 1].id}`);
   const say = (b: { en: string; vi: string }) => (ui === 'vi' ? b.vi : ui === 'help' ? `${b.en}\n🇻🇳 ${b.vi}` : b.en);
 
   const setCode = (v: string) => {
     setCodeState(v);
-    writeDraft(draftKey(studentId, `${lang}:${lesson.id}`), v);
+    writeDraft(draftKey(studentId, `${prefix}:${lesson.id}`), v);
   };
   const pick = (k: number) => {
     setI(k);
     setVerdict(null);
     setHint(false);
     r.sandbox.current?.stop();
-    setCodeState(readDraft(draftKey(studentId, `${lang}:${LESSONS[k].id}`)) ?? LESSONS[k].starter[lang]);
+    setCodeState(readDraft(draftKey(studentId, `${prefix}:${LESSONS[k].id}`)) ?? LESSONS[k].starter[lang]);
   };
 
   const check = async (l: Lesson) => {
@@ -254,7 +283,7 @@ function CourseTab({ lang, studentId, done, onPassed }: { lang: Lang; studentId:
     if (s.error) return setVerdict({ ok: false, text: `${tr(ui, 'Your program has an error')}: ${s.error}` });
     const miss = l.check.test(s, code, before, lang);
     if (miss) return setVerdict({ ok: false, text: say(miss) });
-    onPassed(l.id);
+    onPassed(`${prefix}:${l.id}`);
     setVerdict({ ok: true, text: tr(ui, '🎉 Correct! +20 coins') });
   };
 
@@ -268,7 +297,7 @@ function CourseTab({ lang, studentId, done, onPassed }: { lang: Lang; studentId:
             onClick={() => pick(k)}
             className={cx('rounded-lg px-3 py-1 text-sm font-bold ring-1', k === i ? 'bg-ink text-paper ring-ink' : 'ring-ink/30', !open(k) && 'opacity-40')}
           >
-            {done.includes(`${lang}:${l.id}`) ? '✓ ' : open(k) ? '' : '🔒 '}
+            {done.includes(`${prefix}:${l.id}`) ? '✓ ' : open(k) ? '' : '🔒 '}
             {k + 1}
           </button>
         ))}
@@ -277,7 +306,7 @@ function CourseTab({ lang, studentId, done, onPassed }: { lang: Lang; studentId:
         <div className="space-y-3">
           <Panel className="space-y-2">
             <h2 className="font-display text-xl font-bold">{ui === 'vi' ? lesson.title.vi : lesson.title.en}</h2>
-            <p className="whitespace-pre-line text-sm">{say(lesson.learn)}</p>
+            <p className="whitespace-pre-line text-sm">{say(lesson.learnBy?.[lang] ?? lesson.learn)}</p>
             <p className="whitespace-pre-line rounded-lg bg-tint-amber p-2 text-sm font-semibold">🎯 {say(lesson.task)}</p>
           </Panel>
           <CodeBox value={code} onChange={setCode} />
@@ -298,7 +327,7 @@ function CourseTab({ lang, studentId, done, onPassed }: { lang: Lang; studentId:
               <TB en="↺ Start again" />
             </TownButton>
           </div>
-          {hint && <p className="whitespace-pre-line rounded-lg bg-paper-2 p-2 font-mono text-xs">{say(lesson.hint)}</p>}
+          {hint && <p className="whitespace-pre-line rounded-lg bg-paper-2 p-2 font-mono text-xs">{say(lesson.hintBy?.[lang] ?? lesson.hint)}</p>}
           {verdict && (
             <p className={cx('whitespace-pre-line rounded-lg p-2 text-sm font-bold', verdict.ok ? 'bg-tint-green' : 'bg-tint-red')}>
               {verdict.text}

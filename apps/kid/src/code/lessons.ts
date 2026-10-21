@@ -6,7 +6,7 @@ import type { Lang, SandboxState } from './runtime';
  * checked by running his code in the sandbox.
  */
 
-type Bi = { en: string; vi: string };
+export type Bi = { en: string; vi: string };
 
 export interface LessonCheck {
   /** Run this long before checking (ms). */
@@ -25,12 +25,15 @@ export interface Lesson {
   task: Bi;
   starter: Record<Lang, string>;
   hint: Bi;
+  /** When the idea or hint differs between JavaScript and Python. */
+  learnBy?: Partial<Record<Lang, Bi>>;
+  hintBy?: Partial<Record<Lang, Bi>>;
   check: LessonCheck;
 }
 
-const bi = (en: string, vi: string): Bi => ({ en, vi });
-const cells = (s: SandboxState) => Object.keys(s.board).map((k) => k.split(',').map(Number) as [number, number]);
-const has = (s: SandboxState, x: number, y: number) => !!s.board[`${x},${y}`];
+export const bi = (en: string, vi: string): Bi => ({ en, vi });
+export const cells = (s: SandboxState) => Object.keys(s.board).map((k) => k.split(',').map(Number) as [number, number]);
+export const has = (s: SandboxState, x: number, y: number) => !!s.board[`${x},${y}`];
 const strip = (code: string, lang: Lang) => code.replace(lang === 'py' ? /#.*$/gm : /\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
 
 export const LESSONS: Lesson[] = [
@@ -334,6 +337,12 @@ every(120, tick)
 `,
 };
 
+/** "Turtle art" template for My games. */
+const TURTLE_ART = {
+  js: `// Turtle art — change the numbers and colours!\nconst colors = ["red", "orange", "gold", "lime", "deepskyblue", "violet"];\nfor (let i = 0; i < 36; i++) {\n  color(colors[i % colors.length]);\n  for (let k = 0; k < 6; k++) {\n    forward(70);\n    right(60);\n  }\n  right(10);\n}\n`,
+  py: `# Turtle art — change the numbers and colours!\ncolors = ["red", "orange", "gold", "lime", "deepskyblue", "violet"]\nfor i in range(36):\n    color(colors[i % len(colors)])\n    for k in range(6):\n        forward(70)\n        right(60)\n    right(10)\n`,
+};
+
 const BLANK: Record<Lang, string> = {
   js: `// My game\ngrid(20, 20);\ntext("Hello!");\ncell(10, 10, "hotpink");\n`,
   py: `# My game\ngrid(20, 20)\ntext("Hello!")\ncell(10, 10, "hotpink")\n`,
@@ -343,6 +352,7 @@ export const TEMPLATES: { id: string; name: string; emoji: string; code: Record<
   { id: 'blank', name: 'Blank game', emoji: '✨', code: BLANK },
   { id: 'snake', name: 'Snake', emoji: '🐍', code: SNAKE },
   { id: 'catch', name: 'Catch the stars', emoji: '⭐', code: CATCH },
+  { id: 'turtle', name: 'Turtle art', emoji: '🐢', code: TURTLE_ART },
 ];
 
 /** Library reference shown next to the editor. */
@@ -358,6 +368,11 @@ export const REFERENCE: Record<Lang, [string, string][]> = {
     ['onKey(fn)', 'fn("up" / "down" / "left" / "right" / "space")'],
     ['gameOver("msg")', 'stop the game'],
     ['console.log(x)', 'print to the log'],
+    ['forward(n) / backward(n)', 'turtle: walk and draw'],
+    ['right(deg) / left(deg)', 'turtle: turn'],
+    ['penUp() / penDown()', 'turtle: stop / start drawing'],
+    ['color("red") / width(5)', 'turtle: pen colour and size'],
+    ['goTo(x, y)', 'turtle: jump to a point (page is 400 × 400)'],
   ],
   py: [
     ['grid(w, h)', 'size of the board'],
@@ -370,5 +385,10 @@ export const REFERENCE: Record<Lang, [string, string][]> = {
     ['on_key(fn)', 'fn("up" / "down" / "left" / "right" / "space")'],
     ['game_over("msg")', 'stop the game'],
     ['print(x)', 'print to the log'],
+    ['forward(n) / backward(n)', 'turtle: walk and draw'],
+    ['right(deg) / left(deg)', 'turtle: turn'],
+    ['pen_up() / pen_down()', 'turtle: stop / start drawing'],
+    ['color("red") / width(5)', 'turtle: pen colour and size'],
+    ['go_to(x, y)', 'turtle: jump to a point (page is 400 × 400)'],
   ],
 };

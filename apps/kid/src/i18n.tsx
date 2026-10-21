@@ -310,6 +310,8 @@ const VI: Record<string, string> = {
   'Wizard Hat': 'Mũ Phù thuỷ',
   'Robot Visor': 'Kính Robot',
   '{name} unlocked!': 'Đã mở khoá {name}!',
+  'Language': 'Ngôn ngữ',
+  'Turtle art': 'Tranh chú rùa',
   'Writing studio': 'Xưởng viết',
   'Try writing first, then open the outline to compare.': 'Hãy viết trước, rồi mở dàn ý để so sánh.',
   'Code Lab': 'Phòng Lập trình',
