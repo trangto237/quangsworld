@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Ball, Box, Cylinder, Door, Emoji, Flag, GableRoof, Ground, INK, P, Poly, PyramidRoof, Tree, Windows, shade, type Pt } from './iso';
+import { Box, Crown, Cylinder, Door, Emoji, Flag, GableRoof, Ground, INK, P, Poly, PyramidRoof, Tree, Windows, shade, type Pt } from './iso';
 
 /**
  * One drawing per world, each on a 2×2-tile lot (the Exam Hall on 4×4). `lv` (0–4) is how far the
@@ -352,9 +352,7 @@ const owlTree: Kind = (x, y, lv) => {
         {/* Branches */}
         <path d={`M${cx - 6},${cy - 58} q-14,-10 -30,-30 M${cx + 6},${cy - 58} q14,-10 28,-32`} fill="none" stroke="#6e4426" strokeWidth={6} strokeLinecap="round" />
         <g transform={`translate(${cx} ${cy}) scale(${grow}) translate(${-cx} ${-cy})`}>
-          {back.map(([dx, dy, r], i) => (
-            <Ball key={`b${i}`} cx={cx + dx} cy={cy + dy} r={r} color={shade(leaf, -0.12 + (i % 2) * 0.05)} />
-          ))}
+          <Crown balls={back.map(([dx, dy, r], i) => ({ cx: cx + dx, cy: cy + dy, r, color: shade(leaf, -0.1 + (i % 2) * 0.04) }))} />
         </g>
         {/* Platform and cabin in the branches */}
         <Box x={x + 0.35} y={y + 0.35} w={1.3} d={1.3} h={4} z={z - 4} color={plank} />
@@ -399,9 +397,9 @@ const owlTree: Kind = (x, y, lv) => {
         })()}
         {/* Leaves in front, hugging the cabin */}
         <g transform={`translate(${cx} ${cy}) scale(${grow}) translate(${-cx} ${-cy})`}>
-          {front.map(([dx, dy, r], i) => (
-            <Ball key={`f${i}`} cx={cx + dx} cy={cy + dy} r={r} color={shade(leaf, 0.04)} />
-          ))}
+          {/* Each side is its own little clump, outlined round the outside only. */}
+          <Crown balls={front.filter(([dx]) => dx < 0).map(([dx, dy, r]) => ({ cx: cx + dx, cy: cy + dy, r, color: shade(leaf, 0.04) }))} />
+          <Crown balls={front.filter(([dx]) => dx > 0).map(([dx, dy, r]) => ({ cx: cx + dx, cy: cy + dy, r, color: shade(leaf, 0.04) }))} />
         </g>
         {/* A lantern on the platform */}
         <Emoji at={P(x + 1.6, y + 0.45, z + 6)} size={12}>
@@ -464,7 +462,39 @@ export const house =
     };
   };
 
+/** The Code Lab: a glass-fronted workshop with a big screen, a satellite dish and a little robot. */
+const codeLab: Kind = (x, y, lv) => {
+  const [bx, by, w, d] = [x + 0.3, y + 0.35, 1.4, 1.3];
+  const h = 30 + Math.min(lv, 4) * 4;
+  const [sx, sy] = P(bx + w * 0.5, by + d, h * 0.55);
+  const dish = P(bx + w * 0.3, by + d * 0.4, h);
+  return {
+    el: (
+      <g>
+        <Box x={bx} y={by} w={w} d={d} h={h} color="#e8eef5" top="#cfd8e3" />
+        {/* Big screen on the front wall, showing code */}
+        <Poly
+          p={[P(bx + w * 0.12, by + d, h * 0.25), P(bx + w * 0.88, by + d, h * 0.25), P(bx + w * 0.88, by + d, h * 0.85), P(bx + w * 0.12, by + d, h * 0.85)]}
+          fill="#0f172a"
+          sw={1.2}
+        />
+        {[0, 1, 2].map((i) => (
+          <line key={i} x1={sx - 16 + i * 3} y1={sy - 6 + i * 5 + i * 1.5} x2={sx + 4 + i * 6} y2={sy - 6 + i * 5 + i * 1.5 - 10 * (0.5 - i * 0.1)} stroke={['#86efac', '#fde047', '#7dd3fc'][i]} strokeWidth={2} strokeLinecap="round" />
+        ))}
+        <Windows x={bx} y={by} w={w} d={d} floors={1} floorH={h} cols={2} color="#bae6fd" />
+        <Cylinder cx={bx + w * 0.3} cy={by + d * 0.4} r={0.08} h={14} z={h} color="#94a3b8" />
+        <ellipse cx={dish[0] + 2} cy={dish[1] - 18} rx={11} ry={6} fill="#e2e8f0" stroke={INK} strokeWidth={1.2} transform={`rotate(-25 ${dish[0] + 2} ${dish[1] - 18})`} />
+        <Emoji at={P(bx + w + 0.25, by + d * 0.5, 10)} size={18}>
+          🤖
+        </Emoji>
+      </g>
+    ),
+    top: [bx + w / 2, by + d / 2, h + 20],
+  };
+};
+
 export const KINDS: Record<string, Kind> = {
+  'code-lab': codeLab,
   'scholars-academy': school,
   'grammar-forge': forge,
   'sound-temple': pagoda,

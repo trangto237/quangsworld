@@ -63,6 +63,11 @@ export function ShadeDefs() {
         <stop offset="0.35" stopColor="#fff" stopOpacity="0.1" />
         <stop offset="1" stopColor="#000" stopOpacity="0.32" />
       </radialGradient>
+      <radialGradient id="sh-leaf" cx="0.35" cy="0.28" r="0.7">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.42" />
+        <stop offset="0.55" stopColor="#fff" stopOpacity="0.06" />
+        <stop offset="1" stopColor="#fff" stopOpacity="0" />
+      </radialGradient>
       <radialGradient id="sh-contact">
         <stop offset="0" stopColor="#1b2a10" stopOpacity="0.38" />
         <stop offset="0.6" stopColor="#1b2a10" stopOpacity="0.16" />
@@ -205,9 +210,33 @@ export function Tree({ x, y, s = 1, kind = 'round', color = '#5aa845' }: { x: nu
     <g>
       <ellipse cx={bx} cy={by} rx={12 * s} ry={5.5 * s} fill="url(#sh-contact)" />
       <rect x={bx - 2 * s} y={by - 10 * s} width={4 * s} height={10 * s} fill="#7a4e2c" stroke={INK} strokeWidth={1} />
-      <Ball cx={bx + 6 * s} cy={by - 16 * s} r={7 * s} color={shade(color, -0.12)} />
-      <Ball cx={bx - 6 * s} cy={by - 17 * s} r={7.5 * s} color={shade(color, -0.06)} />
-      <Ball cx={bx} cy={by - 23 * s} r={10 * s} color={color} />
+      <Crown
+        balls={[
+          { cx: bx + 6 * s, cy: by - 16 * s, r: 7 * s, color: shade(color, -0.12) },
+          { cx: bx - 6 * s, cy: by - 17 * s, r: 7.5 * s, color: shade(color, -0.06) },
+          { cx: bx, cy: by - 23 * s, r: 10 * s, color },
+        ]}
+      />
+    </g>
+  );
+}
+
+/**
+ * A leafy crown made of overlapping balls, outlined only around the outside: the outline layer is
+ * drawn first, slightly bigger, then the leaves on top hide the inner edges.
+ */
+export function Crown({ balls, sw = 1.3 }: { balls: { cx: number; cy: number; r: number; color: string }[]; sw?: number }) {
+  return (
+    <g>
+      {balls.map((b, i) => (
+        <circle key={`o${i}`} cx={b.cx} cy={b.cy} r={b.r + sw} fill="#3c3a1f" />
+      ))}
+      {balls.map((b, i) => (
+        <circle key={`f${i}`} cx={b.cx} cy={b.cy} r={b.r} fill={b.color} />
+      ))}
+      {balls.map((b, i) => (
+        <circle key={`h${i}`} cx={b.cx} cy={b.cy} r={b.r} fill="url(#sh-leaf)" />
+      ))}
     </g>
   );
 }
