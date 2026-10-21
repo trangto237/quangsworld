@@ -145,7 +145,10 @@ const LAMPS: [number, number][] = [
   [8.2, 15.0],
   [11.8, 8.1],
 ];
-const VIEW = { x: -960, y: -420, w: 2000, h: 1340 };
+const VIEW_TOP = -420;
+/** Tall enough for the lowest cliff tip, plus room for the bobbing and the glow under it. */
+const VIEW_BOTTOM = Math.max(920, ...ISLES.map((i) => SHAPES[i.id].apex[1] - i.lift + 90));
+const VIEW = { x: -960, y: VIEW_TOP, w: 2000, h: Math.ceil(VIEW_BOTTOM - VIEW_TOP) };
 
 /** Screen point (in map pixels) of a spot's centre, for centring the view. */
 export const spotCenter = (s: Spot): Pt => {
