@@ -13,6 +13,46 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="format-detection" content="telephone=no" />
     <title>Atlas — Adventure</title>
+    <!--
+      Never a blank screen: if the app can't start (its code didn't load, or it crashed), show what went wrong
+      and a Repair button that clears the offline copy of the app and reloads. Saved progress is not touched.
+    -->
+    <script>
+      (function () {
+        function esc(t) { return String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+        function repair() {
+          var jobs = [];
+          try { if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+          try { if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+          Promise.all(jobs).then(function () { location.reload(); }, function () { location.reload(); });
+        }
+        function show(msg, force) {
+          if (window.__atlasBooted && !force) return;
+          var d = document.getElementById('atlas-fatal');
+          if (!d) { d = document.createElement('div'); d.id = 'atlas-fatal'; (document.body || document.documentElement).appendChild(d); }
+          d.setAttribute('style', 'position:fixed;inset:0;z-index:2147483647;overflow:auto;background:#fff5e1;color:#3b2412;font:16px/1.45 -apple-system,system-ui,sans-serif;padding:max(24px,env(safe-area-inset-top)) 20px 24px');
+          d.innerHTML =
+            '<div style="font-size:44px">😵</div><h2 style="margin:8px 0">The app could not start · Ứng dụng không mở được</h2>' +
+            '<p>Tap <b>Repair</b> to load a fresh copy. Your progress is kept.<br>Bấm <b>Sửa</b> để tải lại bản mới. Tiến độ vẫn được giữ.</p>' +
+            '<button id="atlas-repair" style="margin:12px 0;padding:12px 22px;border-radius:14px;border:3px solid #4a2e18;background:#5cb85c;color:#fff;font-weight:700;font-size:18px">🔧 Repair · Sửa</button>' +
+            '<p style="font-size:13px;opacity:.8">If it still does not open, send a screenshot of this page.</p>' +
+            '<pre style="white-space:pre-wrap;font-size:12px;background:#f6e3bd;padding:10px;border-radius:10px">' + esc(msg) + '</pre>';
+          document.getElementById('atlas-repair').onclick = repair;
+        }
+        window.__atlasFatal = function (err) { show((err && (err.stack || err.message)) || String(err), true); };
+        window.__atlasRepair = repair;
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t !== window && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) return show('Could not load ' + (t.src || t.href));
+          if (e.message) show(e.message + (e.filename ? '\n' + e.filename + ':' + e.lineno + ':' + e.colno : '') + (e.error && e.error.stack ? '\n' + e.error.stack : ''));
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          show('Unhandled: ' + ((r && (r.stack || r.message)) || r));
+        });
+        setTimeout(function () { show('The app did not start within 20 seconds (' + navigator.userAgent + ')'); }, 20000);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

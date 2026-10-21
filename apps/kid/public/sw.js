@@ -3,7 +3,7 @@
  * Navigations: network first, falling back to the cached app shell.
  * Assets (hashed JS/CSS/wasm, fonts): cache first, then network (and cache).
  */
-const CACHE = 'atlas-v6';
+const CACHE = 'atlas-v7';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/parent/', '/manifest.webmanifest', '/icon.svg', '/icons/icon-192.png'])).catch(() => undefined));
@@ -46,7 +46,10 @@ self.addEventListener('fetch', (e) => {
       (hit) =>
         hit ||
         fetch(req).then((res) => {
-          if (res.ok || res.type === 'opaque') {
+          // Never keep a web page in place of a script, style or other file (a missing file can come back as
+          // the app's page, which would then break the app every time it opens).
+          const page = (res.headers.get('content-type') || '').includes('text/html');
+          if ((res.ok && !page) || res.type === 'opaque') {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy));
           }
