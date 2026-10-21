@@ -310,10 +310,18 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
               }}
             />
           </div>
-          <div className="fixed inset-x-0 top-[7.85rem] z-20 flex justify-center px-2 sm:top-[5.75rem]">
-            <button onClick={() => go({ name: 'hub' })} className="town-btn flex items-center gap-2 rounded-full bg-paper px-3 py-1 font-display text-sm font-bold text-ink-text">
-              ← <T en="Realms" /> <span className="opacity-40">|</span> {inside.emoji} <T en={inside.realm ? inside.name : 'Home Island'} />
+          <div className="fixed inset-x-0 top-[7.85rem] z-20 flex items-center justify-center gap-1.5 px-2 sm:top-[5.75rem]">
+            <button onClick={() => go({ name: 'hub' })} className="town-btn shrink-0 rounded-full bg-paper px-3 py-1 font-display text-sm font-bold text-ink-text">
+              ← <T en="Realms" />
             </button>
+            <span className="min-w-0 truncate rounded-full bg-paper/80 px-3 py-1 font-display text-sm font-bold text-ink-text shadow-sm">
+              {inside.emoji} {tr(lang, inside.realm ? inside.name : 'Home Island')}
+            </span>
+            {inside.realm && (
+              <button onClick={() => go({ name: 'realm', realmId: 'home' })} className="town-btn shrink-0 rounded-full bg-[#ffc23d] px-3 py-1 font-display text-sm font-bold text-[#3b2412]">
+                🏠 <T en="Home" />
+              </button>
+            )}
           </div>
         </>
       ) : (

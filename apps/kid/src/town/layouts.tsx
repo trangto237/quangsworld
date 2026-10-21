@@ -133,6 +133,9 @@ const homeLayout = (): Layout =>
   });
 
 // ── Realms ──────────────────────────────────────────────────────
+/** Realms without the little scenery islets between their places. */
+const PLAIN: RealmId[] = ['english'];
+
 /** Twelve places in a ring round the middle island (lot origins). */
 const RING: [number, number][] = [
   [-4.4, -4.4],
@@ -215,23 +218,20 @@ const tallRealm = (id: RealmId): Layout => {
   const realm = realmById(id)!;
   const at = (a: number, d: number, half: number) => ({ x: (d + a) / 2 - half, y: (d - a) / 2 - half });
   const mid = { ...at(0, 0, 3), w: 6, d: 6 };
-  const spots: Spot[] = [
-    { id: 'gate', kind: 'gate', ...at(0, 0, 1.5), lot: 3 },
-    ...realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(i % 2 ? 7 : -7, 10.4 + i * 6, 1.5), lot: 3 })),
-  ];
+  // The way home is a button in the bar above the map, so the realm's places get all the room.
+  const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(i % 2 ? 7 : -7, i * 6, 1.5), lot: 3 }));
   const rows = realm.places.length;
-  const decor = Array.from({ length: Math.max(0, Math.floor((rows - 1) / 2)) }, (_, k) => at(0, 13.4 + k * 12, 1.1));
+  const decor = PLAIN.includes(id) ? [] : Array.from({ length: Math.max(0, Math.floor((rows - 1) / 2)) }, (_, k) => at(0, 3 + k * 12, 1.1));
   return finish({
     id,
     spots,
     hub: mid,
-    hubSpots: ['gate'],
-    start: 'gate',
+    hubSpots: [],
+    start: spots[0].id,
     cls: realm.className,
     night: realm.night,
     isles: [
-      { id: 'hub', ...mid, seed: 17, lift: 0, falls: 0.5, spots: ['gate'] },
-      ...spots.slice(1).map((sp, i) => isleFor(sp, i + 1)),
+      ...spots.map((sp, i) => isleFor(sp, i + 1)),
       ...decor.map((p, k): Isle => ({ id: `deco${k}`, ...p, w: 2.2, d: 2.2, seed: 60 + k * 9, lift: 26, spots: [], small: true, decor: () => DECOR[id](p.x + 0.1, p.y + 0.1) })),
     ],
     lamps: [],
@@ -241,23 +241,21 @@ const tallRealm = (id: RealmId): Layout => {
 const realmLayout = (id: RealmId): Layout => {
   const realm = realmById(id)!;
   const slots = SLOTS[id];
-  const spots: Spot[] = [
-    { id: 'gate', kind: 'gate', x: MIDDLE.x + 2.7, y: MIDDLE.y + 2.7, lot: 3 },
-    ...realm.places.map((p, i): Spot => ({ id: p, kind: p, x: RING[slots[i]][0], y: RING[slots[i]][1], lot: 3 })),
-  ];
+  const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, x: RING[slots[i]][0], y: RING[slots[i]][1], lot: 3 }));
   const free = RING.map((_, k) => k).filter((k) => !slots.includes(k));
-  const decorSlots = free.filter((_, k) => k % 2 === 0).slice(0, 4);
+  const decorSlots = PLAIN.includes(id) ? [] : free.filter((_, k) => k % 2 === 0).slice(0, 4);
   return finish({
     id,
     spots,
     hub: MIDDLE,
-    hubSpots: ['gate'],
-    start: 'gate',
+    hubSpots: [],
+    start: spots[0].id,
     cls: realm.className,
     night: realm.night,
     isles: [
-      { id: 'hub', ...MIDDLE, seed: 13 + slots.length, lift: 0, falls: 0.45, spots: ['gate'], decor: MIDDLE_DECOR[id] },
-      ...spots.slice(1).map((s, i) => isleFor(s, i + 1)),
+      // The middle keeps a little scenery island (no buildings); home is a button above the map.
+      ...(PLAIN.includes(id) ? [] : [{ id: 'hub', ...MIDDLE, seed: 13 + slots.length, lift: 0, falls: 0.45, spots: [], small: true, decor: MIDDLE_DECOR[id] }]),
+      ...spots.map((s, i) => isleFor(s, i + 1)),
       ...decorSlots.map((k, i): Isle => {
         const [x, y] = RING[k];
         return { id: `deco${k}`, x: x + 0.2, y: y + 0.2, w: 2.2, d: 2.2, seed: 50 + k * 7, lift: 20 + i * 14, spots: [], small: true, decor: () => DECOR[id](x + 0.3, y + 0.3) };

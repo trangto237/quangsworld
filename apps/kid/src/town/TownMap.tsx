@@ -305,6 +305,8 @@ export function TownMap({
     const out: { from: string; key: string; a: Pt; b: Pt; done: boolean }[] = [];
     const seen = new Set<string>();
     const hub = L.shapes.hub;
+    // Bridges run from the middle island; realms open from a button instead, so they have none.
+    if (!hub || !L.hubSpots.length) return out;
     path.forEach((id) => {
       const isle = L.isles.find((i) => i.spots.includes(id));
       if (!isle || isle.id === 'hub' || seen.has(isle.id)) return;

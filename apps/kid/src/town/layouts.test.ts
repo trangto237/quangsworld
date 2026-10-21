@@ -8,13 +8,17 @@ describe('realm maps', () => {
     for (const w of WORLDS) expect(REALMS.filter((r) => r.places.includes(w.id)).length, w.id).toBe(1);
   });
 
-  it('each realm, wide or tall, has a gate and all its places', () => {
+  it('each realm, wide or tall, has all its places (home is a button, not an island)', () => {
     for (const r of REALMS)
       for (const tall of [false, true]) {
         const l = layoutFor(r.id, tall);
-        expect(l.spots.some((s) => s.id === 'gate')).toBe(true);
+        expect(l.spots.some((s) => s.id === 'gate')).toBe(false);
         for (const p of r.places) expect(l.spots.some((s) => s.id === p), p).toBe(true);
       }
+  });
+
+  it('the English realm has no little scenery islets', () => {
+    for (const tall of [false, true]) expect(layoutFor('english', tall).isles.filter((i) => i.small)).toEqual([]);
   });
 
   it('tall realms are taller than wide ones', () => {
