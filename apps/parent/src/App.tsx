@@ -11,6 +11,7 @@ import { Materials } from './screens/Materials';
 import { Profiles } from './screens/Profiles';
 import { Settings } from './screens/Settings';
 import { LiveDot } from './components/LiveDot';
+import { TimeRequests } from './components/ScreenTime';
 import { CloudBadge, useCloud } from './components/Cloud';
 import { confirmSignOut } from '@atlas/db/cloud';
 
@@ -106,7 +107,8 @@ export function App() {
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className="mx-auto max-w-7xl space-y-4 px-4 py-6">
+        <TimeRequests students={students} />
         {tab === 'dashboard' && <Dashboard student={student} />}
         {tab === 'knowledge' && <KnowledgeMap student={student} />}
         {tab === 'goals' && <Goals student={student} />}

@@ -7,3 +7,4 @@ export * from './insights';
 export * from './rewards';
 export * from './exams';
 export * from './exam-import';
+export * from './screentime';

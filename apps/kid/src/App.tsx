@@ -23,6 +23,15 @@ import { CodeLab } from './code/CodeLab';
 import { Writing } from './screens/Writing';
 import { Arcade } from './screens/Arcade';
 import { GardenScreen } from './screens/Garden';
+import { ScreenTime } from './components/ScreenTime';
+
+/** Daily screen time for whoever is playing (not on the "Who's playing?" screen). */
+function ScreenTimeFor() {
+  const { studentId, screen } = useKid();
+  const student = useQuery((r) => (studentId ? r.getStudent(studentId) : undefined), [studentId]);
+  if (!student || screen.name === 'profiles') return null;
+  return <ScreenTime key={student.id} student={student} />;
+}
 
 export function App() {
   const studentId = useKid((s) => s.studentId);
@@ -30,6 +39,7 @@ export function App() {
   return (
     <LangContext.Provider value={lang}>
       <Screens />
+      <ScreenTimeFor />
       <ErrorToast />
     </LangContext.Provider>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { Button, Card, Modal, useQuery, useRepo } from '@atlas/ui';
 import { StudentForm } from '../components/StudentForm';
+import { TimeLimitSetting } from '../components/ScreenTime';
 
 type LangMode = 'help' | 'vi' | 'en';
 const LANG_OPTIONS: { value: LangMode; label: string }[] = [
@@ -72,6 +73,7 @@ export function Profiles() {
                 <div className="text-xs text-slate-500">{s.placementDone ? 'Placement complete' : 'Placement not taken yet'}</div>
                 <LanguageSelect studentId={s.id} />
                 <CodeLabSwitch studentId={s.id} />
+                <TimeLimitSetting studentId={s.id} />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

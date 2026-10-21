@@ -4,7 +4,7 @@ import type {
 } from '@atlas/shared';
 import { hashString, uid } from '@atlas/shared';
 import { LIT_PART_LABEL, PART_LABEL, allConcepts, flashcardsToConcept, registerCustomContent, unregisterConcept, type DraftPart, type DraftQuestion } from '@atlas/knowledge';
-import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, type ImportedExam, type PlacementState } from '@atlas/engine';
+import { SHOP, STARTER_ITEMS, canAfford, newConceptState, scheduleReview, usedPrefix, type ImportedExam, type PlacementState } from '@atlas/engine';
 import type { AtlasDb } from './database';
 import * as t from './schema';
 import { hashSecret, verifySecret } from './crypto';
@@ -479,6 +479,16 @@ export class Repo {
   // ── Key/value ─────────────────────────────────────────────
   getKv<T>(key: string): T | undefined {
     return this.db.read((o) => o.select().from(t.kv).where(eq(t.kv.key, key)).get())?.value as T | undefined;
+  }
+
+  /** Every key starting with `prefix`, with its value. */
+  listKv<T>(prefix: string): { key: string; value: T }[] {
+    return this.db.read((o) => o.select().from(t.kv).where(like(t.kv.key, `${prefix}%`)).all()).map((r) => ({ key: r.key, value: r.value as T }));
+  }
+
+  /** Active milliseconds a child has used on a day, over all their devices. */
+  screenTimeUsed(studentId: string, date: string): number {
+    return this.listKv<number>(usedPrefix(studentId, date)).reduce((n, r) => n + (typeof r.value === 'number' ? r.value : 0), 0);
   }
 
   /** Stores a JSON value; `null`/`undefined` removes the key. */
