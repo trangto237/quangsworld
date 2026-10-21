@@ -55,6 +55,20 @@ export function SkyLife({ view, phase, reduced }: { view: { x: number; y: number
   const stars = Array.from({ length: 40 }, (_, i) => [view.x + ((i * 397) % view.w), view.y + ((i * 211) % (view.h * 0.8)), 1 + (i % 3) * 0.6] as const);
   return (
     <g style={{ pointerEvents: 'none' }}>
+      <defs>
+        <radialGradient id="sun-glow">
+          <stop offset="0" stopColor="#fff7d1" stopOpacity="0.9" />
+          <stop offset="0.25" stopColor="#ffe9a0" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#ffe9a0" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {phase !== 'night' && (
+        <g>
+          <circle cx={view.x + view.w - 300} cy={view.y + 170} r={260} fill="url(#sun-glow)" />
+          <circle cx={view.x + view.w - 300} cy={view.y + 170} r={44} fill={phase === 'dusk' ? '#ffb46b' : '#fff6cf'} />
+        </g>
+      )}
+      {phase === 'night' && <circle cx={view.x + view.w - 300} cy={view.y + 170} r={34} fill="#f3f0dc" opacity={0.9} />}
       {phase === 'night' &&
         stars.map(([x, y, r], i) => (
           <circle key={i} cx={x} cy={y} r={r} fill="#fff" opacity={0.8}>

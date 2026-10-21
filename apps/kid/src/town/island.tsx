@@ -125,23 +125,57 @@ export function IslandBase({ shape, seed, grass = 'var(--grass)', vines = true, 
   const leftFace = [...low.slice(0, f + 1), apex, ...leftJ.slice().reverse()];
   const rightFace = [...low.slice(f), ...rightJ, apex];
   const soil = [...front, ...low.slice().reverse()];
-  // Hanging vines and a few rock lines.
+  // Rock layers: the front edge pulled part of the way towards the tip.
+  const strata = [0.3, 0.58].map((t) => low.filter((_, i) => i % 2 === 0 || i === low.length - 1).map((p) => [p[0] + (apex[0] - p[0]) * t, p[1] + (apex[1] - p[1]) * t + 6] as Pt));
+  const chips = Array.from({ length: 5 }, () => {
+    const p = low[Math.floor(r() * low.length)];
+    const t = 0.12 + r() * 0.6;
+    return [p[0] + (apex[0] - p[0]) * t, p[1] + (apex[1] - p[1]) * t] as Pt;
+  });
+  // Grass tufts scattered on the top.
+  const { ring, center } = shape;
+  const tufts = Array.from({ length: Math.round(ring.length * 0.9) }, () => {
+    const p = ring[Math.floor(r() * ring.length)];
+    const t = 0.15 + r() * 0.7;
+    return [p[0] + (center[0] - p[0]) * t, p[1] + (center[1] - p[1]) * t] as Pt;
+  });
+  const outline = outlinePath(shape);
+  const clip = `isle-clip-${seed}`;
+  // Hanging vines.
   const vinePts = vines ? front.filter((_, i) => i % 3 === 1) : [];
   return (
     <g>
-      <polygon points={poly(leftFace)} fill="var(--cliff)" stroke={INK} strokeWidth={2} strokeLinejoin="round" />
-      <polygon points={poly(rightFace)} fill="var(--cliff-2)" stroke={INK} strokeWidth={2} strokeLinejoin="round" />
-      {leftJ.slice(0, 2).map((p, i) => (
-        <path key={`l${i}`} d={`M${p[0] + 6},${p[1]} q${10 + i * 6},-4 ${22 + i * 8},2`} fill="none" stroke={INK} strokeWidth={1.4} opacity={0.45} />
+      <polygon points={poly(leftFace)} fill="var(--cliff)" />
+      <polygon points={poly(rightFace)} fill="var(--cliff-2)" />
+      {/* Rock layers following the island's shape, narrowing towards the tip. */}
+      {strata.map((band, i) => (
+        <g key={i}>
+          <polyline points={poly(band)} fill="none" stroke="#000" strokeOpacity={0.2} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={poly(band.map((p) => [p[0], p[1] - 2.5] as Pt))} fill="none" stroke="#fff" strokeOpacity={0.16} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        </g>
       ))}
-      {rightJ.slice(0, 2).map((p, i) => (
-        <path key={`r${i}`} d={`M${p[0] - 6},${p[1]} q${-10 - i * 6},-4 ${-22 - i * 8},2`} fill="none" stroke={INK} strokeWidth={1.4} opacity={0.45} />
+      {chips.map((c, i) => (
+        <polygon key={`c${i}`} points={poly([[c[0] - 5, c[1]], [c[0], c[1] - 4], [c[0] + 6, c[1] - 1], [c[0] + 2, c[1] + 4]])} fill="#fff" opacity={0.14} />
       ))}
+      {/* Light from above: the cliff darkens towards its tip. */}
+      <polygon points={poly(leftFace)} fill="url(#isle-cliff)" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
+      <polygon points={poly(rightFace)} fill="url(#isle-cliff-r)" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
       {falls != null && <Waterfall at={front[Math.min(front.length - 1, Math.max(0, Math.round(front.length * falls)))]} drop={apex[1] - front[0][1] - 10} />}
-      <polygon points={poly(soil)} fill="var(--soil)" stroke={INK} strokeWidth={2} strokeLinejoin="round" />
-      <path d={outlinePath(shape)} fill={grass} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
-      {/* A lighter rim along the front, like sunlit grass. */}
-      <polyline points={poly(front.map((p) => [p[0], p[1] - 3] as Pt))} fill="none" stroke="var(--grass-hi)" strokeWidth={3} strokeLinecap="round" opacity={0.8} />
+      <polygon points={poly(soil)} fill="var(--soil)" stroke={INK} strokeWidth={1.6} strokeLinejoin="round" />
+      <polygon points={poly(soil)} fill="url(#isle-soil)" />
+      <clipPath id={clip}>
+        <path d={outline} />
+      </clipPath>
+      <path d={outline} fill={grass} />
+      {/* A soft bevel: light just inside the edge, a sunny glow in the middle. */}
+      <g clipPath={`url(#${clip})`}>
+        <path d={outline} fill="none" stroke="var(--grass-hi)" strokeWidth={12} opacity={0.55} />
+        <path d={outline} fill="url(#isle-top)" />
+        {tufts.map(([x, y], i) => (
+          <path key={i} d={`M${x - 4},${y} q2,-6 3,-8 M${x},${y} q0,-7 0,-10 M${x + 4},${y} q-1,-6 -3,-8`} fill="none" stroke="var(--grass-dark)" strokeWidth={1.4} strokeLinecap="round" opacity={0.55} />
+        ))}
+      </g>
+      <path d={outline} fill="none" stroke={INK} strokeWidth={2} strokeLinejoin="round" />
       {vinePts.map((p, i) => {
         const len = 14 + r() * 26;
         const sway = (r() - 0.5) * 10;
@@ -167,6 +201,32 @@ function Waterfall({ at, drop }: { at: Pt; drop: number }) {
       <path className="isle-water" d={`M${x + 4},${y + 8} L${x + 5},${y + h}`} stroke="#e8f8ff" strokeWidth={2} strokeDasharray="6 12" />
       <ellipse cx={x} cy={y + h} rx={16} ry={6} fill="#ffffff" opacity={0.7} />
     </g>
+  );
+}
+
+/** Gradients for the islands; put <IslandDefs /> once in the SVG. */
+export function IslandDefs() {
+  return (
+    <>
+      <radialGradient id="isle-top" cx="0.42" cy="0.38" r="0.7">
+        <stop offset="0" stopColor="#fffbe0" stopOpacity="0.35" />
+        <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#1d3a10" stopOpacity="0.18" />
+      </radialGradient>
+      <linearGradient id="isle-cliff" x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.12" />
+        <stop offset="0.35" stopColor="#000" stopOpacity="0" />
+        <stop offset="1" stopColor="#1a0d05" stopOpacity="0.55" />
+      </linearGradient>
+      <linearGradient id="isle-cliff-r" x1="0" y1="0" x2="-0.2" y2="1">
+        <stop offset="0" stopColor="#000" stopOpacity="0.08" />
+        <stop offset="1" stopColor="#1a0d05" stopOpacity="0.6" />
+      </linearGradient>
+      <linearGradient id="isle-soil" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#000" stopOpacity="0.3" />
+        <stop offset="1" stopColor="#000" stopOpacity="0" />
+      </linearGradient>
+    </>
   );
 }
 

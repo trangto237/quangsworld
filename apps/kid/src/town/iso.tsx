@@ -8,7 +8,9 @@ import { NightContext } from './night';
 
 export const TW = 64; // tile width on screen
 export const TH = 32; // tile height on screen
-export const INK = '#4a2e18';
+/** Soft outline for the artwork (shapes); labels use TAG_INK for crisp text frames. */
+export const INK = 'rgba(52,30,14,0.62)';
+export const TAG_INK = '#4a2e18';
 
 export type Pt = [number, number];
 
@@ -25,8 +27,70 @@ export function shade(hex: string, amt: number) {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
-export function Poly({ p, fill, stroke = INK, sw = 1.6, opacity }: { p: Pt[]; fill: string; stroke?: string; sw?: number; opacity?: number }) {
-  return <polygon points={pts(p)} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" opacity={opacity} />;
+/**
+ * Shared light-and-shadow gradients. Faces are drawn in their flat colour, then a gradient is laid
+ * over them: lit from the top left, darker towards the ground. Put <ShadeDefs /> once in the SVG.
+ */
+export function ShadeDefs() {
+  return (
+    <>
+      <linearGradient id="sh-wall" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
+        <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.2" />
+      </linearGradient>
+      <linearGradient id="sh-wall-r" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.06" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.32" />
+      </linearGradient>
+      <radialGradient id="sh-top" cx="0.35" cy="0.3" r="0.9">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.42" />
+        <stop offset="1" stopColor="#fff" stopOpacity="0" />
+      </radialGradient>
+      <linearGradient id="sh-roof" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.3" />
+        <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.22" />
+      </linearGradient>
+      <linearGradient id="sh-cyl" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stopColor="#000" stopOpacity="0.25" />
+        <stop offset="0.3" stopColor="#fff" stopOpacity="0.3" />
+        <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.38" />
+      </linearGradient>
+      <radialGradient id="sh-ball" cx="0.35" cy="0.3" r="0.75">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.5" />
+        <stop offset="0.35" stopColor="#fff" stopOpacity="0.1" />
+        <stop offset="1" stopColor="#000" stopOpacity="0.32" />
+      </radialGradient>
+      <radialGradient id="sh-contact">
+        <stop offset="0" stopColor="#1b2a10" stopOpacity="0.38" />
+        <stop offset="0.6" stopColor="#1b2a10" stopOpacity="0.16" />
+        <stop offset="1" stopColor="#1b2a10" stopOpacity="0" />
+      </radialGradient>
+      <linearGradient id="sh-glass" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.7" />
+        <stop offset="0.4" stopColor="#fff" stopOpacity="0" />
+      </linearGradient>
+    </>
+  );
+}
+
+export function Poly({ p, fill, stroke = INK, sw = 1.4, opacity, shade: overlay }: { p: Pt[]; fill: string; stroke?: string; sw?: number; opacity?: number; shade?: string }) {
+  if (!overlay) return <polygon points={pts(p)} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" opacity={opacity} />;
+  return (
+    <g opacity={opacity}>
+      <polygon points={pts(p)} fill={fill} stroke="none" />
+      <polygon points={pts(p)} fill={`url(#${overlay})`} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+    </g>
+  );
+}
+
+/** A soft shadow on the ground under something standing there. */
+export function Contact({ x, y, w, d }: { x: number; y: number; w: number; d: number }) {
+  const [cx, cy] = P(x + w / 2, y + d / 2);
+  const rx = ((w + d) * TW) / 3.2;
+  return <ellipse cx={cx} cy={cy + 2} rx={rx} ry={rx * 0.52} fill="url(#sh-contact)" style={{ pointerEvents: 'none' }} />;
 }
 
 /** A flat diamond-ish area on the ground (x..x+w, y..y+d). */
@@ -38,9 +102,11 @@ export function Ground({ x, y, w, d, fill, z = 0, stroke = 'none', sw = 1.2 }: {
 export function Box({ x, y, w, d, h, z = 0, color, top }: { x: number; y: number; w: number; d: number; h: number; z?: number; color: string; top?: string }) {
   return (
     <g>
-      <Poly p={[P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)]} fill={shade(color, -0.05)} />
-      <Poly p={[P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)]} fill={shade(color, -0.25)} />
-      <Poly p={[P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)]} fill={top ?? shade(color, 0.25)} />
+      <Poly p={[P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)]} fill={shade(color, -0.02)} shade="sh-wall" />
+      <Poly p={[P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)]} fill={shade(color, -0.25)} shade="sh-wall-r" />
+      <Poly p={[P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)]} fill={top ?? shade(color, 0.25)} shade="sh-top" />
+      {/* Sunlit rim along the top's front edges. */}
+      <polyline points={pts([P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y, z + h)])} fill="none" stroke="#fff" strokeOpacity={0.5} strokeWidth={1.1} strokeLinejoin="round" />
     </g>
   );
 }
@@ -59,7 +125,7 @@ export function Windows({ x, y, w, d, z = 0, floors, floorH, cols = 2, color = '
       // At night about two windows in three are lit.
       const on = (k: number) => (night && (f * 3 + c + k) % 3 !== 0 ? '#ffd76a' : fill);
       // Left wall (along x at y + d).
-      out.push(<Poly key={`l${f}${c}`} p={[P(x + u1 * w, y + d, z1), P(x + u2 * w, y + d, z1), P(x + u2 * w, y + d, z2), P(x + u1 * w, y + d, z2)]} fill={on(0)} sw={1.1} />);
+      out.push(<Poly key={`l${f}${c}`} p={[P(x + u1 * w, y + d, z1), P(x + u2 * w, y + d, z1), P(x + u2 * w, y + d, z2), P(x + u1 * w, y + d, z2)]} fill={on(0)} sw={1} shade="sh-glass" />);
       // Right wall (along y at x + w).
       out.push(<Poly key={`r${f}${c}`} p={[P(x + w, y + u1 * d, z1), P(x + w, y + u2 * d, z1), P(x + w, y + u2 * d, z2), P(x + w, y + u1 * d, z2)]} fill={shade(on(1), -0.15)} sw={1.1} />);
     }
@@ -80,9 +146,10 @@ export function GableRoof({ x, y, w, d, z, h, color }: { x: number; y: number; w
   const [x0, x1, y0, y1, ym] = [x - o, x + w + o, y - o, y + d + o, y + d / 2];
   return (
     <g>
-      <Poly p={[P(x0, y0, z), P(x1, y0, z), P(x1, ym, z + h), P(x0, ym, z + h)]} fill={shade(color, -0.2)} />
-      <Poly p={[P(x + w, y, z), P(x + w, y + d, z), P(x + w, ym, z + h)]} fill={shade(color, 0.35)} />
-      <Poly p={[P(x0, y1, z), P(x1, y1, z), P(x1, ym, z + h), P(x0, ym, z + h)]} fill={color} />
+      <Poly p={[P(x0, y0, z), P(x1, y0, z), P(x1, ym, z + h), P(x0, ym, z + h)]} fill={shade(color, -0.2)} shade="sh-roof" />
+      <Poly p={[P(x + w, y, z), P(x + w, y + d, z), P(x + w, ym, z + h)]} fill={shade(color, 0.3)} shade="sh-wall-r" />
+      <Poly p={[P(x0, y1, z), P(x1, y1, z), P(x1, ym, z + h), P(x0, ym, z + h)]} fill={color} shade="sh-roof" />
+      <line x1={P(x0, ym, z + h)[0]} y1={P(x0, ym, z + h)[1]} x2={P(x1, ym, z + h)[0]} y2={P(x1, ym, z + h)[1]} stroke="#fff" strokeOpacity={0.55} strokeWidth={1.4} strokeLinecap="round" />
     </g>
   );
 }
@@ -93,8 +160,9 @@ export function PyramidRoof({ x, y, w, d, z, h, color, o = 0.15 }: { x: number; 
   const apex = P(x + w / 2, y + d / 2, z + h);
   return (
     <g>
-      <Poly p={[P(x0, y1, z), P(x1, y1, z), apex]} fill={color} />
-      <Poly p={[P(x1, y0, z), P(x1, y1, z), apex]} fill={shade(color, -0.22)} />
+      <Poly p={[P(x0, y1, z), P(x1, y1, z), apex]} fill={color} shade="sh-roof" />
+      <Poly p={[P(x1, y0, z), P(x1, y1, z), apex]} fill={shade(color, -0.22)} shade="sh-wall-r" />
+      <line x1={P(x1, y1, z)[0]} y1={P(x1, y1, z)[1]} x2={apex[0]} y2={apex[1]} stroke="#fff" strokeOpacity={0.45} strokeWidth={1.2} strokeLinecap="round" />
     </g>
   );
 }
@@ -107,9 +175,16 @@ export function Cylinder({ cx, cy, r, h, z = 0, color, dome }: { cx: number; cy:
   const top = sy - h;
   return (
     <g>
-      <path d={`M${sx - rx},${top} L${sx - rx},${sy} A${rx},${ry} 0 0 0 ${sx + rx},${sy} L${sx + rx},${top} Z`} fill={shade(color, -0.12)} stroke={INK} strokeWidth={1.6} />
-      <ellipse cx={sx} cy={top} rx={rx} ry={ry} fill={shade(color, 0.25)} stroke={INK} strokeWidth={1.6} />
-      {dome && <path d={`M${sx - rx},${top} A${rx},${rx * 0.9} 0 0 1 ${sx + rx},${top} A${rx},${ry} 0 0 1 ${sx - rx},${top} Z`} fill={dome} stroke={INK} strokeWidth={1.6} />}
+      <path d={`M${sx - rx},${top} L${sx - rx},${sy} A${rx},${ry} 0 0 0 ${sx + rx},${sy} L${sx + rx},${top} Z`} fill={shade(color, -0.05)} />
+      <path d={`M${sx - rx},${top} L${sx - rx},${sy} A${rx},${ry} 0 0 0 ${sx + rx},${sy} L${sx + rx},${top} Z`} fill="url(#sh-cyl)" stroke={INK} strokeWidth={1.4} />
+      <ellipse cx={sx} cy={top} rx={rx} ry={ry} fill={shade(color, 0.25)} stroke={INK} strokeWidth={1.4} />
+      <ellipse cx={sx} cy={top} rx={rx} ry={ry} fill="url(#sh-top)" />
+      {dome && (
+        <>
+          <path d={`M${sx - rx},${top} A${rx},${rx * 0.9} 0 0 1 ${sx + rx},${top} A${rx},${ry} 0 0 1 ${sx - rx},${top} Z`} fill={dome} />
+          <path d={`M${sx - rx},${top} A${rx},${rx * 0.9} 0 0 1 ${sx + rx},${top} A${rx},${ry} 0 0 1 ${sx - rx},${top} Z`} fill="url(#sh-ball)" stroke={INK} strokeWidth={1.4} />
+        </>
+      )}
     </g>
   );
 }
@@ -120,15 +195,29 @@ export function Tree({ x, y, s = 1, kind = 'round', color = '#5aa845' }: { x: nu
   if (kind === 'pine')
     return (
       <g>
-        <rect x={bx - 2 * s} y={by - 8 * s} width={4 * s} height={8 * s} fill="#8a5a33" stroke={INK} strokeWidth={1.2} />
-        <polygon points={pts([[bx, by - 40 * s], [bx - 12 * s, by - 8 * s], [bx + 12 * s, by - 8 * s]])} fill={shade(color, -0.1)} stroke={INK} strokeWidth={1.5} strokeLinejoin="round" />
+        <ellipse cx={bx} cy={by} rx={11 * s} ry={5 * s} fill="url(#sh-contact)" />
+        <rect x={bx - 2 * s} y={by - 8 * s} width={4 * s} height={8 * s} fill="#7a4e2c" stroke={INK} strokeWidth={1} />
+        <Poly p={[[bx, by - 30 * s], [bx - 13 * s, by - 7 * s], [bx + 13 * s, by - 7 * s]]} fill={shade(color, -0.12)} shade="sh-cyl" sw={1.2} />
+        <Poly p={[[bx, by - 42 * s], [bx - 10 * s, by - 20 * s], [bx + 10 * s, by - 20 * s]]} fill={shade(color, -0.02)} shade="sh-cyl" sw={1.2} />
       </g>
     );
   return (
     <g>
-      <rect x={bx - 2 * s} y={by - 10 * s} width={4 * s} height={10 * s} fill="#8a5a33" stroke={INK} strokeWidth={1.2} />
-      <circle cx={bx} cy={by - 20 * s} r={11 * s} fill={color} stroke={INK} strokeWidth={1.5} />
-      <circle cx={bx - 3.5 * s} cy={by - 23 * s} r={4 * s} fill={shade(color, 0.3)} />
+      <ellipse cx={bx} cy={by} rx={12 * s} ry={5.5 * s} fill="url(#sh-contact)" />
+      <rect x={bx - 2 * s} y={by - 10 * s} width={4 * s} height={10 * s} fill="#7a4e2c" stroke={INK} strokeWidth={1} />
+      <Ball cx={bx + 6 * s} cy={by - 16 * s} r={7 * s} color={shade(color, -0.12)} />
+      <Ball cx={bx - 6 * s} cy={by - 17 * s} r={7.5 * s} color={shade(color, -0.06)} />
+      <Ball cx={bx} cy={by - 23 * s} r={10 * s} color={color} />
+    </g>
+  );
+}
+
+/** A lit sphere (tree crowns, bushes). */
+export function Ball({ cx, cy, r, color }: { cx: number; cy: number; r: number; color: string }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill={color} />
+      <circle cx={cx} cy={cy} r={r} fill="url(#sh-ball)" stroke={INK} strokeWidth={1.2} />
     </g>
   );
 }
@@ -163,8 +252,8 @@ export function NameTag({ at, icon, title, sub, color }: { at: Pt; icon: string;
   const left = x - w / 2;
   return (
     <g>
-      <rect x={left} y={y} width={w} height={h} rx={h / 2} fill="#fff5e1" stroke={INK} strokeWidth={2} />
-      <circle cx={left + 4} cy={y + h / 2} r={12} fill={color} stroke={INK} strokeWidth={2} />
+      <rect x={left} y={y} width={w} height={h} rx={h / 2} fill="#fff5e1" stroke={TAG_INK} strokeWidth={2} />
+      <circle cx={left + 4} cy={y + h / 2} r={12} fill={color} stroke={TAG_INK} strokeWidth={2} />
       <text x={left + 4} y={y + h / 2 + 1} fontSize={13} textAnchor="middle" dominantBaseline="central">
         {icon}
       </text>
@@ -186,8 +275,8 @@ export function Bubble({ at, text, color = '#e8584a', bob }: { at: Pt; text: str
   const [x, y] = at;
   return (
     <g className={bob ? 'town-bob' : undefined} style={{ pointerEvents: 'none' }}>
-      <rect x={x - w / 2} y={y - 30} width={w} height={22} rx={11} fill={color} stroke={INK} strokeWidth={2} />
-      <polygon points={pts([[x - 6, y - 9], [x + 6, y - 9], [x, y - 1]])} fill={color} stroke={INK} strokeWidth={2} strokeLinejoin="round" />
+      <rect x={x - w / 2} y={y - 30} width={w} height={22} rx={11} fill={color} stroke={TAG_INK} strokeWidth={2} />
+      <polygon points={pts([[x - 6, y - 9], [x + 6, y - 9], [x, y - 1]])} fill={color} stroke={TAG_INK} strokeWidth={2} strokeLinejoin="round" />
       <rect x={x - 5} y={y - 11} width={10} height={3} fill={color} />
       <text x={x} y={y - 19} fontSize={12} fontWeight={800} fill="#fff" textAnchor="middle" dominantBaseline="central" fontFamily="'Baloo 2', Nunito, sans-serif">
         {text}

@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { Bubble, Emoji, Flag, Ground, NameTag, P, Tree, type Pt } from './iso';
+import { Bubble, Contact, Emoji, Flag, Ground, NameTag, P, ShadeDefs, Tree, type Pt } from './iso';
 import { KINDS, Lake, Pitch, RiceField, house } from './buildings';
 import { Builders, Chest, HazeDefs, LampGlowDef, NightContext, SkyLife, SkyTint, StopBadge, StreetLamps, useDayPhase, useReducedMotion, type ChestState } from './life';
 import { Knight } from '../components/Knight';
-import { Cloud, Crumble, IslandBase, IslandCloud, RopeBridge, edgeToward, islandShape, type IslandShape } from './island';
+import { Cloud, Crumble, IslandDefs, IslandBase, IslandCloud, RopeBridge, edgeToward, islandShape, type IslandShape } from './island';
 
 /**
  * The hero's world: islands floating in the sky. The big island in the middle holds home, the shop,
@@ -214,6 +214,7 @@ function Body({ s, st, tap }: { s: Spot; st: SpotState; tap: Pointing }) {
       style={{ cursor: 'pointer' }}
     >
       <Ground x={s.x} y={s.y} w={s.lot} d={s.lot} fill="transparent" />
+      <Contact x={fp.bx - 0.2} y={fp.by - 0.2} w={fp.size + 0.4} d={fp.size + 0.4} />
       <g filter={st.unexplored && !st.grew ? 'url(#town-mist)' : faded || (st.due && st.level > 0) ? 'url(#town-faded)' : undefined}>{d.el}</g>
       {st.level >= 3 && !st.unexplored && <Flowers s={s} />}
       {st.level >= 2 && !st.unexplored && !SERVICE.includes(s.kind) && <Flag x={d.top[0]} y={d.top[1]} z={d.top[2]} color={st.color} gold={st.level >= 4} />}
@@ -427,17 +428,14 @@ export function TownMap({
     >
       <NightContext.Provider value={phase === 'night'}>
         <defs>
-          <linearGradient id="town-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={SKY[phase][0]} />
-            <stop offset="1" stopColor={SKY[phase][1]} />
-          </linearGradient>
           <filter id="town-faded">
             <feColorMatrix type="saturate" values="0.25" />
           </filter>
+          <ShadeDefs />
+          <IslandDefs />
           <LampGlowDef />
           <HazeDefs />
         </defs>
-        <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} fill="url(#town-sky)" />
         <SkyLife view={VIEW} phase={phase} reduced={reduced} />
         {layers}
         <g opacity={0.85}>
@@ -463,6 +461,12 @@ export function TownMap({
   );
 }
 
+/** Room above and below the map, so the hero bar and the bottom bars never hide the edge islands. */
+const PAD_TOP = 150;
+const PAD_BOTTOM = 250;
+/** The middle of the part of the screen the bars leave free. */
+const mid = (el: HTMLElement) => (el.clientHeight + PAD_TOP - PAD_BOTTOM) / 2;
+
 const MIN_Z = 0.5;
 const MAX_Z = 1.6;
 
@@ -481,7 +485,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     if (!el) return;
     const [fx, fy] = spotCenter(focus);
     el.scrollLeft = fx * zoom - el.clientWidth / 2;
-    el.scrollTop = fy * zoom - el.clientHeight / 2;
+    el.scrollTop = PAD_TOP + fy * zoom - mid(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -492,7 +496,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     if (!el || focus.id === firstFocus.current) return;
     firstFocus.current = focus.id;
     const [fx, fy] = spotCenter(focus);
-    el.scrollTo({ left: fx * zoom - el.clientWidth / 2, top: fy * zoom - el.clientHeight / 2, behavior: 'smooth' });
+    el.scrollTo({ left: fx * zoom - el.clientWidth / 2, top: PAD_TOP + fy * zoom - mid(el), behavior: 'smooth' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus.id]);
 
@@ -502,7 +506,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     const p = pending.current;
     if (!el || !p) return;
     el.scrollLeft = p.cx * zoom - el.clientWidth / 2;
-    el.scrollTop = p.cy * zoom - el.clientHeight / 2;
+    el.scrollTop = PAD_TOP + p.cy * zoom - mid(el);
     pending.current = null;
   }, [zoom]);
 
@@ -510,7 +514,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
     const el = ref.current;
     if (!el) return;
     const next = Math.max(MIN_Z, Math.min(MAX_Z, z));
-    pending.current = { cx: (el.scrollLeft + el.clientWidth / 2) / zoom, cy: (el.scrollTop + el.clientHeight / 2) / zoom };
+    pending.current = { cx: (el.scrollLeft + el.clientWidth / 2) / zoom, cy: (el.scrollTop + mid(el) - PAD_TOP) / zoom };
     setZoom(next);
   };
 
@@ -567,6 +571,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
           if (drag.current?.moved) e.stopPropagation();
         }}
       >
+        <div style={{ paddingTop: PAD_TOP, paddingBottom: `calc(${PAD_BOTTOM}px + env(safe-area-inset-bottom))`, width: 'max-content' }}>
         <svg
           viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
           width={VIEW.w * zoom}
@@ -578,6 +583,7 @@ function Viewport({ children, focus, onPointer, onBackground, sky }: { children:
         >
           {children}
         </svg>
+        </div>
       </div>
       <div className="fixed left-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2">
         <button onClick={() => zoomTo(zoom + 0.2)} className="town-btn grid size-10 place-items-center rounded-full bg-paper font-display text-2xl font-bold text-ink-text" aria-label="Zoom in">

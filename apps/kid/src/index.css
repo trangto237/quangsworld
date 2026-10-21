@@ -34,6 +34,7 @@ html { background: var(--paper-2); }
   --cliff-2: #8a5a35;
   --soil: #7a4f2c;
   --grass-hi: #c7e88c;
+  --grass-dark: #5f9a3a;
 }
 .dark {
   --paper: #34283f;
@@ -60,6 +61,7 @@ html { background: var(--paper-2); }
   --cliff-2: #573b27;
   --soil: #4a3220;
   --grass-hi: #5b7f4a;
+  --grass-dark: #2c4426;
 }
 @theme inline {
   --color-paper: var(--paper);
