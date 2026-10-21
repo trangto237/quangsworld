@@ -64,7 +64,8 @@ const ARROW =
 export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCard[]; index: number; onIndex: (i: number) => void; onEnter: (i: number) => void }) {
   const n = cards.length;
   const [drag, setDrag] = useState(0);
-  const start = useRef<{ x: number; moved: boolean } | null>(null);
+  const start = useRef<{ x: number; t: number; moved: boolean; id: number } | null>(null);
+  const dragRef = useRef(0);
   const prev = useRef<Record<string, number>>({});
   const ref = useRef<HTMLDivElement>(null);
   const swiped = useRef(false);
@@ -84,30 +85,52 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
     <div
       ref={ref}
       className="absolute inset-0 flex select-none flex-col items-center justify-center"
-      style={{ touchAction: 'pan-y' }}
+      // The ring handles the whole gesture itself, so a slightly diagonal swipe is never taken over by the
+      // browser's scrolling halfway through.
+      style={{ touchAction: 'none' }}
       onPointerDown={(e) => {
-        if ((e.target as Element).closest('[data-noswipe]')) return;
-        start.current = { x: e.clientX, moved: false };
+        if ((e.target as Element).closest('[data-noswipe]') || start.current) return;
+        swiped.current = false;
+        start.current = { x: e.clientX, t: performance.now(), moved: false, id: e.pointerId };
+        dragRef.current = 0;
       }}
       onPointerMove={(e) => {
         const s = start.current;
-        if (!s) return;
+        if (!s || e.pointerId !== s.id) return;
         const dx = e.clientX - s.x;
-        if (Math.abs(dx) > 8) s.moved = true;
-        if (s.moved) setDrag(dx);
-      }}
-      onPointerUp={() => {
-        const s = start.current;
-        start.current = null;
-        swiped.current = !!s?.moved;
-        if (s?.moved) {
-          const steps = Math.round(-drag / step);
-          setDrag(0);
-          if (steps) turn(steps);
+        if (!s.moved && Math.abs(dx) > 8) {
+          s.moved = true;
+          // From now on it's a swipe: keep getting the finger even if it leaves the ring.
+          try {
+            ref.current?.setPointerCapture(e.pointerId);
+          } catch {
+            /* not supported */
+          }
+        }
+        if (s.moved) {
+          dragRef.current = dx;
+          setDrag(dx);
         }
       }}
-      onPointerCancel={() => {
+      onPointerUp={(e) => {
+        const s = start.current;
+        if (!s || e.pointerId !== s.id) return;
         start.current = null;
+        const dx = dragRef.current;
+        dragRef.current = 0;
+        swiped.current = s.moved;
+        setDrag(0);
+        if (!s.moved) return;
+        // A short flick is enough for one step; a long drag can turn several.
+        const fast = Math.abs(dx) / Math.max(1, performance.now() - s.t) > 0.35;
+        let steps = Math.round(-dx / step);
+        if (!steps && (Math.abs(dx) > 35 || fast)) steps = dx < 0 ? 1 : -1;
+        if (steps) turn(steps);
+      }}
+      onPointerCancel={(e) => {
+        if (start.current?.id !== e.pointerId) return;
+        start.current = null;
+        dragRef.current = 0;
         setDrag(0);
       }}
       onClickCapture={(e) => {
@@ -160,6 +183,8 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
                 zIndex: 10 - Math.round(a * 3),
                 transition: drag || jumped ? 'none' : 'transform 0.45s cubic-bezier(.2,.8,.2,1), opacity 0.45s ease, filter 0.45s ease',
                 filter: a > 0.5 ? 'saturate(0.75) brightness(0.95)' : undefined,
+                // Only the island itself answers taps (the box around it overlaps the islands beside it).
+                pointerEvents: 'none',
               }}
               aria-label={c.label}
               tabIndex={front ? 0 : -1}
@@ -169,6 +194,7 @@ export function RealmPicker({ cards, index, onIndex, onEnter }: { cards: RealmCa
                 className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl transition-opacity duration-500"
                 style={{ background: `radial-gradient(circle, ${c.color}aa 0%, ${c.color}33 45%, transparent 70%)`, opacity: a < 0.5 ? 1 : 0 }}
               />
+              <span className="absolute bottom-[12%] left-[22%] right-[22%] top-[22%] rounded-[40%]" style={{ pointerEvents: a > 2.2 ? 'none' : 'auto' }} />
               <span className={cx('relative block aspect-[4/3]', c.cls)} style={{ filter: 'drop-shadow(0 22px 22px rgba(25,15,50,0.35))' }}>
                 <Preview card={c} />
               </span>
