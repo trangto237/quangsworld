@@ -22,15 +22,19 @@ export function Carousel<S extends Slide>({
   index,
   onIndex,
   render,
+  start,
 }: {
   slides: S[];
   index: number;
   onIndex: (i: number) => void;
   /** Draws a slide, given whether it's in front, the stage size and the zoom. */
   render: (slide: S, opts: { front: boolean; size: { w: number; h: number }; zoom: number }) => ReactNode;
+  /** Where a slide opens: a zoom, and a stage point to bring to the middle. */
+  start?: (slide: S, size: { w: number; h: number }) => { z: number; at?: { x: number; y: number } };
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 390, h: 600 });
+  const [measured, setMeasured] = useState(false);
   const [z, setZ] = useState(1);
   const [t, setT] = useState({ x: 0, y: 0 });
   const [drag, setDrag] = useState(0);
@@ -46,14 +50,19 @@ export function Carousel<S extends Slide>({
     const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
     ro.observe(el);
     setSize({ w: el.clientWidth, h: el.clientHeight });
+    setMeasured(true);
     return () => ro.disconnect();
   }, []);
 
-  // A new slide starts zoomed out.
+  // A new slide opens at its starting zoom (zoomed out unless it asks otherwise).
   useEffect(() => {
-    setZ(1);
-    setT({ x: 0, y: 0 });
-  }, [index]);
+    const s0 = start && measured ? start(slides[index], size) : { z: 1 };
+    const nz = Math.max(MIN_Z, Math.min(MAX_Z, s0.z));
+    const at = s0.at ?? { x: size.w / 2, y: size.h / 2 };
+    setZ(nz);
+    setT(clamp(nz, { x: size.w / 2 - nz * at.x, y: size.h / 2 - nz * at.y }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, measured]);
 
   const clamp = (zz: number, tt: { x: number; y: number }) => ({
     x: Math.min(0, Math.max(size.w * (1 - zz), tt.x)),

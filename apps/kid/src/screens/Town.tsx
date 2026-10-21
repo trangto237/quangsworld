@@ -11,7 +11,7 @@ import { useKid } from '../store';
 import { T, TB, tr, useLang } from '../i18n';
 import { BottomNav, HeroBar, rankFor } from '../town/Shell';
 import { TownMap, levelFor, type Spot, type SpotState } from '../town/TownMap';
-import { layoutFor, type LayoutId } from '../town/layouts';
+import { layoutFor, spotCenter, type LayoutId } from '../town/layouts';
 import { Carousel, type Slide } from '../town/Carousel';
 import { RealmPicker, type RealmCard } from '../town/RealmPicker';
 import { SKY } from '../town/TownMap';
@@ -278,6 +278,16 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
               slides={[inside]}
               index={0}
               onIndex={() => {}}
+              start={(sl, size) => {
+                // Open filling the screen's width, on today's quest (or the gate), not the whole realm shrunk.
+                const tall = size.h > size.w * 1.05;
+                const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
+                const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
+                const z = Math.min(2.6, Math.max(1, size.w / L.view.w / fit));
+                const focus = L.spots.find((x) => shown[x.id]?.quest) ?? L.spots.find((x) => x.id === L.start)!;
+                const [, py] = spotCenter(L, focus);
+                return { z, at: { x: size.w / 2, y: (size.h - L.view.h * fit) / 2 + (py + 60) * fit } };
+              }}
               render={(sl, { size, zoom }) => {
                 const tall = size.h > size.w * 1.05;
                 const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
