@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { StudentProfile } from '@atlas/db';
 import { uid } from '@atlas/shared';
 import { cx, useQuery, useRepo } from '@atlas/ui';
@@ -18,6 +18,8 @@ const REWARD = { coins: 20, gems: 0, xp: 20 };
 
 export const unlockKey = (studentId: string) => `code-unlocked:${studentId}`;
 const doneKey = (studentId: string) => `code-done:${studentId}`;
+/** The course he was last in, so the Code Lab opens where he left off (synced across devices). */
+const tabKey = (studentId: string) => `code-tab:${studentId}`;
 const gamesKey = (studentId: string) => `code-games:${studentId}`;
 const draftKey = (studentId: string, id: string) => `atlas-code-draft:${studentId}:${id}`;
 
@@ -50,7 +52,27 @@ export function CodeLab({ student }: { student: StudentProfile }) {
   const unlocked = useQuery((r) => !!r.getKv<boolean>(unlockKey(student.id)), [student.id]);
   const done = useQuery((r) => r.getKv<string[]>(doneKey(student.id)) ?? [], [student.id]);
   const repo = useRepo();
-  const [tab, setTab] = useState<Tab>('blocks');
+  // Open where he left off: the course he was last in, or else the first one he hasn't finished.
+  const [tab, setTabState] = useState<Tab>(() => {
+    const saved = repo.getKv<Tab>(tabKey(student.id));
+    if (saved) return saved;
+    const has = (prefix: string, total: number) => done.filter((d) => d.startsWith(prefix)).length < total;
+    if (PUZZLES.some((p) => !done.includes(p.id))) return 'blocks';
+    if (has('js:', LESSONS.length)) return 'js';
+    if (has('py:', LESSONS.length)) return 'py';
+    if (has('bug-', BUGS.length * 2)) return 'bugs';
+    if (has('draw-', DRAWING.length * 2)) return 'draw';
+    return 'games';
+  });
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    void repo.setKv(tabKey(student.id), t);
+  };
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // Keep the open course's tab in view (the row scrolls sideways on phones).
+  useEffect(() => {
+    tabsRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [tab, unlocked]);
 
   const finish = async (id: string) => {
     if (!done.includes(id)) await repo.setKv(doneKey(student.id), [...done, id]);
@@ -81,12 +103,12 @@ export function CodeLab({ student }: { student: StudentProfile }) {
     { id: 'games', label: '🎮 My games' },
   ];
   const got = (prefix: string) => done.filter((d) => d.startsWith(prefix)).length;
-  const progress: [string, string, number, number][] = [
-    ['🧩', 'Blocks', done.filter((d) => /^b\d+$/.test(d)).length, PUZZLES.length],
-    ['🟨', 'JavaScript', got('js:'), LESSONS.length],
-    ['🐍', 'Python', got('py:'), LESSONS.length],
-    ['🐞', 'Bugs', got('bug-'), BUGS.length * 2],
-    ['🐢', 'Drawing', got('draw-'), DRAWING.length * 2],
+  const progress: [string, string, number, number, Tab][] = [
+    ['🧩', 'Blocks', done.filter((d) => /^b\d+$/.test(d)).length, PUZZLES.length, 'blocks'],
+    ['🟨', 'JavaScript', got('js:'), LESSONS.length, 'js'],
+    ['🐍', 'Python', got('py:'), LESSONS.length, 'py'],
+    ['🐞', 'Bugs', got('bug-'), BUGS.length * 2, 'bugs'],
+    ['🐢', 'Drawing', got('draw-'), DRAWING.length * 2, 'draw'],
   ];
 
   return (
@@ -107,8 +129,8 @@ export function CodeLab({ student }: { student: StudentProfile }) {
         </div>
         {/* Progress in each course */}
         <div className="mt-3 grid grid-cols-5 gap-1.5">
-          {progress.map(([icon, label, got, total]) => (
-            <div key={label} className="rounded-xl border-2 border-ink/15 bg-paper-2 px-1 py-1.5 text-center">
+          {progress.map(([icon, label, got, total, id]) => (
+            <button key={label} onClick={() => setTab(id)} className={cx('rounded-xl border-2 bg-paper-2 px-1 py-1.5 text-center', tab === id ? 'border-[#ffc23d] bg-tint-amber' : 'border-ink/15')}>
               <div className="text-lg leading-none">{icon}</div>
               <div className="mt-1 font-display text-sm font-bold tabular-nums leading-none">
                 {got}/{total}
@@ -117,14 +139,15 @@ export function CodeLab({ student }: { student: StudentProfile }) {
               <div className="mt-0.5 truncate text-[10px] font-semibold text-ink-soft">
                 <T en={label} />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </Panel>
-      <div className="mt-4 flex gap-2 overflow-x-auto px-0.5 pb-2 pt-0.5">
+      <div ref={tabsRef} className="mt-4 flex gap-2 overflow-x-auto px-0.5 pb-2 pt-0.5">
         {TABS.map((t) => (
           <button
             key={t.id}
+            aria-current={tab === t.id ? 'page' : undefined}
             onClick={() => setTab(t.id)}
             className={cx('town-btn shrink-0 rounded-full px-4 py-1.5 font-display text-sm font-bold', tab === t.id ? 'bg-[#ffc23d] text-[#3b2412]' : 'bg-paper text-ink-text hover:bg-paper-3')}
           >
