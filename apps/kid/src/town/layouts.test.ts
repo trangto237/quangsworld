@@ -45,4 +45,18 @@ describe('realm maps', () => {
       }
     }
   });
+
+  it('wide realms spread out to the shape of the screen, without overlapping', () => {
+    for (const r of REALMS) {
+      const base = layoutFor(r.id);
+      const wide = layoutFor(r.id, false, 4.5);
+      expect(wide.view.w / wide.view.h, r.id).toBeGreaterThanOrEqual(base.view.w / base.view.h);
+      expect(wide.view.w / wide.view.h, r.id).toBeLessThanOrEqual(4.5);
+      for (let i = 0; i < wide.isles.length; i++)
+        for (let j = i + 1; j < wide.isles.length; j++) {
+          const [a, b] = [wide.isles[i], wide.isles[j]];
+          expect(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.d <= b.y || b.y + b.d <= a.y, `${r.id}: ${a.id} / ${b.id}`).toBe(true);
+        }
+    }
+  });
 });

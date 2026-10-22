@@ -286,7 +286,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
                 // Phones held upright: open filling the width, on today's quest (or the first place).
                 const tall = size.h > size.w * 1.05;
                 if (!tall && sl.realm) return { z: 1 };
-                const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
+                const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall, size.w / size.h);
                 const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
                 const z = Math.min(2.6, Math.max(1, size.w / L.view.w / fit));
                 const focus = L.spots.find((x) => shown[x.id]?.quest) ?? L.spots.find((x) => x.id === L.start)!;
@@ -295,13 +295,14 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
               }}
               render={(sl, { size, zoom }) => {
                 const tall = size.h > size.w * 1.05;
-                const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
+                const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall, size.w / size.h);
                 const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
                 const here = new Set(L.spots.map((x) => x.id));
                 return (
                   <div className="h-full w-full" style={{ filter: tint }}>
                     <TownMap
                       tint={false}
+                      aspect={size.w / size.h}
                       layout={L.id}
                       tall={tall}
                       labelScale={Math.max(1, Math.min(2, 0.75 / (fit * zoom)))}

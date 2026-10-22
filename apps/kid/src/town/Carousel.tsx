@@ -54,15 +54,22 @@ export function Carousel<S extends Slide>({
     return () => ro.disconnect();
   }, []);
 
-  // A new slide opens at its starting zoom (zoomed out unless it asks otherwise).
+  /** Whether he has zoomed or panned this slide himself (then a resize leaves his view alone). */
+  const touched = useRef(false);
+  // A new slide opens at its starting zoom (zoomed out unless it asks otherwise). Until he zooms or
+  // pans himself, it follows the stage's size too (the window resized, or the first measure was off).
   useEffect(() => {
+    touched.current = false;
+  }, [index]);
+  useEffect(() => {
+    if (touched.current) return;
     const s0 = start && measured ? start(slides[index], size) : { z: 1 };
     const nz = Math.max(MIN_Z, Math.min(MAX_Z, s0.z));
     const at = s0.at ?? { x: size.w / 2, y: size.h / 2 };
     setZ(nz);
     setT(clamp(nz, { x: size.w / 2 - nz * at.x, y: size.h / 2 - nz * at.y }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, measured]);
+  }, [index, measured, size.w, size.h]);
 
   const clamp = (zz: number, tt: { x: number; y: number }) => ({
     x: Math.min(0, Math.max(size.w * (1 - zz), tt.x)),
@@ -70,6 +77,7 @@ export function Carousel<S extends Slide>({
   });
   /** Zoom to zz keeping screen point m (relative to the stage) still. */
   const zoomAt = (zz: number, m: { x: number; y: number }, from = { z, t }) => {
+    touched.current = true;
     const nz = Math.max(MIN_Z, Math.min(MAX_Z, zz));
     const p = { x: (m.x - from.t.x) / from.z, y: (m.y - from.t.y) / from.z };
     setZ(nz);
@@ -124,8 +132,10 @@ export function Carousel<S extends Slide>({
       g.moved = true;
       moved.current = true;
     }
-    if (g.kind === 'pan') setT(clamp(z, { x: g.t0.x + dx, y: g.t0.y + dy }));
-    else if (g.kind === 'swipe' && g.moved) {
+    if (g.kind === 'pan') {
+      touched.current = true;
+      setT(clamp(z, { x: g.t0.x + dx, y: g.t0.y + dy }));
+    } else if (g.kind === 'swipe' && g.moved) {
       // Resist at the ends.
       const edge = (index === 0 && dx > 0) || (index === slides.length - 1 && dx < 0);
       setDrag(edge ? dx / 3 : dx);

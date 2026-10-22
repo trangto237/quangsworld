@@ -85,18 +85,19 @@ const isleFor = (s: Spot, i: number, cls?: string): Isle => ({
 });
 
 /** Works out the view box from the islands: room above for buildings and tags, below for the cliffs. */
-function viewOf(isles: Isle[], shapes: Record<string, IslandShape>) {
+function viewOf(isles: Isle[], shapes: Record<string, IslandShape>, above = 170) {
   const xs = isles.flatMap((i) => shapes[i.id].ring.map((p) => p[0]));
   const tops = isles.flatMap((i) => shapes[i.id].ring.map((p) => p[1] - i.lift));
   const bottoms = isles.map((i) => shapes[i.id].apex[1] - i.lift);
   const x = Math.min(...xs) - 70;
-  const y = Math.min(...tops) - 170;
+  const y = Math.min(...tops) - above;
   return { x, y, w: Math.max(...xs) + 70 - x, h: Math.max(...bottoms) + 40 - y };
 }
 
-function finish(l: Omit<Layout, 'shapes' | 'view'>): Layout {
+/** `above`: sky kept above the highest island, for buildings, tags and the quest bubble. */
+function finish(l: Omit<Layout, 'shapes' | 'view'>, above?: number): Layout {
   const shapes = Object.fromEntries(l.isles.map((i) => [i.id, islandShape(i.x, i.y, i.w, i.d, i.seed)]));
-  return { ...l, shapes, view: viewOf(l.isles, shapes) };
+  return { ...l, shapes, view: viewOf(l.isles, shapes, above) };
 }
 
 // ── Home ────────────────────────────────────────────────────────
@@ -177,15 +178,16 @@ const tallRealm = (id: RealmId): Layout => {
  * zig-zagging up and down, so the whole realm fits a wide, short screen without zooming. Little
  * scenery islets sit in the gaps (not in the English realm).
  */
-const realmLayout = (id: RealmId): Layout => {
+const realmLayout = (id: RealmId, step?: number): Layout => {
   const realm = realmById(id)!;
   const at = (a: number, d: number, half: number) => ({ x: (d + a) / 2 - half, y: (d - a) / 2 - half });
   const n = realm.places.length;
   // Few places: far apart in one gentle row. Many: closer, in two staggered rows.
-  const step = n <= 3 ? 10 : 6.6;
+  step ??= n <= 3 ? 10 : 6.6;
   const rise = n <= 3 ? 3 : 5;
   const across = (i: number) => (i - (n - 1) / 2) * step;
   const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(across(i), i % 2 ? rise : -rise, 1.5), lot: 3 }));
+  // Scenery islets in the gaps, beside the row (low, so they don't make the map much taller).
   const decor = PLAIN.includes(id) ? [] : Array.from({ length: n - 1 }, (_, k) => at((across(k) + across(k + 1)) / 2, k % 2 ? -rise - 3 : rise + 3, 1.1));
   return finish({
     id,
@@ -197,19 +199,40 @@ const realmLayout = (id: RealmId): Layout => {
     night: realm.night,
     isles: [
       ...spots.map((sp, i) => isleFor(sp, i + 1)),
-      ...decor.map((p, k): Isle => ({ id: `deco${k}`, ...p, w: 2.2, d: 2.2, seed: 50 + k * 7, lift: 20 + k * 14, spots: [], small: true, decor: () => DECOR[id](p.x + 0.1, p.y + 0.1) })),
+      ...decor.map((p, k): Isle => ({ id: `deco${k}`, ...p, w: 2.2, d: 2.2, seed: 50 + k * 7, lift: 8 + (k % 2) * 10, spots: [], small: true, decor: () => DECOR[id](p.x + 0.1, p.y + 0.1) })),
     ],
     lamps: [],
-  });
+  }, 135);
 };
 
 const cache = new Map<string, Layout>();
-/** A map's layout; `tall` for phones held upright (realms zig-zag down instead of a ring). */
-export function layoutFor(id: LayoutId, tall = false): Layout {
-  const key = `${id}:${tall && id !== 'home'}`;
+/** How far apart a wide realm's places can be spread (tiles between neighbours). */
+const STEPS: Record<'few' | 'many', [number, number]> = { few: [10, 15], many: [6.6, 9] };
+
+/**
+ * A map's layout. `tall` for phones held upright (realms zig-zag down). On wide screens, `aspect`
+ * (width ÷ height of the screen's map area) spreads a realm's places out to match its shape, so the
+ * realm fills the screen instead of sitting small in the middle with empty sky around it.
+ */
+export function layoutFor(id: LayoutId, tall = false, aspect?: number): Layout {
+  const wide = id !== 'home' && !tall;
+  const want = wide && aspect ? Math.round(aspect * 4) / 4 : 0;
+  const key = `${id}:${tall && id !== 'home'}:${want}`;
   let l = cache.get(key);
   if (!l) {
-    l = id === 'home' ? homeLayout() : tall ? tallRealm(id) : realmLayout(id);
+    if (id === 'home') l = homeLayout();
+    else if (tall) l = tallRealm(id);
+    else if (!want) l = realmLayout(id);
+    else {
+      // The spread whose map is closest to the screen's shape (no wider than it).
+      const [lo, hi] = STEPS[realmById(id)!.places.length <= 3 ? 'few' : 'many'];
+      l = realmLayout(id, lo);
+      for (let st = lo + 0.5; st <= hi; st += 0.5) {
+        const c = realmLayout(id, st);
+        if (c.view.w / c.view.h > want) break;
+        l = c;
+      }
+    }
     cache.set(key, l);
   }
   return l;

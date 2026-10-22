@@ -262,6 +262,7 @@ export function TownMap({
   labelScale = 1,
   still = false,
   tint = true,
+  aspect,
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
@@ -283,8 +284,10 @@ export function TownMap({
   still?: boolean;
   /** Draw the night/dusk tint (off when the screen tints everything behind its menus instead). */
   tint?: boolean;
+  /** Width ÷ height of the map's area: wide realms spread out to fill it. */
+  aspect?: number;
 }) {
-  const L = layoutFor(layout, tall);
+  const L = layoutFor(layout, tall, aspect);
   const phase = useDayPhase();
   const reduced = useReducedMotion();
   const [hover, setHover] = useState<string | null>(null);
