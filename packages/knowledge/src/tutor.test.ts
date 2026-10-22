@@ -71,6 +71,14 @@ describe('mistakeNote', () => {
     expect(note.some((n) => n.en.includes('mu-SI-cian'))).toBe(true);
     expect(mistakeNote(q, 'musician')).toBeNull();
   });
+
+  it('gives the reason for every word that shares the stress, not just the one picked', () => {
+    const q = { id: 'y', conceptId: 'en.pron.stress', prompt: '', options: ['beautiful', 'introduce', 'interrupt', 'guarantee'], answer: 0, difficulty: 3 } as never;
+    const text = mistakeNote(q, 'guarantee')!.map((n) => n.en).join('\n');
+    expect(text).toMatch(/• guar-an-TEE: .*-ee/);
+    expect(text).toMatch(/• in-tro-DUCE: .*prefix in-tro \+ DUCE/);
+    expect(text).toMatch(/• in-ter-RUPT: .*prefix \+ verb/);
+  });
 });
 
 describe('mistakeNote for sounds', () => {

@@ -321,6 +321,15 @@ function stressNote(a: StressAnalysis): Bi {
     );
   }
   if (a.root) return bi(`${where.en} — same as the root word ${a.root}`, `${where.vi} — giống từ gốc ${a.root}`);
+  if (a.rule.id === 'three-verb-last') {
+    const syl = a.word.syllables;
+    const pre = syl.slice(0, -1).join('-').toLowerCase();
+    const verb = syl[syl.length - 1].toUpperCase();
+    return bi(
+      `${where.en} — it is a verb made of the prefix ${pre} + ${verb}, and in prefix + verb words the verb part keeps the stress`,
+      `${where.vi} — đây là động từ gồm tiền tố ${pre} + ${verb}, và trong từ dạng tiền tố + động từ thì phần động từ mang trọng âm`,
+    );
+  }
   return bi(`${where.en} — ${a.rule.title.en}`, `${where.vi} — ${a.rule.title.vi}`);
 }
 
@@ -804,6 +813,8 @@ export function whyNot(q: Question, picked: string): Bi | null {
  * About his mistake, not the topic in general: why the option he picked is wrong and what gives the
  * right one away. Null when there's nothing specific to say (the question's own explanation is used).
  */
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 export function mistakeNote(q: Question, picked: string): Bi[] | null {
   const right = q.options[q.answer];
   if (!picked || picked === right) return null;
@@ -825,13 +836,24 @@ export function mistakeNote(q: Question, picked: string): Bi[] | null {
           )
         : bi(`You picked ${mine.display}: its stress is on the ${ORD_EN[pos]} syllable.`, `Em chọn ${mine.display}: trọng âm ở âm tiết ${ORD_VI[pos]}.`),
     );
-    const why = stressNote(a);
-    out.push(bi(`Why it's stressed there: ${why.en.replace(/^[^—]*— /, '')}.`, `Vì sao nhấn ở đó: ${why.vi.replace(/^[^—]*— /, '')}.`));
+    // Why each word that sounds like his is stressed there — not only the one he picked.
+    const rule = (n: Bi) => ({ en: n.en.replace(/^[^—]*— /, ''), vi: n.vi.replace(/^[^—]*— /, '') });
+    const same = [mine, ...all.filter((x) => x.o !== picked && x.o !== right && x.w?.stress === pos).map((x) => x.w!)];
+    if (same.length === 1) {
+      const why = rule(stressNote(a));
+      out.push(bi(`Why it's stressed there: ${why.en}.`, `Vì sao nhấn ở đó: ${why.vi}.`));
+    } else {
+      out.push(bi('Why each of them is stressed there:', 'Vì sao các từ này nhấn ở đó:'));
+      for (const w of same) {
+        const why = rule(stressNote(analyseStress(w)));
+        out.push(bi(`• ${w.display}: ${why.en}.`, `• ${w.display}: ${why.vi}.`));
+      }
+    }
     const whyOdd = stressNote(b);
     out.push(
       bi(
-        `The odd one out is ${odd.display} — stress on the ${ORD_EN[odd.stress]} syllable. ${whyOdd.en.replace(/^[^—]*— /, '')}.`,
-        `Từ khác biệt là ${odd.display} — trọng âm ở âm tiết ${ORD_VI[odd.stress]}. ${whyOdd.vi.replace(/^[^—]*— /, '')}.`,
+        `The odd one out is ${odd.display} — stress on the ${ORD_EN[odd.stress]} syllable. ${cap(whyOdd.en.replace(/^[^—]*— /, ''))}.`,
+        `Từ khác biệt là ${odd.display} — trọng âm ở âm tiết ${ORD_VI[odd.stress]}. ${cap(whyOdd.vi.replace(/^[^—]*— /, ''))}.`,
       ),
     );
     out.push(
