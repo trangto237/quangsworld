@@ -5,8 +5,8 @@ import { islandShape, type IslandShape } from './island';
 import { REALMS, realmById, type RealmId } from '../lib/realms';
 
 /**
- * Where everything stands, for each map: Home (the middle island and a portal island per realm) and one
- * map per realm (a gate island in the middle, the realm's places in a ring around it). Positions are in
+ * Where everything stands, for each map: Home (the middle island and its buildings) and one map per
+ * realm, laid out for the screen: a row across for wide screens, a zig-zag down for phones held upright. Positions are in
  * tiles; the view box is worked out from the islands so nothing is ever cut off.
  */
 
@@ -136,78 +136,12 @@ const homeLayout = (): Layout =>
 /** Realms without the little scenery islets between their places. */
 const PLAIN: RealmId[] = ['english'];
 
-/** Twelve places in a ring round the middle island (lot origins). */
-const RING: [number, number][] = [
-  [-4.4, -4.4],
-  [4.1, -5.6],
-  [12.1, -5.0],
-  [19.8, -4.4],
-  [21.0, 3.9],
-  [20.4, 12.1],
-  [19.8, 19.8],
-  [12.1, 20.4],
-  [3.9, 21.0],
-  [-4.4, 19.8],
-  [-5.0, 12.1],
-  [-5.6, 4.1],
-];
-/** Which ring places each realm uses, spread round the circle. */
-const SLOTS: Record<RealmId, number[]> = {
-  english: [0, 1, 2, 4, 6, 8, 9, 11],
-  maths: [1, 5, 9],
-  logic: [1, 5, 9],
-  literature: [2, 8],
-};
 /** Little islets in the empty ring places, in the realm's style. */
 const DECOR: Record<RealmId, (x: number, y: number) => ReactNode> = {
   english: (x, y) => <Tree x={x + 1} y={y + 1} s={1.1} />,
   maths: (x, y) => <Emoji at={P(x + 1, y + 1, 12)} size={26}>🌵</Emoji>,
   logic: (x, y) => <Emoji at={P(x + 1, y + 1, 14)} size={24}>💎</Emoji>,
   literature: (x, y) => <Tree x={x + 1} y={y + 1} s={1.1} color="#f3a9c4" />,
-};
-const MIDDLE = { x: 5.4, y: 5.4, w: 8.4, d: 8.4 };
-/** The middle of a realm: its gate home, and a few things of the realm around it. */
-const MIDDLE_DECOR: Record<RealmId, () => ReactNode> = {
-  english: () => (
-    <>
-      <Tree x={6.4} y={6.6} s={1.2} kind="pine" color="#3f8f3a" />
-      <Tree x={12.6} y={7} s={1.1} />
-      <Lake x={6.2} y={10.6} w={2.2} d={2.2} />
-    </>
-  ),
-  maths: () => (
-    <>
-      <Emoji at={P(6.6, 7, 14)} size={30}>
-        🌵
-      </Emoji>
-      <Emoji at={P(12.4, 11.6, 10)} size={24}>
-        🗿
-      </Emoji>
-      <Emoji at={P(6.8, 12, 10)} size={26}>
-        🏺
-      </Emoji>
-    </>
-  ),
-  logic: () => (
-    <>
-      <Emoji at={P(6.6, 7, 14)} size={28}>
-        💎
-      </Emoji>
-      <Emoji at={P(12.4, 11.4, 12)} size={24}>
-        🔮
-      </Emoji>
-      <Emoji at={P(6.8, 12, 12)} size={24}>
-        🛰️
-      </Emoji>
-    </>
-  ),
-  literature: () => (
-    <>
-      <Tree x={6.4} y={6.6} s={1.3} color="#f3a9c4" />
-      <Tree x={12.6} y={7} s={1.1} color="#f7bfd3" />
-      <Lake x={6.2} y={10.6} w={2.2} d={2.2} />
-    </>
-  ),
 };
 
 /**
@@ -238,28 +172,32 @@ const tallRealm = (id: RealmId): Layout => {
   });
 };
 
+/**
+ * Wide screens (laptops, tablets on their side): the places in a row from left to right, gently
+ * zig-zagging up and down, so the whole realm fits a wide, short screen without zooming. Little
+ * scenery islets sit in the gaps (not in the English realm).
+ */
 const realmLayout = (id: RealmId): Layout => {
   const realm = realmById(id)!;
-  const slots = SLOTS[id];
-  const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, x: RING[slots[i]][0], y: RING[slots[i]][1], lot: 3 }));
-  const free = RING.map((_, k) => k).filter((k) => !slots.includes(k));
-  const decorSlots = PLAIN.includes(id) ? [] : free.filter((_, k) => k % 2 === 0).slice(0, 4);
+  const at = (a: number, d: number, half: number) => ({ x: (d + a) / 2 - half, y: (d - a) / 2 - half });
+  const n = realm.places.length;
+  // Few places: far apart in one gentle row. Many: closer, in two staggered rows.
+  const step = n <= 3 ? 10 : 6.6;
+  const rise = n <= 3 ? 3 : 5;
+  const across = (i: number) => (i - (n - 1) / 2) * step;
+  const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(across(i), i % 2 ? rise : -rise, 1.5), lot: 3 }));
+  const decor = PLAIN.includes(id) ? [] : Array.from({ length: n - 1 }, (_, k) => at((across(k) + across(k + 1)) / 2, k % 2 ? -rise - 3 : rise + 3, 1.1));
   return finish({
     id,
     spots,
-    hub: MIDDLE,
+    hub: { ...at(0, 0, 3), w: 6, d: 6 },
     hubSpots: [],
     start: spots[0].id,
     cls: realm.className,
     night: realm.night,
     isles: [
-      // The middle keeps a little scenery island (no buildings); home is a button above the map.
-      ...(PLAIN.includes(id) ? [] : [{ id: 'hub', ...MIDDLE, seed: 13 + slots.length, lift: 0, falls: 0.45, spots: [], small: true, decor: MIDDLE_DECOR[id] }]),
-      ...spots.map((s, i) => isleFor(s, i + 1)),
-      ...decorSlots.map((k, i): Isle => {
-        const [x, y] = RING[k];
-        return { id: `deco${k}`, x: x + 0.2, y: y + 0.2, w: 2.2, d: 2.2, seed: 50 + k * 7, lift: 20 + i * 14, spots: [], small: true, decor: () => DECOR[id](x + 0.3, y + 0.3) };
-      }),
+      ...spots.map((sp, i) => isleFor(sp, i + 1)),
+      ...decor.map((p, k): Isle => ({ id: `deco${k}`, ...p, w: 2.2, d: 2.2, seed: 50 + k * 7, lift: 20 + k * 14, spots: [], small: true, decor: () => DECOR[id](p.x + 0.1, p.y + 0.1) })),
     ],
     lamps: [],
   });

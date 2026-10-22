@@ -261,6 +261,7 @@ export function TownMap({
   tall = false,
   labelScale = 1,
   still = false,
+  tint = true,
 }: {
   states: Record<string, SpotState>;
   onOpen: (spot: Spot) => void;
@@ -280,6 +281,8 @@ export function TownMap({
   labelScale?: number;
   /** A map in the background (the next realm along): not tappable. */
   still?: boolean;
+  /** Draw the night/dusk tint (off when the screen tints everything behind its menus instead). */
+  tint?: boolean;
 }) {
   const L = layoutFor(layout, tall);
   const phase = useDayPhase();
@@ -365,7 +368,7 @@ export function TownMap({
           <Cloud x={-560} y={640} s={1.3} />
           <Cloud x={620} y={700} s={1.1} />
         </g>
-        {!L.night && <SkyTint phase={phase} view={L.view} />}
+        {tint && !L.night && <SkyTint phase={phase} view={L.view} />}
         <StreetLamps spots={L.lamps} glow={phase !== 'day'} />
         {overlays.map((s) => (
           <Overlay

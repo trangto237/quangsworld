@@ -221,6 +221,9 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
   }, [grew?.id]);
   const enter = (i: number) => go({ name: 'realm', realmId: (slides[i].realm ?? 'home') as RealmId | 'home' });
   const inside = realm ? slides[slideOf(realm)] : null;
+  // Evening colours for the sky and the map together (a filter, so the map has no visible edge).
+  const nightRealm = !!inside?.realm && !!layoutFor(inside.realm as LayoutId).night;
+  const tint = nightRealm || phase === 'day' ? undefined : phase === 'night' ? 'brightness(0.66) saturate(0.85)' : 'sepia(0.12) saturate(1.08) brightness(0.98)';
   const cards: RealmCard[] = slides.map((sl) => {
     const r = sl.realm ? REALMS.find((x) => x.id === sl.realm)! : null;
     const st = r ? shown[`realm-${r.id}`] : undefined;
@@ -270,7 +273,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
 
   return (
     <div className="text-ink-text">
-      <div className={cx('fixed inset-0', (inside ?? slides[index]).cls)} style={{ background: (inside ?? slides[index]).sky, transition: 'background 0.4s' }} />
+      <div className={cx('fixed inset-0', (inside ?? slides[index]).cls)} style={{ background: (inside ?? slides[index]).sky, transition: 'background 0.4s', filter: inside ? tint : undefined }} />
       {inside ? (
         <>
           <div className="fixed inset-x-0 top-[10.5rem] sm:top-[8.5rem]" style={{ bottom: ABOVE_QUEST }}>
@@ -279,8 +282,10 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
               index={0}
               onIndex={() => {}}
               start={(sl, size) => {
-                // Open filling the screen's width, on today's quest (or the gate), not the whole realm shrunk.
+                // Wide screens: the realm is laid out in a row, so show all of it.
+                // Phones held upright: open filling the width, on today's quest (or the first place).
                 const tall = size.h > size.w * 1.05;
+                if (!tall && sl.realm) return { z: 1 };
                 const L = layoutFor((sl.realm ?? 'home') as LayoutId, tall);
                 const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
                 const z = Math.min(2.6, Math.max(1, size.w / L.view.w / fit));
@@ -294,18 +299,21 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
                 const fit = Math.min(size.w / L.view.w, size.h / L.view.h);
                 const here = new Set(L.spots.map((x) => x.id));
                 return (
-                  <TownMap
-                    layout={L.id}
-                    tall={tall}
-                    labelScale={Math.max(1, Math.min(2, 0.75 / (fit * zoom)))}
-                    states={shown}
-                    path={spots.path.filter((id) => here.has(id))}
-                    chest={sl.realm ? undefined : { state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
-                    onOpen={open}
-                    onSelect={setSelected}
-                    selected={selected?.id ?? null}
-                    hero={hero}
-                  />
+                  <div className="h-full w-full" style={{ filter: tint }}>
+                    <TownMap
+                      tint={false}
+                      layout={L.id}
+                      tall={tall}
+                      labelScale={Math.max(1, Math.min(2, 0.75 / (fit * zoom)))}
+                      states={shown}
+                      path={spots.path.filter((id) => here.has(id))}
+                      chest={sl.realm ? undefined : { state: chestOpened ? 'opened' : allDone ? 'ready' : 'locked', progress: `${doneCount}/${plan.missions.length}`, onOpen: () => void openChest() }}
+                      onOpen={open}
+                      onSelect={setSelected}
+                      selected={selected?.id ?? null}
+                      hero={hero}
+                    />
+                  </div>
                 );
               }}
             />
