@@ -10,10 +10,12 @@ import { BlockPuzzle } from './BlockPuzzle';
 import { LESSONS, REFERENCE, TEMPLATES, type Lesson } from './lessons';
 import { BUGS, DRAWING } from './courses';
 import { PUZZLES } from './puzzles';
+import { LearnPython, lessonDoneId } from './learn/LearnPython';
+import { ALL_LESSONS } from './learn/course';
 import type { Lang } from './runtime';
 import { Sandbox, type SandboxHandle } from './Sandbox';
 
-type Tab = 'blocks' | 'js' | 'py' | 'bugs' | 'draw' | 'games';
+type Tab = 'blocks' | 'learn' | 'js' | 'py' | 'bugs' | 'draw' | 'games';
 const REWARD = { coins: 20, gems: 0, xp: 20 };
 
 export const unlockKey = (studentId: string) => `code-unlocked:${studentId}`;
@@ -58,6 +60,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
     if (saved) return saved;
     const has = (prefix: string, total: number) => done.filter((d) => d.startsWith(prefix)).length < total;
     if (PUZZLES.some((p) => !done.includes(p.id))) return 'blocks';
+    if (ALL_LESSONS.some((l) => !done.includes(lessonDoneId(l.id)))) return 'learn';
     if (has('js:', LESSONS.length)) return 'js';
     if (has('py:', LESSONS.length)) return 'py';
     if (has('bug-', BUGS.length * 2)) return 'bugs';
@@ -96,8 +99,9 @@ export function CodeLab({ student }: { student: StudentProfile }) {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'blocks', label: '🧩 Blocks' },
+    { id: 'learn', label: '🐍 Learn Python' },
     { id: 'js', label: '🟨 JavaScript' },
-    { id: 'py', label: '🐍 Python' },
+    { id: 'py', label: '🐍 Python game' },
     { id: 'bugs', label: '🐞 Fix the bug' },
     { id: 'draw', label: '🐢 Drawing' },
     { id: 'games', label: '🎮 My games' },
@@ -105,6 +109,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
   const got = (prefix: string) => done.filter((d) => d.startsWith(prefix)).length;
   const progress: [string, string, number, number, Tab][] = [
     ['🧩', 'Blocks', done.filter((d) => /^b\d+$/.test(d)).length, PUZZLES.length, 'blocks'],
+    ['📘', 'Learn Python', got('lp:'), ALL_LESSONS.length, 'learn'],
     ['🟨', 'JavaScript', got('js:'), LESSONS.length, 'js'],
     ['🐍', 'Python', got('py:'), LESSONS.length, 'py'],
     ['🐞', 'Bugs', got('bug-'), BUGS.length * 2, 'bugs'],
@@ -128,7 +133,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
           </div>
         </div>
         {/* Progress in each course */}
-        <div className="mt-3 grid grid-cols-5 gap-1.5">
+        <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
           {progress.map(([icon, label, got, total, id]) => (
             <button key={label} onClick={() => setTab(id)} className={cx('rounded-xl border-2 bg-paper-2 px-1 py-1.5 text-center', tab === id ? 'border-[#ffc23d] bg-tint-amber' : 'border-ink/15')}>
               <div className="text-lg leading-none">{icon}</div>
@@ -157,6 +162,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
       </div>
       <div className="mt-3">
         {tab === 'blocks' && <BlocksTab done={done} onSolved={(id) => void finish(id)} />}
+        {tab === 'learn' && <LearnPython done={done} onPassed={(id) => void finish(id)} />}
         {(tab === 'js' || tab === 'py') && <CourseTab key={tab} lang={tab} lessons={LESSONS} prefix={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
         {(tab === 'bugs' || tab === 'draw') && <TwoLanguages key={tab} kind={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
         {tab === 'games' && <GamesTab studentId={student.id} />}

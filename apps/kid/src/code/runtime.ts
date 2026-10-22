@@ -12,9 +12,10 @@
  * Keys arrive as "up", "down", "left", "right", "space".
  *
  * Messages with the app (postMessage):
- *   app → sandbox: { type: 'run', lang, code } · { type: 'stop' } · { type: 'key', key } · { type: 'state', id }
+ *   app → sandbox: { type: 'run', lang, code, stdin? } · { type: 'stop' } · { type: 'key', key } · { type: 'state', id }
  *   sandbox → app: { type: 'ready' } · { type: 'log', text } · { type: 'error', text } · { type: 'loading', text }
- *                  { type: 'over', text } · { type: 'state', id, state }
+ *                  { type: 'over', text } · { type: 'state', id, state } · { type: 'done' } (the program's main part finished)
+ * `stdin`: lines that Python's input() reads, in order (Learn Python exercises).
  */
 
 export type Lang = 'js' | 'py';
@@ -80,7 +81,7 @@ function fail(e) { stopped = true; timers.forEach(clearInterval); postMessage({ 
 onmessage = (m) => {
   const d = m.data;
   if (d.type === 'key') for (const fn of keyFns) { try { fn(d.key); } catch (e) { fail(e); } }
-  if (d.type === 'run') start(d.code);
+  if (d.type === 'run') start(d.code, d.stdin);
 };
 `;
 
@@ -91,6 +92,7 @@ function start(code) {
     const names = ['grid', 'clear', 'cell', 'text', 'score', 'random', 'every', 'onKey', 'gameOver', 'forward', 'backward', 'right', 'left', 'penUp', 'penDown', 'color', 'width', 'goTo'];
     const run = new Function(...names, 'console', '"use strict";\n' + code);
     run(...names.map((n) => api[n]), console);
+    setTimeout(() => postMessage({ type: 'done' }), 0);
   } catch (e) { fail(e); }
 }
 postMessage({ type: 'ready' });
@@ -98,7 +100,7 @@ postMessage({ type: 'ready' });
 
 const WORKER_PY = String.raw`
 let py = null;
-async function start(code) {
+async function start(code, stdin) {
   try {
     if (!py) {
       postMessage({ type: 'loading', text: 'Loading Python… (the first time takes a little while)' });
@@ -131,7 +133,10 @@ async function start(code) {
       ].join('\n'));
       postMessage({ type: 'loading', text: '' });
     }
+    const lines = (stdin || []).slice();
+    py.setStdin({ stdin: () => (lines.length ? lines.shift() : undefined) });
     await py.runPythonAsync(code);
+    setTimeout(() => postMessage({ type: 'done' }), 0);
   } catch (e) {
     const msg = String((e && e.message) || e);
     // Python tracebacks are long: keep the last useful lines.
@@ -202,13 +207,14 @@ function apply(ops) {
   dirty = true;
 }
 function stop() { if (worker) { worker.terminate(); worker = null; } }
-function run(lang, code) {
+function run(lang, code, stdin) {
   stop(); reset();
   const url = URL.createObjectURL(new Blob([W[lang]], { type: 'text/javascript' }));
   worker = new Worker(url);
   worker.onmessage = (m) => {
     const d = m.data;
-    if (d.type === 'ready') worker.postMessage({ type: 'run', code });
+    if (d.type === 'ready') worker.postMessage({ type: 'run', code, stdin });
+    else if (d.type === 'done') parent.postMessage({ type: 'done' }, '*');
     else if (d.type === 'ops') apply(d.ops);
     else if (d.type === 'error') { errorV = d.text; parent.postMessage({ type: 'error', text: d.text }, '*'); }
     else if (d.type === 'loading') parent.postMessage({ type: 'loading', text: d.text }, '*');
@@ -219,7 +225,7 @@ const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 
 addEventListener('keydown', (e) => { const k = KEYS[e.key]; if (k && worker) { worker.postMessage({ type: 'key', key: k }); e.preventDefault(); } });
 addEventListener('message', (m) => {
   const d = m.data || {};
-  if (d.type === 'run') run(d.lang, d.code);
+  if (d.type === 'run') run(d.lang, d.code, d.stdin);
   else if (d.type === 'stop') stop();
   else if (d.type === 'key' && worker) worker.postMessage({ type: 'key', key: d.key });
   else if (d.type === 'state') parent.postMessage({ type: 'state', id: d.id, state: { board, cols, rows, used: [...used], frames, score: scoreV, text: textV, over: overV, error: errorV, logs, lines: lines.map((l) => l.slice(0, 4)) } }, '*');

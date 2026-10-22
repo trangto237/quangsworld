@@ -2,7 +2,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { SANDBOX_HTML, type Lang, type SandboxState } from './runtime';
 
 export interface SandboxHandle {
-  run: (lang: Lang, code: string) => void;
+  /** `stdin`: lines Python's input() reads. */
+  run: (lang: Lang, code: string, stdin?: string[]) => void;
   stop: () => void;
   key: (k: 'up' | 'down' | 'left' | 'right' | 'space') => void;
   /** The program's current picture and what it has used (for checking lessons). */
@@ -11,14 +12,17 @@ export interface SandboxHandle {
 }
 
 /** The game screen his code draws on: a sandboxed iframe (see runtime.ts). */
-export const Sandbox = forwardRef<SandboxHandle, { onLog?: (t: string) => void; onError?: (t: string) => void; onLoading?: (t: string) => void; onOver?: (t: string) => void; className?: string }>(
-  function Sandbox({ onLog, onError, onLoading, onOver, className }, ref) {
+export const Sandbox = forwardRef<
+  SandboxHandle,
+  { onLog?: (t: string) => void; onError?: (t: string) => void; onLoading?: (t: string) => void; onOver?: (t: string) => void; onDone?: () => void; className?: string }
+>(
+  function Sandbox({ onLog, onError, onLoading, onOver, onDone, className }, ref) {
     const frame = useRef<HTMLIFrameElement>(null);
     const ready = useRef(false);
     const queued = useRef<unknown[]>([]);
     const waiting = useRef(new Map<number, (s: SandboxState | null) => void>());
-    const cb = useRef({ onLog, onError, onLoading, onOver });
-    cb.current = { onLog, onError, onLoading, onOver };
+    const cb = useRef({ onLog, onError, onLoading, onOver, onDone });
+    cb.current = { onLog, onError, onLoading, onOver, onDone };
 
     const send = (msg: unknown) => {
       if (!ready.current) queued.current.push(msg);
@@ -36,6 +40,7 @@ export const Sandbox = forwardRef<SandboxHandle, { onLog?: (t: string) => void; 
         else if (d.type === 'error') cb.current.onError?.(d.text ?? '');
         else if (d.type === 'loading') cb.current.onLoading?.(d.text ?? '');
         else if (d.type === 'over') cb.current.onOver?.(d.text ?? '');
+        else if (d.type === 'done') cb.current.onDone?.();
         else if (d.type === 'state' && d.id != null) {
           waiting.current.get(d.id)?.(d.state ?? null);
           waiting.current.delete(d.id);
@@ -46,8 +51,8 @@ export const Sandbox = forwardRef<SandboxHandle, { onLog?: (t: string) => void; 
     }, []);
 
     useImperativeHandle(ref, () => ({
-      run: (lang, code) => {
-        send({ type: 'run', lang, code });
+      run: (lang, code, stdin) => {
+        send({ type: 'run', lang, code, stdin });
         frame.current?.focus();
       },
       stop: () => send({ type: 'stop' }),
