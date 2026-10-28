@@ -45,6 +45,8 @@ export interface BattleResult {
 interface KidState {
   studentId: string | null;
   screen: Screen;
+  /** Where he was before the current game, to go back to when it ends (a realm, an island, the Arcade…). */
+  returnTo: Screen | null;
   go: (s: Screen) => void;
   /** Switch screen without a new Back step (e.g. swiping between realms). */
   swap: (s: Screen) => void;
@@ -79,9 +81,14 @@ const startScreen = (): Screen => (saved ? (typeof location !== 'undefined' ? sc
 export const useKid = create<KidState>((set, get) => ({
   studentId: saved,
   screen: startScreen(),
+  returnTo: null,
   go: (screen) => {
-    syncUrl(get().screen, screen);
-    set({ screen });
+    const from = get().screen;
+    syncUrl(from, screen);
+    // Starting a game from a menu screen remembers that screen (not from a game or its results: a replay keeps it).
+    const playing = (s: Screen) => s.name === 'battle' || s.name === 'results' || s.name === 'placement';
+    if (screen.name === 'battle' && !playing(from)) set({ screen, returnTo: from });
+    else set({ screen });
   },
   swap: (screen) => {
     try {

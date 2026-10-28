@@ -7,6 +7,7 @@ import { KnightArena } from './KnightArena';
 import { MeteorArena } from './MeteorArena';
 import { PenaltyArena } from './PenaltyArena';
 import { RaceArena } from './RaceArena';
+import { TempleArena } from './TempleArena';
 import { RunnerArena } from './RunnerArena';
 import { SprintArena } from './SprintArena';
 import type { ModeProps } from './types';
@@ -101,6 +102,8 @@ function pick(mode: GameMode, p: ModeProps, defense: { config: BattleConfig; the
       return <DuelArena {...p} />;
     case 'runner':
       return <RunnerArena {...p} />;
+    case 'temple':
+      return <TempleArena {...p} />;
     case 'knight':
       return <KnightArena {...p} />;
     case 'sprint':

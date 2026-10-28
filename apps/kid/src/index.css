@@ -184,6 +184,26 @@ html { background: var(--paper-2); }
   to { transform: translate(-50%, -8px); }
 }
 
+/* Temple Run: stone slabs rushing toward the runner, and falling off the path. */
+.temple-stones { box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35); }
+.temple-run-tiles {
+  background-image: repeating-linear-gradient(to bottom, transparent 0 34px, rgba(41, 37, 36, 0.45) 34px 38px), linear-gradient(90deg, transparent 49.5%, rgba(41, 37, 36, 0.35) 49.5% 50.5%, transparent 50.5%);
+  background-size: 100% 76px, 100% 100%;
+  animation: temple-run 0.45s linear infinite;
+}
+@keyframes temple-run {
+  to { background-position: 0 76px, 0 0; }
+}
+.temple-fall { animation: temple-fall 1s ease-in forwards; }
+@keyframes temple-fall {
+  0% { transform: translate(-50%, 0) rotate(0) scale(1); opacity: 1; }
+  30% { transform: translate(-50%, -30px) rotate(-20deg) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, 140px) rotate(-200deg) scale(0.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .temple-run-tiles { animation: none; }
+}
+
 /* Meteor Defense: twinkling star field. */
 .meteor-stars {
   background-image:

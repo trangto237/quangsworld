@@ -15,7 +15,7 @@ const BLOCK_COLORS = ['#f97316', '#eab308', '#22c55e', '#06b6d4', '#6366f1', '#d
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 
 /**
- * Sentence Sprint: put the word tiles in order before the clock runs out. Every right sentence adds a
+ * Rocket Builder: put the word tiles in order before the clock runs out. Every right sentence adds a
  * stage to the rocket; finish it to launch. Keys: 1–9 place a tile, Backspace undo, Enter check.
  * Other kinds of questions that arrive here are answered on a normal card (no clock).
  */
@@ -131,7 +131,7 @@ export function SprintArena(p: ModeProps) {
   return (
     <GameShell
       title={p.title}
-      subtitle={p.subtitle ?? 'Sentence Sprint'}
+      subtitle={p.subtitle ?? 'Rocket Builder'}
       progress={p.progress ?? { value: sim.floors, max: goal, label: 'Rocket built' }}
       retreatText={p.retreatText}
       onLeave={() => end(false, true)}

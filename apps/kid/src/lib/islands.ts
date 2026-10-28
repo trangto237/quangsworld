@@ -99,15 +99,12 @@ export const ISLAND_GAMES: Record<string, IslandGame> = {
     },
   },
   'sound-temple': {
-    mode: 'runner',
+    mode: 'temple',
     name: 'Temple Run',
     emoji: '🛕',
-    blurb: 'Run through the jungle temple — dive through the gate with the right sound!',
-    dress: {
-      bg: 'bg-gradient-to-b from-emerald-800 via-green-950 to-stone-950',
-      road: 'linear-gradient(#a8a29e, #57534e)',
-      decor: '🛕 🌴 🗿 🌴 🛕',
-    },
+    blurb: 'Sprint through the jungle temple. The path splits: swipe to the way with the right sound — the wrong way crumbles and you fall!',
+    loss: 'You fell off the temple path…',
+    dress: { bg: 'bg-gradient-to-b from-emerald-800 via-green-950 to-stone-950' },
   },
   'number-citadel': {
     mode: 'defense',

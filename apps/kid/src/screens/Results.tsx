@@ -16,6 +16,7 @@ import { TownButton } from '../town/ui';
 const LOSS: Record<GameMode, string> = {
   defense: 'The castle fell…',
   runner: 'Out of breath…',
+  temple: 'You fell off the temple path…',
   knight: 'The Glitch king escaped…',
   duel: 'The boss won this time…',
   sprint: 'The rocket ran out of fuel…',
@@ -39,7 +40,9 @@ export function Results({ student, result: r }: { student: StudentProfile; resul
   const acc = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
   const game = gameOf(r.mission);
   // After the garden's bug invasion, back to the garden.
-  const home: Screen = r.mission.id.startsWith(INVASION_ID) ? { name: 'garden' } : { name: 'hub' };
+  // Back to where he started the game from (the realm map, the island, the Arcade…).
+  const returnTo = useKid((s) => s.returnTo);
+  const home: Screen = r.mission.id.startsWith(INVASION_ID) ? { name: 'garden' } : (returnTo ?? { name: 'hub' });
   const title = r.retreated ? 'Strategic retreat' : r.victory ? 'Victory!' : (game.loss ?? LOSS[game.mode]);
   const sub = r.victory ? '{name}, the realm is safe!' : r.retreated ? 'Rest up, hero. The Glitches will be back.' : 'Every hero loses sometimes. You still grew stronger.';
 

@@ -7,14 +7,15 @@
 
 import { ComebackTracker, type ComebackCard } from './arcade';
 
-export type GameMode = 'defense' | 'runner' | 'knight' | 'duel' | 'sprint' | 'meteor' | 'penalty' | 'race' | 'detective';
+export type GameMode = 'defense' | 'runner' | 'temple' | 'knight' | 'duel' | 'sprint' | 'meteor' | 'penalty' | 'race' | 'detective';
 
 export const MODES: Record<GameMode, { name: string; emoji: string; blurb: string }> = {
   defense: { name: 'Castle Defense', emoji: '🏰', blurb: 'Answers power your chess towers.' },
   runner: { name: 'Word Runner', emoji: '🏃', blurb: 'Steer into the right gate before it reaches you!' },
+  temple: { name: 'Temple Run', emoji: '🛕', blurb: 'The path splits: swipe left or right to the right answer. The wrong way crumbles and you fall!' },
   knight: { name: "Knight's Quest", emoji: '♞', blurb: 'Every right answer earns a knight move. Hunt the Glitch king.' },
   duel: { name: 'Boss Duel', emoji: '⚔️', blurb: 'Every right answer is an attack — answer before the boss strikes!' },
-  sprint: { name: 'Sentence Sprint', emoji: '🧩', blurb: 'Build sentences against the clock to launch your rocket.' },
+  sprint: { name: 'Rocket Builder', emoji: '🚀', blurb: 'Put the words in order: every right sentence adds a stage to your rocket. Finish it before the countdown to launch!' },
   meteor: { name: 'Meteor Defense', emoji: '☄️', blurb: 'Blast the right meteor before it hits the city!' },
   penalty: { name: 'Penalty Shootout', emoji: '⚽', blurb: 'Pick the right corner to score — then save their kicks.' },
   race: { name: 'Grand Prix', emoji: '🏎️', blurb: 'Right answers boost, 3 in a row fire nitro. Reach the podium!' },
@@ -24,7 +25,7 @@ export const MODES: Record<GameMode, { name: string; emoji: string; blurb: strin
 /** Modes that suit each kind of content, best first. The daily quest rotates through them. */
 const SUITED: Record<string, GameMode[]> = {
   order: ['sprint'],
-  fast: ['runner', 'meteor', 'penalty', 'race'],
+  fast: ['runner', 'temple', 'meteor', 'penalty', 'race'],
   calm: ['duel', 'detective'],
   dialogue: ['knight', 'detective', 'penalty'],
   logic: ['knight', 'race', 'penalty'],
