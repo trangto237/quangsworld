@@ -196,6 +196,8 @@ const VI: Record<string, string> = {
   '🌱 Garden': '🌱 Vườn',
   '📗 Catalogue': '📗 Sổ cây',
   'Plant a seed': 'Gieo hạt',
+  'Mix': 'Trộn',
+  'Play a mix of every topic': 'Chơi trộn tất cả chủ đề',
   'Jump here': 'Nhảy tới đây',
   'Jump test': 'Bài kiểm tra vượt cấp',
   'You jumped ahead!': 'Em đã vượt cấp!',

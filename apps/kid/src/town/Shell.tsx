@@ -110,7 +110,7 @@ const NAV: { id: Exclude<NavTab, null | 'hero'>; icon: string; en: string; color
 
 /** Bottom navigation, with a big round Play button for the next quest in the middle. */
 /** `play={false}` on the map, where the quest card has its own Play button. */
-export function BottomNav({ student, active, play = true }: { student: StudentProfile; active: NavTab; play?: boolean }) {
+export function BottomNav({ student, active, play = true, onPlay }: { student: StudentProfile; active: NavTab; play?: boolean; onPlay?: () => void }) {
   const go = useKid((s) => s.go);
   const lang = useLang();
   const plan = useQuery((r) => todayPlan(r, student.id), [student.id]);
@@ -136,14 +136,14 @@ export function BottomNav({ student, active, play = true }: { student: StudentPr
         {NAV.slice(0, 2).map(item)}
         {play && (
         <button
-          onClick={() => (next ? go(playScreen(next, true)) : go({ name: 'quests' }))}
+          onClick={() => (onPlay ? onPlay() : next ? go(playScreen(next, true)) : go({ name: 'quests' }))}
           className="town-btn -mt-7 grid size-16 shrink-0 place-items-center rounded-full bg-[#e8584a] font-display text-white"
           aria-label={next ? tr(lang, '▶ Play: {title}', { title: next.title }) : tr(lang, 'Quests')}
         >
           <span className="flex flex-col items-center leading-none">
-            <span className="text-2xl">{next ? '▶' : '🏆'}</span>
+            <span className="text-2xl">{onPlay || next ? '▶' : '🏆'}</span>
             <span className="text-[10px] font-bold">
-              <T en={next ? 'Play' : 'Done!'} />
+              <T en={onPlay ? 'Mix' : next ? 'Play' : 'Done!'} />
             </span>
           </span>
         </button>
@@ -172,10 +172,13 @@ export function TownScreen({
   back,
   showPowers,
   className,
+  onPlay,
   children,
 }: {
   student: StudentProfile;
   tab: NavTab;
+  /** What the big Play button does here, instead of today's quest (an island plays a mix of its topics). */
+  onPlay?: () => void;
   back?: () => void;
   showPowers?: boolean;
   className?: string;
@@ -187,7 +190,7 @@ export function TownScreen({
     <div className="town-bg min-h-dvh text-ink-text">
       <HeroBar student={student} back={back ?? (() => go({ name: 'hub' }))} showPowers={showPowers} />
       <main className={cx('mx-auto max-w-5xl px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-2 sm:px-4', className)}>{children}</main>
-      <BottomNav student={student} active={tab} />
+      <BottomNav student={student} active={tab} onPlay={onPlay} />
     </div>
   );
 }

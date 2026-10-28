@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { realmOf } from '../lib/realms';
 import type { StudentProfile } from '@atlas/db';
-import { conceptMission, isDue, stars } from '@atlas/engine';
+import { conceptMission, isDue, mixMission, stars } from '@atlas/engine';
 import { MODES, modeFor, modesFor, type GameMode } from '@atlas/game';
 import { WORLDS, conceptsInWorld } from '@atlas/knowledge';
 import type { ConceptDef } from '@atlas/shared';
@@ -22,9 +22,11 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const [mode, setMode] = useState<GameMode | null>(null);
   const lang = useLang();
   const island = ISLAND_GAMES[worldId];
+  /** No topic to choose: a mix of the whole island, its weakest and due topics first. */
+  const playMix = () => go({ name: 'battle', mission: mixMission(concepts.map((c) => c.id), `🎲 ${world.name}`, states), fromPlan: false });
 
   return (
-    <TownScreen student={student} tab="map" back={() => go(realmOf(worldId) ? { name: 'realm', realmId: realmOf(worldId)!.id } : { name: 'hub' })}>
+    <TownScreen student={student} tab="map" onPlay={playMix} back={() => go(realmOf(worldId) ? { name: 'realm', realmId: realmOf(worldId)!.id } : { name: 'hub' })}>
       <div className="town-panel mx-auto max-w-md p-4 text-center">
         <div className="mx-auto grid size-20 place-items-center rounded-2xl border-[2.5px] border-ink text-5xl" style={{ background: `${world.color}55` }}>
           {world.emoji}
@@ -40,6 +42,9 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
             🎮 <T en="Island game" />: {island.emoji} <T en={island.name} />
           </p>
         )}
+        <TownButton tone="green" size="lg" className="mt-3 w-full" onClick={playMix}>
+          🎲 <TB en="Play a mix of every topic" />
+        </TownButton>
       </div>
       {world.subject === 'literature' && (
         <div className="mx-auto mt-4 max-w-md">

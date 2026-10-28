@@ -1,7 +1,7 @@
 import type { ConceptDef, ConceptState, Goal, Mission, MissionBlock, SubjectId } from '@atlas/shared';
 import { DAY_MS, dayKey, hashString, rng } from '@atlas/shared';
 import { allConcepts, getConcept } from '@atlas/knowledge';
-import { newConceptState } from './mastery';
+import { isDue, newConceptState } from './mastery';
 
 /**
  * Daily Adaptive Engine (PRD §4.5).
@@ -162,6 +162,26 @@ export function missionReward(minutes: number, kind: Mission['kind']) {
 }
 
 /** A focused mission for a single concept (when the kid chooses a node on a world map). */
+/**
+ * A mixed mission over several concepts (e.g. a whole island), with no topic to choose: the ones due for
+ * review come first, then the weakest, so the mix spends its time where it helps most.
+ */
+export function mixMission(conceptIds: string[], title: string, states: Record<string, ConceptState> = {}, minutes = 6): Mission {
+  const need = (id: string) => {
+    const s = states[id];
+    if (!s || s.attempts === 0) return 50;
+    return (isDue(s) ? -100 : 0) + s.mastery;
+  };
+  return {
+    id: `mix-${Date.now()}`,
+    concepts: [...conceptIds].sort((a, b) => need(a) - need(b)),
+    duration: minutes,
+    kind: 'learn',
+    title,
+    reward: missionReward(minutes, 'learn'),
+  };
+}
+
 export function conceptMission(conceptId: string, minutes = 5): Mission {
   const c = getConcept(conceptId);
   return {
