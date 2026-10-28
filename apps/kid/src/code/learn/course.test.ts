@@ -65,5 +65,5 @@ describe('Learn Python course', () => {
       if (s.kind === 'write') check(where, s.solution, s.expect, s.stdin);
     }
     expect(bad, bad.join('\n\n')).toEqual([]);
-  });
+  }, 60_000); // runs Python once per snippet
 });
