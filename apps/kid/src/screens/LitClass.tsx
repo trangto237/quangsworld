@@ -1,6 +1,7 @@
 import type { StudentProfile } from '@atlas/db';
 import { useQuery, useRepo } from '@atlas/ui';
 import { useKid } from '../store';
+import { LangContext } from '../i18n';
 import { TownScreen } from '../town/Shell';
 import { CourseView } from '../code/learn/LearnPython';
 import { LIT_COURSE } from '../lit/course';
@@ -23,16 +24,19 @@ export function LitClass({ student }: { student: StudentProfile }) {
   };
   return (
     <TownScreen student={student} tab={null} back={() => go({ name: 'realm', realmId: 'literature' })} showPowers={false}>
-      <CourseView
-        units={LIT_COURSE}
-        done={done}
-        onPassed={(id) => void finish(id)}
-        doneId={(lessonId) => lessonId}
-        icon="📖"
-        title="Lớp học Ngữ văn"
-        intro="Ngữ văn 8 & 9 — học từng bước: hiểu kiến thức, cùng làm mẫu, luyện tập nhỏ, rồi tự viết vài câu. Đã xong {n}/{m} bài."
-        prose
-      />
+      {/* The course is taught in Vietnamese, so its buttons are too. */}
+      <LangContext.Provider value="vi">
+        <CourseView
+          units={LIT_COURSE}
+          done={done}
+          onPassed={(id) => void finish(id)}
+          doneId={(lessonId) => lessonId}
+          icon="📖"
+          title="Lớp học Ngữ văn"
+          intro="Ngữ văn 8 & 9 — học từng bước: hiểu kiến thức, cùng làm mẫu, luyện tập nhỏ, rồi tự viết vài câu. Đã xong {n}/{m} bài."
+          prose
+        />
+      </LangContext.Provider>
     </TownScreen>
   );
 }
