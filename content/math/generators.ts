@@ -26,6 +26,7 @@ import { frac, int, nz, numeric, pick, signed } from './util';
 import { grade9Generators } from './grade9';
 import { geometry9Generators } from './geometry9';
 import { number9Generators } from './number9';
+import { advancedGenerators } from './advanced';
 
 const raw: Record<string, Generator> = {
   'math.number.integers': (d, r) => {
@@ -285,5 +286,5 @@ export function sanitize(g: Generated): Generated {
 }
 
 export const generators: Record<string, Generator> = Object.fromEntries(
-  Object.entries({ ...raw, ...grade9Generators, ...geometry9Generators, ...number9Generators }).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]),
+  Object.entries({ ...raw, ...grade9Generators, ...geometry9Generators, ...number9Generators, ...advancedGenerators }).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]),
 );

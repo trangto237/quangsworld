@@ -1,6 +1,7 @@
 import type { ConceptSeed } from '../helpers';
 import { geometry9Concepts, geometry9Patches } from './geometry9';
 import { number9Concepts, number9Patches } from './number9';
+import { advancedConcepts } from './advanced';
 
 const baseConcepts: ConceptSeed[] = [
   // ── Number ─────────────────────────────────────────────────
@@ -232,4 +233,5 @@ export const mathConcepts: ConceptSeed[] = [
   ...baseConcepts.map((c) => ({ ...c, ...geometry9Patches[c.id], ...number9Patches[c.id] })),
   ...number9Concepts,
   ...geometry9Concepts,
+  ...advancedConcepts,
 ];

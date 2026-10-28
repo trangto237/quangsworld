@@ -188,7 +188,7 @@ const realmLayout = (id: RealmId, step?: number): Layout => {
   const across = (i: number) => (i - (n - 1) / 2) * step;
   const spots: Spot[] = realm.places.map((p, i): Spot => ({ id: p, kind: p, ...at(across(i), i % 2 ? rise : -rise, 1.5), lot: 3 }));
   // Scenery islets in the gaps, beside the row (low, so they don't make the map much taller).
-  const decor = PLAIN.includes(id) ? [] : Array.from({ length: n - 1 }, (_, k) => at((across(k) + across(k + 1)) / 2, k % 2 ? -rise - 3 : rise + 3, 1.1));
+  const decor = PLAIN.includes(id) || n > 3 ? [] : Array.from({ length: n - 1 }, (_, k) => at((across(k) + across(k + 1)) / 2, k % 2 ? -rise - 3 : rise + 3, 1.1));
   return finish({
     id,
     spots,

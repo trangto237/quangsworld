@@ -131,6 +131,13 @@ export const ISLAND_GAMES: Record<string, IslandGame> = {
     blurb: 'A shootout on the island beach — find the right angle and score!',
     dress: { bg: 'bg-gradient-to-b from-sky-600 via-cyan-800 to-amber-900' },
   },
+  'olympiad-spire': {
+    mode: 'knight',
+    name: 'Spire Chess',
+    emoji: '🏆',
+    blurb: 'No clock, just hard problems: every one you crack is a knight move toward the Glitch king.',
+    dress: { bg: 'bg-gradient-to-b from-violet-950 via-indigo-950 to-slate-950' },
+  },
   'logic-labyrinth': {
     mode: 'knight',
     name: "Knight's Labyrinth",

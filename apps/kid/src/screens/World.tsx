@@ -23,7 +23,9 @@ export function WorldScreen({ student, worldId }: { student: StudentProfile; wor
   const lang = useLang();
   const island = ISLAND_GAMES[worldId];
   /** No topic to choose: a mix of the whole island, its weakest and due topics first. */
-  const playMix = () => go({ name: 'battle', mission: mixMission(concepts.map((c) => c.id), `🎲 ${world.name}`, states), fromPlan: false });
+  const playMix = () =>
+    concepts.length > 0 &&
+    go({ name: 'battle', mission: mixMission(concepts.map((c) => c.id), `🎲 ${world.name}`, states), fromPlan: false });
 
   return (
     <TownScreen student={student} tab="map" onPlay={playMix} back={() => go(realmOf(worldId) ? { name: 'realm', realmId: realmOf(worldId)!.id } : { name: 'hub' })}>

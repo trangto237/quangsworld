@@ -44,6 +44,7 @@ export const WORLDS: World[] = [
   { id: 'number-citadel', name: 'Number Citadel', emoji: '🏰', color: '#059669', subject: 'math', domains: ['Number', 'Statistics', 'Combinatorics'], blurb: 'Defend the walls with the power of numbers.' },
   { id: 'algebra-peaks', name: 'Algebra Peaks', emoji: '⛰️', color: '#2563eb', subject: 'math', domains: ['Algebra', 'Mathematical Reasoning'], blurb: 'Rally up the mountain by balancing the unknown.' },
   { id: 'geometry-isles', name: 'Geometry Isles', emoji: '🔺', color: '#0d9488', subject: 'math', domains: ['Geometry'], blurb: 'Score on the island beach with angles and shapes.' },
+  { id: 'olympiad-spire', name: 'Olympiad Spire', emoji: '🏆', color: '#7c3aed', subject: 'math', domains: ['Advanced'], blurb: 'Chuyên Toán and HSG problems for the boldest climbers.' },
   { id: 'logic-labyrinth', name: 'Logic Labyrinth', emoji: '♞', color: '#d97706', subject: 'logic', domains: ['Pattern recognition', 'Deduction', 'Spatial reasoning', 'Chess puzzles', 'Sequence'], blurb: 'A maze only the sharpest minds escape.' },
   { id: 'story-library', name: 'Story Library', emoji: '📜', color: '#db2777', subject: 'literature', domains: ['Sách Ngữ văn', 'Đọc hiểu', 'Từ ngữ', 'Nghị luận', 'Viết'], blurb: 'Every book hides a guardian.' },
 ];

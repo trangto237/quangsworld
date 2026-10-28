@@ -36,7 +36,7 @@ export const REALMS: Realm[] = [
     emoji: '🏜️',
     color: '#d97706',
     blurb: 'Sandstone islands of numbers, algebra and shapes.',
-    places: ['number-citadel', 'algebra-peaks', 'geometry-isles'],
+    places: ['number-citadel', 'algebra-peaks', 'geometry-isles', 'olympiad-spire'],
     className: 'realm-maths',
   },
   {

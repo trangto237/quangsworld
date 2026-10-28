@@ -628,6 +628,7 @@ export const KINDS: Record<string, Kind> = {
   'number-citadel': citadel,
   'algebra-peaks': peaks,
   'geometry-isles': isles,
+  'olympiad-spire': tower,
   'logic-labyrinth': maze,
   'story-library': library,
   'exam-hall': examHall,

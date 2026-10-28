@@ -1,6 +1,7 @@
 import { ieltsTopicLessonsVi } from './english/ielts-topics';
 import { geometry9LessonsVi } from './math/geometry9';
 import { number9LessonsVi } from './math/number9';
+import { advancedLessonsVi } from './math/advanced';
 /**
  * Vietnamese help for question instructions, explanations and lessons.
  * Only the *instruction* is translated for English items (the English being tested stays English);
@@ -241,4 +242,5 @@ export const LESSONS_VI: Record<string, string> = {
   'logic.sequence': 'Vẽ một đường thẳng và đặt các dữ kiện chắc chắn trước, rồi thử các khả năng còn lại.',
   ...number9LessonsVi,
   ...geometry9LessonsVi,
+  ...advancedLessonsVi,
 };
