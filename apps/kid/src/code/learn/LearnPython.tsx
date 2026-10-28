@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { hashString, rng } from '@atlas/shared';
 import { cx } from '@atlas/ui';
 import { T, TB, tr, useLang, type LangMode } from '../../i18n';
 import { Meter, Panel, TownButton } from '../../town/ui';
 import { Sandbox, type SandboxHandle } from '../Sandbox';
-import { ALL_LESSONS, COURSE } from './course';
+import { COURSE } from './course';
 import type { Bi, PyLesson, PyUnit, Step } from './types';
 
 /**
@@ -16,6 +16,10 @@ import type { Bi, PyLesson, PyUnit, Step } from './types';
 
 export const lessonDoneId = (lessonId: string) => `lp:${lessonId}`;
 
+/** Prose courses (literature): passages and answers are text, not code. */
+const Prose = createContext(false);
+const useProse = () => useContext(Prose);
+
 const say = (ui: LangMode, b: Bi) => (ui === 'vi' ? b.vi : b.en);
 /** The text in his language; in "help" mode English with the Vietnamese underneath. */
 function Say({ b, className }: { b: Bi; className?: string }) {
@@ -23,7 +27,7 @@ function Say({ b, className }: { b: Bi; className?: string }) {
   return (
     <div className={className}>
       <p className="whitespace-pre-line">{say(ui, b)}</p>
-      {ui === 'help' && (
+      {ui === 'help' && b.vi !== b.en && (
         <p lang="vi" className="mt-1 whitespace-pre-line text-[0.9em] text-[#9b3b2c]">
           🇻🇳 {b.vi}
         </p>
@@ -42,26 +46,59 @@ const shuffle = <X,>(xs: X[], seed: string) => {
   return a;
 };
 /** Printed output compared fairly: no spaces at line ends, no blank lines at the end. */
-const norm = (s: string) => s.replace(/\r/g, '').split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
+const norm = (s: string) =>
+  s
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => l.replace(/\s+$/, ''))
+    .join('\n')
+    .replace(/\n+$/, '');
 
 // ── Python, coloured ────────────────────────────────────────────
 const KEYWORDS = new Set('def return if elif else for while in not and or True False None break continue import from as pass class lambda global try except finally with is del'.split(' '));
 const BUILTINS = new Set('print input len range int float str bool list dict type sum max min sorted round abs enumerate zip append'.split(' '));
 function PyLine({ line }: { line: string }) {
+  const prose = useProse();
+  if (prose) return <>{line || '\u00a0'}</>;
   const parts: ReactNode[] = [];
   const re = /(#.*$)|(f?"[^"]*"?|f?'[^']*'?)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)|(___)|(\s+|.)/g;
   let m: RegExpExecArray | null;
   let k = 0;
   while ((m = re.exec(line))) {
     const [t, com, str, numb, word] = m;
-    const cls = com ? 'text-[#7d8b6a] italic' : str ? 'text-[#c2410c]' : numb ? 'text-[#7c3aed]' : word && KEYWORDS.has(word) ? 'text-[#be185d] font-bold' : word && BUILTINS.has(word) ? 'text-[#0369a1]' : '';
-    parts.push(cls ? <span key={k++} className={cls}>{t}</span> : t);
+    const cls = com
+      ? 'text-[#7d8b6a] italic'
+      : str
+        ? 'text-[#c2410c]'
+        : numb
+          ? 'text-[#7c3aed]'
+          : word && KEYWORDS.has(word)
+            ? 'text-[#be185d] font-bold'
+            : word && BUILTINS.has(word)
+              ? 'text-[#0369a1]'
+              : '';
+    parts.push(
+      cls ? (
+        <span key={k++} className={cls}>
+          {t}
+        </span>
+      ) : (
+        t
+      ),
+    );
   }
   return <>{parts.length ? parts : ' '}</>;
 }
 export function PyCode({ code, className }: { code: string; className?: string }) {
+  const prose = useProse();
   return (
-    <pre className={cx('overflow-x-auto rounded-xl border-2 border-ink/20 bg-[#fffaf0] p-3 font-mono text-[15px] leading-relaxed text-ink-text', className)}>
+    <pre
+      className={cx(
+        'overflow-x-auto rounded-xl border-2 border-ink/20 bg-[#fffaf0] p-3 text-ink-text',
+        prose ? 'whitespace-pre-wrap font-sans text-[16px] leading-relaxed' : 'font-mono text-[15px] leading-relaxed',
+        className,
+      )}
+    >
       {code.split('\n').map((l, i) => (
         <div key={i}>
           <PyLine line={l} />
@@ -83,6 +120,43 @@ function Output({ text, label = 'Output' }: { text: string; label?: string }) {
 
 // ── The course path ───────────────────────────────────────────
 export function LearnPython({ done, onPassed }: { done: string[]; onPassed: (id: string) => void }) {
+  return (
+    <CourseView
+      units={COURSE}
+      done={done}
+      onPassed={onPassed}
+      doneId={lessonDoneId}
+      icon="🐍"
+      title="Learn Python"
+      intro="Short lessons: read an idea, then practise it right away. {n}/{m} lessons done."
+    />
+  );
+}
+
+/**
+ * A course of short lessons on a path (Learn Python, Lớp học Ngữ văn). `prose` shows passages and answers
+ * as text instead of code.
+ */
+export function CourseView({
+  units: COURSE,
+  done,
+  onPassed,
+  doneId: lessonDoneId,
+  icon,
+  title,
+  intro,
+  prose = false,
+}: {
+  units: PyUnit[];
+  done: string[];
+  onPassed: (id: string) => void;
+  doneId: (lessonId: string) => string;
+  icon: string;
+  title: string;
+  intro: string;
+  prose?: boolean;
+}) {
+  const ALL_LESSONS = useMemo(() => COURSE.flatMap((u) => u.lessons), [COURSE]);
   const isDone = (l: PyLesson) => done.includes(lessonDoneId(l.id));
   const nextIdx = ALL_LESSONS.findIndex((l) => !isDone(l));
   const [playing, setPlaying] = useState<{ unit: PyUnit; lesson: PyLesson } | null>(null);
@@ -95,31 +169,34 @@ export function LearnPython({ done, onPassed }: { done: string[]; onPassed: (id:
 
   if (playing)
     return (
-      <LessonPlayer
-        key={playing.lesson.id}
-        unit={playing.unit}
-        lesson={playing.lesson}
-        onExit={() => setPlaying(null)}
-        onFinish={() => onPassed(lessonDoneId(playing.lesson.id))}
-        onNext={() => {
-          const k = ALL_LESSONS.indexOf(playing.lesson) + 1;
-          const l = ALL_LESSONS[k];
-          setPlaying(l ? { unit: COURSE.find((u) => u.lessons.includes(l))!, lesson: l } : null);
-        }}
-      />
+      <Prose.Provider value={prose}>
+        <LessonPlayer
+          hasNext={ALL_LESSONS.indexOf(playing.lesson) < ALL_LESSONS.length - 1}
+          key={playing.lesson.id}
+          unit={playing.unit}
+          lesson={playing.lesson}
+          onExit={() => setPlaying(null)}
+          onFinish={() => onPassed(lessonDoneId(playing.lesson.id))}
+          onNext={() => {
+            const k = ALL_LESSONS.indexOf(playing.lesson) + 1;
+            const l = ALL_LESSONS[k];
+            setPlaying(l ? { unit: COURSE.find((u) => u.lessons.includes(l))!, lesson: l } : null);
+          }}
+        />
+      </Prose.Provider>
     );
 
   const next = nextIdx >= 0 ? ALL_LESSONS[nextIdx] : null;
   return (
     <div className="space-y-4">
       <Panel className="flex flex-wrap items-center gap-3">
-        <span className="grid size-12 place-items-center rounded-2xl border-[2.5px] border-ink bg-[#d9f99d] text-3xl">🐍</span>
+        <span className="grid size-12 place-items-center rounded-2xl border-[2.5px] border-ink bg-[#d9f99d] text-3xl">{icon}</span>
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-xl font-bold leading-tight">
-            <T en="Learn Python" />
+            <T en={title} />
           </h2>
           <p className="text-sm text-ink-soft">
-            <T en="Short lessons: read an idea, then practise it right away. {n}/{m} lessons done." vars={{ n: finished, m: ALL_LESSONS.length }} />
+            <T en={intro} vars={{ n: finished, m: ALL_LESSONS.length }} />
           </p>
           <Meter value={finished} max={ALL_LESSONS.length} color="#5cb85c" className="mt-1 h-2" />
         </div>
@@ -192,7 +269,7 @@ function BiText({ b }: { b: Bi }) {
 }
 
 // ── One lesson ──────────────────────────────────────────────────
-function LessonPlayer({ unit, lesson, onExit, onFinish, onNext }: { unit: PyUnit; lesson: PyLesson; onExit: () => void; onFinish: () => void; onNext: () => void }) {
+function LessonPlayer({ unit, lesson, hasNext, onExit, onFinish, onNext }: { unit: PyUnit; lesson: PyLesson; hasNext: boolean; onExit: () => void; onFinish: () => void; onNext: () => void }) {
   const total = lesson.steps.length;
   /** Steps still to do, in order; a missed question goes back to the end once. */
   const [queue, setQueue] = useState(() => lesson.steps.map((_, i) => i));
@@ -241,7 +318,7 @@ function LessonPlayer({ unit, lesson, onExit, onFinish, onNext }: { unit: PyUnit
           <TownButton tone="paper" onClick={onExit}>
             <TB en="Back to the path" />
           </TownButton>
-          {ALL_LESSONS.indexOf(lesson) < ALL_LESSONS.length - 1 && (
+          {hasNext && (
             <TownButton tone="green" onClick={onNext}>
               <TB en="Next lesson" /> →
             </TownButton>
@@ -296,6 +373,8 @@ function StepView({ step, seed, onDone }: { step: Step; seed: string; onDone: (o
       return <OutputStep step={step} onDone={onDone} />;
     case 'write':
       return <WriteStep step={step} onDone={onDone} />;
+    case 'compose':
+      return <ComposeStep step={step} onDone={() => onDone(true)} />;
   }
 }
 
@@ -369,7 +448,15 @@ function ReadStep({ step, onDone }: { step: Extract<Step, { kind: 'read' }>; onD
 
 function ChoiceStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'choice' }>; seed: string; onDone: (ok: boolean) => void }) {
   const ui = useLang();
-  const order = useMemo(() => shuffle(step.options.map((_, i) => i), seed), [step, seed]);
+  const prose = useProse();
+  const order = useMemo(
+    () =>
+      shuffle(
+        step.options.map((_, i) => i),
+        seed,
+      ),
+    [step, seed],
+  );
   const [pick, setPick] = useState<number | null>(null);
   const [verdict, setVerdict] = useState<Verdict>(null);
   const label = (o: string | Bi) => (typeof o === 'string' ? o : say(ui, o));
@@ -398,7 +485,9 @@ function ChoiceStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'choic
       <CheckBar
         ready={pick !== null}
         verdict={verdict}
-        onCheck={() => setVerdict({ ok: pick === step.answer, why: step.why, right: <code className="font-mono">{label(step.options[step.answer])}</code> })}
+        onCheck={() =>
+          setVerdict({ ok: pick === step.answer, why: step.why, right: prose ? <b>{label(step.options[step.answer])}</b> : <code className="font-mono">{label(step.options[step.answer])}</code> })
+        }
         onContinue={() => onDone(!!verdict?.ok)}
       />
     </div>
@@ -406,7 +495,15 @@ function ChoiceStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'choic
 }
 
 function FillStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'fill' }>; seed: string; onDone: (ok: boolean) => void }) {
-  const bank = useMemo(() => shuffle([...step.answers, ...step.extra].map((w, i) => ({ w, i })), seed), [step, seed]);
+  const prose = useProse();
+  const bank = useMemo(
+    () =>
+      shuffle(
+        [...step.answers, ...step.extra].map((w, i) => ({ w, i })),
+        seed,
+      ),
+    [step, seed],
+  );
   /** Bank tile index in each blank. */
   const [slots, setSlots] = useState<(number | null)[]>(() => step.answers.map(() => null));
   const [verdict, setVerdict] = useState<Verdict>(null);
@@ -421,7 +518,7 @@ function FillStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'fill' }
   return (
     <div className="space-y-3">
       <Say b={step.ask} className="font-display text-lg font-bold" />
-      <pre className="overflow-x-auto rounded-xl border-2 border-ink/20 bg-[#fffaf0] p-3 font-mono text-[15px] leading-loose">
+      <pre className={cx('overflow-x-auto rounded-xl border-2 border-ink/20 bg-[#fffaf0] p-3 leading-loose', prose ? 'whitespace-pre-wrap font-sans text-[16px]' : 'font-mono text-[15px]')}>
         {step.code.split('\n').map((line, li) => (
           <div key={li}>
             {line.split('___').map((part, pi, arr) => {
@@ -453,7 +550,7 @@ function FillStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'fill' }
             key={b.i}
             disabled={used.has(b.i) || !!verdict}
             onClick={() => put(b.i)}
-            className={cx('town-btn rounded-lg px-3 py-1.5 font-mono font-bold', used.has(b.i) ? 'bg-paper-3 opacity-30' : 'bg-white hover:bg-paper-3')}
+            className={cx('town-btn rounded-lg px-3 py-1.5 font-bold', !prose && 'font-mono', used.has(b.i) ? 'bg-paper-3 opacity-30' : 'bg-white hover:bg-paper-3')}
           >
             {b.w}
           </button>
@@ -477,9 +574,14 @@ function FillStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'fill' }
 }
 
 function OrderStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'order' }>; seed: string; onDone: (ok: boolean) => void }) {
+  const prose = useProse();
+  const lineCls = prose ? 'font-sans text-[15px] font-semibold whitespace-normal' : 'font-mono text-[15px] whitespace-pre';
   // Shuffled, but never already in the right order.
   const tiles = useMemo(() => {
-    let s = shuffle(step.lines.map((l, i) => ({ l, i })), seed);
+    let s = shuffle(
+      step.lines.map((l, i) => ({ l, i })),
+      seed,
+    );
     for (let k = 1; k < 6 && s.every((t, i) => step.lines[i] === t.l); k++) s = shuffle(s, `${seed}:${k}`);
     return s;
   }, [step, seed]);
@@ -489,16 +591,16 @@ function OrderStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'order'
     <div className="space-y-3">
       <Say b={step.ask} className="font-display text-lg font-bold" />
       <div className="min-h-16 space-y-1.5 rounded-xl border-2 border-dashed border-ink/30 bg-[#fffaf0] p-2">
-        {built.length === 0 && (
-          <p className="p-2 text-sm text-ink-soft">
-            <T en="Tap the lines in the order the program should run." />
-          </p>
-        )}
+        {built.length === 0 && <p className="p-2 text-sm text-ink-soft">{prose ? <T en="Tap the parts in the right order." /> : <T en="Tap the lines in the order the program should run." />}</p>}
         {built.map((i, k) => (
           <button
             key={i}
             onClick={() => !verdict && setBuilt(built.filter((x) => x !== i))}
-            className={cx('block w-full rounded-lg px-2 py-1.5 text-left font-mono text-[15px] whitespace-pre', verdict ? (step.lines[k] === tiles.find((t) => t.i === i)!.l ? 'bg-[#e6f6d5]' : 'bg-[#fde3dc]') : 'bg-white ring-1 ring-ink/15')}
+            className={cx(
+              'block w-full rounded-lg px-2 py-1.5 text-left',
+              lineCls,
+              verdict ? (step.lines[k] === tiles.find((t) => t.i === i)!.l ? 'bg-[#e6f6d5]' : 'bg-[#fde3dc]') : 'bg-white ring-1 ring-ink/15',
+            )}
           >
             <PyLine line={tiles.find((t) => t.i === i)!.l} />
           </button>
@@ -508,7 +610,12 @@ function OrderStep({ step, seed, onDone }: { step: Extract<Step, { kind: 'order'
         {tiles
           .filter((t) => !built.includes(t.i))
           .map((t) => (
-            <button key={t.i} disabled={!!verdict} onClick={() => setBuilt([...built, t.i])} className="town-btn block w-full rounded-lg bg-white px-2 py-1.5 text-left font-mono text-[15px] whitespace-pre hover:bg-paper-3">
+            <button
+              key={t.i}
+              disabled={!!verdict}
+              onClick={() => setBuilt([...built, t.i])}
+              className={cx('town-btn block w-full rounded-lg bg-white px-2 py-1.5 text-left hover:bg-paper-3', lineCls)}
+            >
               <PyLine line={t.l} />
             </button>
           ))}
@@ -706,6 +813,65 @@ function WriteStep({ step, onDone }: { step: Extract<Step, { kind: 'write' }>; o
         onDone={() => live.current.finish?.()}
       />
       <CheckBar ready={!busy && code.trim().length > 0} verdict={verdict} onCheck={() => void check()} onContinue={() => onDone(!!verdict?.ok)} />
+    </div>
+  );
+}
+
+/**
+ * Guided writing: a short task with sentence starters. He writes, then compares with a model answer and
+ * ticks a checklist. Not graded — it shows what a good answer looks like.
+ */
+function ComposeStep({ step, onDone }: { step: Extract<Step, { kind: 'compose' }>; onDone: () => void }) {
+  const [text, setText] = useState(step.frame ?? '');
+  const [shown, setShown] = useState(false);
+  const [ticked, setTicked] = useState<boolean[]>(() => step.checklist.map(() => false));
+  const wrote = text.trim().length > (step.frame?.trim().length ?? 0) + 8;
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-bold uppercase tracking-wide text-[#16a34a]">
+        ✍️ <T en="Your turn: write a little" />
+      </div>
+      <Say b={step.task} className="font-display text-lg font-bold" />
+      {step.tip && <Say b={step.tip} className="rounded-lg bg-paper-2 p-2 text-sm" />}
+      <textarea
+        value={text}
+        onChange={(e) => !shown && setText(e.target.value)}
+        rows={4}
+        className="w-full rounded-xl border-[2.5px] border-ink bg-[#fffaf0] p-3 text-[16px] leading-relaxed text-ink-text outline-none focus:ring-2 focus:ring-[#ffc23d]"
+        aria-label="Your answer"
+      />
+      {!shown ? (
+        <TownButton tone="green" size="lg" className="w-full" disabled={!wrote} onClick={() => setShown(true)}>
+          <TB en="Compare with a model answer" />
+        </TownButton>
+      ) : (
+        <div className="animate-pop space-y-3">
+          <div className="rounded-xl bg-[#e6f6d5] p-3">
+            <div className="text-xs font-bold uppercase tracking-wide text-[#15803d]">
+              ⭐ <T en="Model answer" />
+            </div>
+            <p className="mt-1 whitespace-pre-line text-[15px] leading-relaxed">{step.model}</p>
+          </div>
+          <div className="rounded-xl bg-paper-2 p-3">
+            <div className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+              ✅ <T en="Check your answer" />
+            </div>
+            <ul className="mt-1 space-y-1">
+              {step.checklist.map((c, i) => (
+                <li key={i}>
+                  <label className="flex cursor-pointer items-start gap-2 text-[15px]">
+                    <input type="checkbox" className="mt-1 size-4 accent-[#5cb85c]" checked={ticked[i]} onChange={() => setTicked(ticked.map((t, k) => (k === i ? !t : t)))} />
+                    <span>{c}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <TownButton tone="green" size="lg" className="w-full" onClick={onDone}>
+            <TB en="Continue" />
+          </TownButton>
+        </div>
+      )}
     </div>
   );
 }

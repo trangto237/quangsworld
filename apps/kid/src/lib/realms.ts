@@ -55,7 +55,7 @@ export const REALMS: Realm[] = [
     emoji: '🏮',
     color: '#db2777',
     blurb: 'Lantern islands of stories, poems and writing.',
-    places: ['story-library', 'writing'],
+    places: ['lit-class', 'story-library', 'writing'],
     className: 'realm-literature',
   },
 ];

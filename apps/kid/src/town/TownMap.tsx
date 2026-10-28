@@ -86,7 +86,7 @@ function Flowers({ s }: { s: Spot }) {
   );
 }
 
-const SERVICE = ['exam-hall', 'coach', 'shop', 'home', 'gate', 'realm-english', 'realm-maths', 'realm-logic', 'realm-literature', 'arcade', 'writing'];
+const SERVICE = ['exam-hall', 'coach', 'shop', 'home', 'gate', 'realm-english', 'realm-maths', 'realm-logic', 'realm-literature', 'arcade', 'writing', 'lit-class'];
 
 function drawingFor(s: Spot, st: SpotState) {
   const kind = s.kind === 'home' ? house('#ffe3a3', '#e8584a', 2) : KINDS[s.kind];

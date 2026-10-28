@@ -19,6 +19,7 @@ export type Screen =
   | { name: 'exam'; examId: string }
   | { name: 'code' }
   | { name: 'writing' }
+  | { name: 'litclass' }
   | { name: 'arcade' }
   | { name: 'garden'; quest?: Mission }
   | { name: 'realm'; realmId: RealmId | 'home' }

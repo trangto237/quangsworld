@@ -135,7 +135,7 @@ export const ISLAND_GAMES: Record<string, IslandGame> = {
     mode: 'knight',
     name: "Knight's Labyrinth",
     emoji: '♞',
-    blurb: 'Every right answer is a knight move — hunt the Glitch king through the maze.',
+    blurb: 'Every right answer is a knight move on the chessboard — capture the Glitch pawns, then the king.',
   },
   'scholars-academy': {
     mode: 'knight',

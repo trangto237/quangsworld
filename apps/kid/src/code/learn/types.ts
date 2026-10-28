@@ -6,6 +6,8 @@
 
 export type Bi = { en: string; vi: string };
 export const bi = (en: string, vi: string): Bi => ({ en, vi });
+/** Vietnamese-only text (the literature course is taught in Vietnamese). */
+export const vn = (s: string): Bi => ({ en: s, vi: s });
 
 export type Step =
   /** An explanation, with an optional example and what it prints. */
@@ -30,7 +32,12 @@ export type Step =
    * Write (or finish) a program; it runs in the app's Python and passes when it prints exactly `expect`.
    * `stdin`: what input() will read, one line each. The test runs `solution` and checks it prints `expect`.
    */
-  | { kind: 'write'; task: Bi; starter: string; expect: string; solution: string; hint: Bi; stdin?: string[] };
+  | { kind: 'write'; task: Bi; starter: string; expect: string; solution: string; hint: Bi; stdin?: string[] }
+  /**
+   * Guided writing (literature): a short task (1–3 sentences) with sentence starters. He writes, then sees a
+   * model answer and ticks a checklist to compare. Nothing is graded: it teaches by showing what good looks like.
+   */
+  | { kind: 'compose'; task: Bi; frame?: string; model: string; checklist: string[]; tip?: Bi };
 
 export interface PyLesson {
   /** Unique across the course, e.g. "u3-l2". */

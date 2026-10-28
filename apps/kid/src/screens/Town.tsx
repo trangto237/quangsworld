@@ -19,6 +19,8 @@ import { useDayPhase } from '../town/life';
 import { cx } from '@atlas/ui';
 import { REALMS, realmOf, type RealmId } from '../lib/realms';
 import { writingKey } from './Writing';
+import { litDoneKey } from './LitClass';
+import { LIT_LESSONS } from '../lit/course';
 import { Meter, Ribbon, TownButton } from '../town/ui';
 
 /** Above the quest card (which sits above the bottom bar and the phone's home-bar gap). */
@@ -44,6 +46,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
   const codeProgress = useQuery((r) => r.getKv<string[]>(`code-done:${student.id}`) ?? [], [student.id]);
   const slots = useQuery((r) => getSlots(r, student.id), [student.id]);
   const writings = useQuery((r) => (r.getKv<unknown[]>(writingKey(student.id)) ?? []).length, [student.id]);
+  const litDone = useQuery((r) => (r.getKv<string[]>(litDoneKey(student.id)) ?? []).length, [student.id]);
   const phase = useDayPhase();
   const hero = { armour: inSlot(slots, 'armour')?.id, emblem: student.avatar, hat: inSlot(slots, 'hat')?.emoji, pet: inSlot(slots, 'pet')?.emoji };
   const next = plan.missions.find((m) => !m.done);
@@ -108,6 +111,14 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
       color: '#db2777',
       blurb: tr(lang, 'Practise the two literature exam essays.'),
     };
+    out['lit-class'] = {
+      level: Math.min(4, 1 + Math.floor(litDone / 9)),
+      title: 'Lớp học Ngữ văn',
+      sub: `📖 ${litDone}/${LIT_LESSONS.length}`,
+      icon: '📖',
+      color: '#be185d',
+      blurb: tr(lang, 'Ngữ văn 8 & 9, step by step: learn, try an example together, practise, write a few sentences.'),
+    };
     out['exam-hall'].stops = stopsAt('exam-hall');
     // Each realm's portal on Home sums up its places.
     for (const r of REALMS) {
@@ -127,7 +138,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
     }
     out.gate = { level: 2, title: tr(lang, 'Home'), sub: '', icon: '🏠', color: '#ffc23d', blurb: tr(lang, 'Fly back to the home island.') };
     return { out, questWorld, path };
-  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress, writings]);
+  }, [states, next, lang, exams, wallet, student.name, student.avatar, plan, played, codeOpen, codeProgress, writings, litDone]);
 
   // Level-up moments: compare with what this device last showed; celebrate one building that grew.
   const seenKey = `atlas-town-seen:${student.id}`;
@@ -137,7 +148,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
     if (checked.current) return;
     checked.current = true;
     const now: Record<string, { level: number; explored: boolean }> = {};
-    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !id.startsWith('realm-') && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade', 'gate', 'writing'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
+    for (const [id, st] of Object.entries(spots.out)) if (!st.hidden && !id.startsWith('realm-') && !['exam-hall', 'coach', 'shop', 'home', 'code-lab', 'arcade', 'gate', 'writing', 'lit-class'].includes(id)) now[id] = { level: st.level, explored: !st.unexplored };
     let before: typeof now | null = null;
     try {
       before = JSON.parse(localStorage.getItem(seenKey) ?? 'null');
@@ -267,6 +278,7 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
     else if (s.id === 'word-forest') go({ name: 'garden' });
     else if (s.kind === 'gate') go({ name: 'hub' });
     else if (s.kind === 'writing') go({ name: 'writing' });
+    else if (s.kind === 'lit-class') go({ name: 'litclass' });
     else if (s.kind.startsWith('realm-')) go({ name: 'realm', realmId: s.kind.slice(6) as RealmId });
     else if (!spots.out[s.id]?.hidden) go({ name: 'world', worldId: s.id });
   };

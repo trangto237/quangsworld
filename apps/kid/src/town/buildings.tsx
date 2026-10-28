@@ -615,6 +615,7 @@ export const KINDS: Record<string, Kind> = {
   'realm-literature': portal('#fbcfe8', '🏮', ['📜', '✍️', '🪷']),
   gate: portal('#fff7cc', '🏠'),
   writing,
+  'lit-class': school,
   arcade,
   'code-lab': codeLab,
   'scholars-academy': school,

@@ -20,6 +20,7 @@ import { ExamHall } from './screens/ExamHall';
 import { Exam } from './screens/Exam';
 import { CoachCorner } from './screens/CoachCorner';
 import { CodeLab } from './code/CodeLab';
+import { LitClass } from './screens/LitClass';
 import { Writing } from './screens/Writing';
 import { Arcade } from './screens/Arcade';
 import { GardenScreen } from './screens/Garden';
@@ -85,6 +86,8 @@ function Screens() {
       return <Hero student={student} />;
     case 'writing':
       return <Writing student={student} />;
+    case 'litclass':
+      return <LitClass student={student} />;
     case 'garden':
       return <GardenScreen key={screen.quest?.id ?? 'garden'} student={student} quest={screen.quest} />;
     case 'arcade':
