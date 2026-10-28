@@ -290,3 +290,17 @@ describe('shop catalogue', () => {
     for (const m of ['defense', 'runner', 'duel', 'knight', 'penalty', 'race', 'meteor', 'sprint', 'detective']) expect(SHOP.some((i) => i.mode === m && i.slot)).toBe(true);
   });
 });
+
+describe('grade floor', () => {
+  it('never pitches a grade 9 below level 3, and still adapts above it', async () => {
+    const { targetDifficulty, setDifficultyFloor, gradeFloor } = await import('./irt');
+    expect(gradeFloor(9)).toBe(3);
+    expect(gradeFloor(7)).toBe(2);
+    expect(gradeFloor(undefined)).toBe(1);
+    setDifficultyFloor(9);
+    expect(targetDifficulty(0)).toBe(3);
+    expect(targetDifficulty(95)).toBe(5);
+    setDifficultyFloor(undefined);
+    expect(targetDifficulty(0)).toBe(1);
+  });
+});

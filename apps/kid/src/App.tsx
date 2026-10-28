@@ -1,3 +1,4 @@
+import { setDifficultyFloor } from '@atlas/engine';
 import { useEffect } from 'react';
 import { useQuery } from '@atlas/ui';
 import { useKid } from './store';
@@ -54,6 +55,8 @@ function Screens() {
   useEffect(() => {
     if (studentId && !student) logout();
   }, [studentId, student, logout]);
+  // Every game, the garden and practice pitch questions at his school grade.
+  setDifficultyFloor(student?.grade);
 
   // First run for this kid: the placement "trial" before anything else.
   useEffect(() => {

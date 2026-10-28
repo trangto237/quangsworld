@@ -12,6 +12,9 @@ import { passageConcepts, passageQuestions } from './english/passages';
 import { wordOrderConcepts, wordOrderQuestions } from './english/word-order';
 import { ieltsTopicConcepts, ieltsTopicQuestions } from './english/ielts-topics';
 import { literatureConcepts, literatureQuestions } from './literature';
+import { englishGrade9Bank } from './english/grade9-bank';
+import { logicGrade9Bank } from './logic/grade9-bank';
+import { literatureGrade9Bank } from './literature/grade9-bank';
 
 const withSubject = (subject: SubjectId, seeds: ConceptSeed[]): ConceptDef[] => seeds.map((c) => ({ ...c, subject }));
 
@@ -27,7 +30,18 @@ export const concepts: ConceptDef[] = [
   ...withSubject('literature', literatureConcepts),
 ];
 
-export const questions: Question[] = [...englishQuestions, ...examSkillQuestions, ...passageQuestions, ...wordOrderQuestions, ...ieltsTopicQuestions, ...logicQuestions, ...literatureQuestions];
+export const questions: Question[] = [
+  ...englishQuestions,
+  ...examSkillQuestions,
+  ...passageQuestions,
+  ...wordOrderQuestions,
+  ...ieltsTopicQuestions,
+  ...logicQuestions,
+  ...literatureQuestions,
+  ...englishGrade9Bank,
+  ...logicGrade9Bank,
+  ...literatureGrade9Bank,
+];
 
 const sanitizeAll = (g: Record<string, Generator>): Record<string, Generator> =>
   Object.fromEntries(Object.entries(g).map(([id, gen]) => [id, (d: number, r: () => number) => sanitize(gen(d, r))]));
