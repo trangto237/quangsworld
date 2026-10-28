@@ -1,6 +1,8 @@
 import type { ConceptSeed } from '../helpers';
+import { geometry9Concepts, geometry9Patches } from './geometry9';
+import { number9Concepts, number9Patches } from './number9';
 
-export const mathConcepts: ConceptSeed[] = [
+const baseConcepts: ConceptSeed[] = [
   // ── Number ─────────────────────────────────────────────────
   {
     id: 'math.number.integers',
@@ -223,4 +225,11 @@ export const mathConcepts: ConceptSeed[] = [
     lesson: 'Choose the unknown and its condition (x > 0, a whole number…), set up the equation or system from the story, solve it, reject roots that break the condition, then answer in words.',
     examRefs: ['Vào 10 Hà Nội · Bài II'],
   },
+];
+
+/** Grade 9 content: the base concepts with their grade-9 changes, plus the new grade-9 concepts. */
+export const mathConcepts: ConceptSeed[] = [
+  ...baseConcepts.map((c) => ({ ...c, ...geometry9Patches[c.id], ...number9Patches[c.id] })),
+  ...number9Concepts,
+  ...geometry9Concepts,
 ];
