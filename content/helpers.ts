@@ -13,7 +13,7 @@ export function makeBank(source: string, idPrefix = '') {
     difficulty: number,
     prompt: string,
     choices: string[],
-    extra: Partial<Pick<Question, 'explanation' | 'type' | 'audio' | 'passage' | 'sign' | 'script' | 'setId' | 'accept'>> = {},
+    extra: Partial<Pick<Question, 'explanation' | 'explanationVi' | 'promptVi' | 'figure' | 'type' | 'audio' | 'passage' | 'sign' | 'script' | 'setId' | 'accept'>> = {},
   ) {
     const n = (counters.get(conceptId) ?? 0) + 1;
     counters.set(conceptId, n);
@@ -26,6 +26,9 @@ export function makeBank(source: string, idPrefix = '') {
       options: choices,
       answer: 0,
       explanation: extra.explanation,
+      explanationVi: extra.explanationVi,
+      promptVi: extra.promptVi,
+      figure: extra.figure,
       audio: extra.audio,
       passage: extra.passage,
       sign: extra.sign,

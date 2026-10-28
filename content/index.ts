@@ -15,6 +15,7 @@ import { literatureConcepts, literatureQuestions } from './literature';
 import { englishGrade9Bank } from './english/grade9-bank';
 import { logicGrade9Bank } from './logic/grade9-bank';
 import { literatureGrade9Bank } from './literature/grade9-bank';
+import { olympiadQuestions } from './math/olympiad';
 
 const withSubject = (subject: SubjectId, seeds: ConceptSeed[]): ConceptDef[] => seeds.map((c) => ({ ...c, subject }));
 
@@ -41,6 +42,7 @@ export const questions: Question[] = [
   ...englishGrade9Bank,
   ...logicGrade9Bank,
   ...literatureGrade9Bank,
+  ...olympiadQuestions,
 ];
 
 const sanitizeAll = (g: Record<string, Generator>): Record<string, Generator> =>
