@@ -30,6 +30,7 @@ export function LitClass({ student }: { student: StudentProfile }) {
           units={LIT_COURSE}
           done={done}
           onPassed={(id) => void finish(id)}
+          onSkip={(ids) => void repo.setKv(litDoneKey(student.id), [...new Set([...done, ...ids])])}
           doneId={(lessonId) => lessonId}
           icon="📖"
           title="Lớp học Ngữ văn"

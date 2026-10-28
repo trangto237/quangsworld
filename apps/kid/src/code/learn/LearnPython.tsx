@@ -119,12 +119,13 @@ function Output({ text, label = 'Output' }: { text: string; label?: string }) {
 }
 
 // ── The course path ───────────────────────────────────────────
-export function LearnPython({ done, onPassed }: { done: string[]; onPassed: (id: string) => void }) {
+export function LearnPython({ done, onPassed, onSkip }: { done: string[]; onPassed: (id: string) => void; onSkip?: (ids: string[]) => void }) {
   return (
     <CourseView
       units={COURSE}
       done={done}
       onPassed={onPassed}
+      onSkip={onSkip}
       doneId={lessonDoneId}
       icon="🐍"
       title="Learn Python"
@@ -146,10 +147,13 @@ export function CourseView({
   title,
   intro,
   prose = false,
+  onSkip,
 }: {
   units: PyUnit[];
   done: string[];
   onPassed: (id: string) => void;
+  /** A jump test was passed: mark these lessons done (without the lesson rewards). */
+  onSkip?: (ids: string[]) => void;
   doneId: (lessonId: string) => string;
   icon: string;
   title: string;
@@ -160,12 +164,33 @@ export function CourseView({
   const isDone = (l: PyLesson) => done.includes(lessonDoneId(l.id));
   const nextIdx = ALL_LESSONS.findIndex((l) => !isDone(l));
   const [playing, setPlaying] = useState<{ unit: PyUnit; lesson: PyLesson } | null>(null);
+  /** A "jump here" test for a unit: pass it to skip everything before. */
+  const [jumping, setJumping] = useState<number | null>(null);
   const finished = ALL_LESSONS.filter(isDone).length;
   const open = (l: PyLesson) => ALL_LESSONS.indexOf(l) <= Math.max(0, nextIdx < 0 ? ALL_LESSONS.length : nextIdx);
   const currentRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!playing) currentRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [playing]);
+
+  if (jumping !== null)
+    return (
+      <Prose.Provider value={prose}>
+        <JumpTest
+          unit={COURSE[jumping]}
+          steps={jumpSteps(COURSE.slice(0, jumping))}
+          onExit={() => setJumping(null)}
+          onPass={() => {
+            const ids = COURSE.slice(0, jumping)
+              .flatMap((u) => u.lessons)
+              .map((l) => lessonDoneId(l.id))
+              .filter((id) => !done.includes(id));
+            if (onSkip) onSkip(ids);
+            else ids.forEach(onPassed);
+          }}
+        />
+      </Prose.Provider>
+    );
 
   if (playing)
     return (
@@ -228,6 +253,14 @@ export function CourseView({
                 {got}/{u.lessons.length}
               </span>
             </div>
+            {/* Already know this? A short test on everything before it unlocks the unit. */}
+            {ui > 0 && !open(u.lessons[0]) && (
+              <div className="mt-2 flex justify-center">
+                <TownButton tone="blue" onClick={() => setJumping(ui)}>
+                  ⏩ <TB en="Jump here" />
+                </TownButton>
+              </div>
+            )}
             {/* Lessons as stepping stones along a winding path */}
             <div className="relative mx-auto flex max-w-sm flex-col items-center gap-3 py-4">
               {u.lessons.map((l, k) => {
@@ -872,6 +905,85 @@ function ComposeStep({ step, onDone }: { step: Extract<Step, { kind: 'compose' }
           </TownButton>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Jump ahead ──────────────────────────────────────────────────
+/** Questions for a jump test: practice steps from every earlier unit, mixed, about 12 in all. */
+function jumpSteps(units: PyUnit[], n = 12): Step[] {
+  const r = rng(hashString(`${units.map((u) => u.id).join()}:${Date.now()}`));
+  const pools = units.map((u) =>
+    shuffle(
+      u.lessons.flatMap((l) => l.steps.filter((s) => s.kind === 'choice' || s.kind === 'fill' || s.kind === 'order' || s.kind === 'output')),
+      String(r()),
+    ),
+  );
+  const out: Step[] = [];
+  // Take one from each unit in turn (the later units first), so every unit is tested.
+  for (let k = 0; out.length < n && pools.some((p) => p.length > k); k++) for (let u = pools.length - 1; u >= 0 && out.length < n; u--) if (pools[u][k]) out.push(pools[u][k]);
+  return shuffle(out, String(r()));
+}
+
+/** Two mistakes are allowed; the third ends the test. */
+const JUMP_LIVES = 3;
+
+function JumpTest({ unit, steps, onExit, onPass }: { unit: PyUnit; steps: Step[]; onExit: () => void; onPass: () => void }) {
+  const [i, setI] = useState(0);
+  const [lives, setLives] = useState(JUMP_LIVES);
+  const [result, setResult] = useState<'pass' | 'fail' | null>(null);
+  const top = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    top.current?.scrollIntoView({ block: 'start' });
+  }, []);
+  const answer = (ok: boolean) => {
+    const left = ok ? lives : lives - 1;
+    setLives(left);
+    if (left <= 0) return setResult('fail');
+    if (i + 1 >= steps.length) {
+      setResult('pass');
+      onPass();
+      return;
+    }
+    setI(i + 1);
+    top.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+
+  if (result)
+    return (
+      <Panel className="mx-auto max-w-lg space-y-3 text-center">
+        <div className="town-bob text-6xl">{result === 'pass' ? '🚀' : '💪'}</div>
+        <h2 className="font-display text-2xl font-bold">{result === 'pass' ? <T en="You jumped ahead!" /> : <T en="Not this time" />}</h2>
+        <p className="font-display text-lg font-bold">
+          {unit.emoji} <BiText b={unit.title} />
+        </p>
+        <p className="text-ink-soft">
+          {result === 'pass' ? <T en="Everything before this unit is marked done. Carry on from here!" /> : <T en="No problem: do the lessons before it, or try the test again later." />}
+        </p>
+        <TownButton tone={result === 'pass' ? 'green' : 'paper'} size="lg" onClick={onExit}>
+          <TB en="Back to the path" />
+        </TownButton>
+      </Panel>
+    );
+
+  return (
+    <div ref={top} className="mx-auto max-w-2xl scroll-mt-24 space-y-3">
+      <div className="flex items-center gap-3">
+        <button onClick={onExit} className="town-btn grid size-10 shrink-0 place-items-center rounded-full bg-paper font-bold" aria-label="Leave the test">
+          ✕
+        </button>
+        <Meter value={i} max={steps.length} color="#4b8fe2" className="h-3 flex-1" />
+        <span className="shrink-0 text-sm" aria-label={`${lives} lives`}>
+          {'❤️'.repeat(lives)}
+          {'🖤'.repeat(JUMP_LIVES - lives)}
+        </span>
+      </div>
+      <p className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+        ⏩ <T en="Jump test" />: {unit.emoji} <BiText b={unit.title} /> · {i + 1}/{steps.length}
+      </p>
+      <Panel>
+        <StepView key={i} step={steps[i]} seed={`jump:${unit.id}:${i}`} onDone={answer} />
+      </Panel>
     </div>
   );
 }

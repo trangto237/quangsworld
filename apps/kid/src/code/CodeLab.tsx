@@ -162,7 +162,7 @@ export function CodeLab({ student }: { student: StudentProfile }) {
       </div>
       <div className="mt-3">
         {tab === 'blocks' && <BlocksTab done={done} onSolved={(id) => void finish(id)} />}
-        {tab === 'learn' && <LearnPython done={done} onPassed={(id) => void finish(id)} />}
+        {tab === 'learn' && <LearnPython done={done} onPassed={(id) => void finish(id)} onSkip={(ids) => void repo.setKv(doneKey(student.id), [...new Set([...done, ...ids])])} />}
         {(tab === 'js' || tab === 'py') && <CourseTab key={tab} lang={tab} lessons={LESSONS} prefix={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
         {(tab === 'bugs' || tab === 'draw') && <TwoLanguages key={tab} kind={tab} studentId={student.id} done={done} onPassed={(id) => void finish(id)} />}
         {tab === 'games' && <GamesTab studentId={student.id} />}
