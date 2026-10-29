@@ -113,6 +113,38 @@ function min2(f: (x: number, y: number) => number): number {
   };
   return tern((x) => tern((y) => f(x, y)));
 }
+// ── Plane geometry helpers for the coordinate checks ──
+type Pt = [number, number];
+const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
+const len = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const area = (...ps: Pt[]) => Math.abs(ps.reduce((s, p, i) => s + p[0] * ps[(i + 1) % ps.length][1] - ps[(i + 1) % ps.length][0] * p[1], 0)) / 2;
+/** The angle at vertex V between rays VA and VB, in degrees. */
+const angle = (A: Pt, V: Pt, B: Pt) => {
+  const [u, w] = [sub(A, V), sub(B, V)];
+  return (Math.acos((u[0] * w[0] + u[1] * w[1]) / (Math.hypot(...u) * Math.hypot(...w))) * 180) / Math.PI;
+};
+const onUnit = (deg: number): Pt => [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
+/** Where lines PQ and RS meet. */
+const meet = (P: Pt, Q: Pt, R: Pt, S: Pt): Pt => {
+  const [d1, d2] = [sub(Q, P), sub(S, R)];
+  const t = ((R[0] - P[0]) * d2[1] - (R[1] - P[1]) * d2[0]) / (d1[0] * d2[1] - d1[1] * d2[0]);
+  return [P[0] + t * d1[0], P[1] + t * d1[1]];
+};
+/** Circle through three points: [centre, radius]. */
+const circle = (A: Pt, B: Pt, C: Pt): [Pt, number] => {
+  const d = 2 * (A[0] * (B[1] - C[1]) + B[0] * (C[1] - A[1]) + C[0] * (A[1] - B[1]));
+  const sq = (p: Pt) => p[0] ** 2 + p[1] ** 2;
+  const O: Pt = [(sq(A) * (B[1] - C[1]) + sq(B) * (C[1] - A[1]) + sq(C) * (A[1] - B[1])) / d, (sq(A) * (C[0] - B[0]) + sq(B) * (A[0] - C[0]) + sq(C) * (B[0] - A[0])) / d];
+  return [O, len(O, A)];
+};
+/** The other point where line PK meets the circle, K being a point of the line already on the circle. */
+const other = (P: Pt, K: Pt, [O, R]: [Pt, number]): Pt => {
+  const u = sub(K, P), w = sub(P, O);
+  const a = u[0] ** 2 + u[1] ** 2, b = 2 * (u[0] * w[0] + u[1] * w[1]), c = w[0] ** 2 + w[1] ** 2 - R * R;
+  const s = Math.sqrt(b * b - 4 * a * c);
+  const pts = [(-b - s) / (2 * a), (-b + s) / (2 * a)].map((t): Pt => [P[0] + t * u[0], P[1] + t * u[1]]);
+  return len(pts[0], K) > len(pts[1], K) ? pts[0] : pts[1];
+};
 const isSq = (n: number) => n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
 
 const bigPow = (a: number, n: number) => BigInt(a) ** BigInt(n);
@@ -439,6 +471,85 @@ const checkers: Record<string, (p: string, g: Generated) => string | number | nu
         if (rs.every((a, i) => rs.every((b, j) => j <= i || (a + b) % md !== 0))) best = rs.length;
       }
       return best + 1;
+    }
+    return null;
+  },
+
+  'math.adv.geometry': (p) => {
+    const ns = (p.match(/\d+/g) ?? []).map(Number);
+    if (p.startsWith('Triangle ABC is similar to triangle DEF')) {
+      const [p1, q1, S] = ns;
+      const A: Pt = [0, 0], B: Pt = [p1, 0], C: Pt = [1.3, (2 * S) / p1];
+      expect(close(area(A, B, C), S)).toBe(true);
+      const k = q1 / p1, rot = (P: Pt): Pt => [k * (0.6 * P[0] - 0.8 * P[1]) + 5, k * (0.8 * P[0] + 0.6 * P[1]) - 2];
+      const [D, E, F] = [rot(A), rot(B), rot(C)];
+      expect(close(len(D, E), q1)).toBe(true);
+      return area(D, E, F);
+    }
+    if (p.includes('with MN ∥ BC')) {
+      const [S, a, b] = ns;
+      const A: Pt = [0, 0], B: Pt = [a + b, 0], C: Pt = [0.7, (2 * S) / (a + b)];
+      const t = a / (a + b), M: Pt = [t * B[0], t * B[1]], N: Pt = [t * C[0], t * C[1]];
+      expect(close(len(A, M), a)).toBe(true);
+      return p.includes('trapezoid') ? area(M, B, C, N) : area(A, M, N);
+    }
+    if (p.includes('draw the tangent MT')) {
+      const [a, b] = ns;
+      // M at the origin, A and B on the x-axis, any circle through A and B.
+      const M: Pt = [0, 0], A: Pt = [a, 0], B: Pt = [a + b, 0], O: Pt = [a + b / 2, 2.7], R = len(O, A);
+      expect(close(len(O, B), R)).toBe(true);
+      return Math.sqrt(len(M, O) ** 2 - R * R);
+    }
+    if (p.startsWith('Chords AB and CD of a circle meet at E. ')) {
+      const [a, b, c] = ns;
+      const E: Pt = [0, 0], A: Pt = [-a, 0], B: Pt = [b, 0], C: Pt = [c * Math.cos(1.1), c * Math.sin(1.1)];
+      const D = other(E, C, circle(A, B, C));
+      return len(E, D);
+    }
+    if (p.includes('The tangent at A makes an angle of')) {
+      const [al] = ns;
+      const O: Pt = [0, 0], A = onUnit(0), B = onUnit(2 * al), C = onUnit(180 + al);
+      expect(close(angle([1, 1], A, B), al, 1e-9)).toBe(true); // the tangent at A is vertical
+      const ask = p.match(/Find ∠(\w+)/)![1];
+      return ask === 'AOB' ? angle(A, O, B) : ask === 'ACB' ? angle(A, C, B) : angle(O, A, B);
+    }
+    if (p.includes('the tangents MA and MB are drawn')) {
+      const [th] = ns;
+      const M: Pt = [1 / Math.sin((th * Math.PI) / 360), 0], A = onUnit(90 - th / 2), B = onUnit(-(90 - th / 2)), C = onUnit(180);
+      expect(close(angle(A, M, B), th, 1e-9)).toBe(true);
+      expect(close(angle([0, 0], A, M), 90, 1e-9)).toBe(true);
+      return angle(A, C, B);
+    }
+    if (p.includes('two secants MAB and MCD are drawn') && p.includes('MC =')) {
+      const [a, b, c] = ns;
+      const M: Pt = [0, 0], A: Pt = [a, 0], B: Pt = [a + b, 0], C: Pt = [c * Math.cos(0.5), c * Math.sin(0.5)];
+      const D = other(M, C, circle(A, B, C));
+      expect(len(M, D)).toBeGreaterThan(c);
+      return len(C, D);
+    }
+    if (p.includes('AM : MB =')) {
+      const [S, p1, q1, s1, t1] = ns;
+      const A: Pt = [0, 0], B: Pt = [p1 + q1, 0], C: Pt = [1.7, (2 * S) / (p1 + q1)];
+      const M: Pt = [p1, 0], N: Pt = [(C[0] * s1) / (s1 + t1), (C[1] * s1) / (s1 + t1)];
+      expect(close(len(A, M) / len(M, B), p1 / q1) && close(len(A, N) / len(N, C), s1 / t1)).toBe(true);
+      return area(A, M, N);
+    }
+    if (p.includes('meet at E inside the circle')) {
+      const [x, y] = ns;
+      const u = (360 - x - y) / 2;
+      const A = onUnit(0), C = onUnit(x), B = onUnit(x + u), D = onUnit(x + u + y);
+      const E = meet(A, B, C, D);
+      expect(Math.hypot(...E)).toBeLessThan(1);
+      return angle(A, E, C);
+    }
+    if (p.includes('The arc BD not containing A, C is')) {
+      const [x, y] = ns;
+      const pq = (360 - x - y) / 2;
+      const A = onUnit(0), B = onUnit(pq), D = onUnit(pq + x), C = onUnit(pq + x + pq);
+      const M = meet(A, B, C, D);
+      expect(len(M, A)).toBeLessThan(len(M, B));
+      expect(len(M, C)).toBeLessThan(len(M, D));
+      return angle(B, M, D);
     }
     return null;
   },

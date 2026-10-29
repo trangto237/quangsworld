@@ -985,6 +985,163 @@ const combinatorics: Generator = (d, r) => {
     `Trường hợp xấu nhất: lấy nhiều nhất có thể mà chưa có ${k} chiếc cùng màu — mỗi màu tối đa ${k - 1} chiếc, nhưng màu nào ít tất hơn thì chỉ lấy được hết số đó: ${parts} = ${ans - 1}. Chiếc tiếp theo chắc chắn tạo ra ${k} chiếc cùng màu: ${ans}.`);
 };
 
+// ── Geometry: similar triangles, power of a point, angles in circles ─────
+const geometry: Generator = (d, r) => {
+  if (d <= 1) {
+    let p = int(r, 2, 9), qq = int(r, 2, 9);
+    if (p === qq) qq = p + int(r, 1, 3);
+    const t = int(r, 1, 5), S = p * p * t, ans = qq * qq * t;
+    return q(
+      r,
+      `Triangle ABC is similar to triangle DEF, with AB = ${p} cm and DE = ${qq} cm. The area of ABC is ${S} cm². Find the area of DEF (cm²).`,
+      `Tam giác ABC đồng dạng với tam giác DEF, với AB = ${p} cm và DE = ${qq} cm. Diện tích tam giác ABC là ${S} cm². Tính diện tích tam giác DEF (cm²).`,
+      ans,
+      [(S * qq) / p, (S * p * p) / (qq * qq), (S * p) / qq, ans + qq, ans - qq],
+      `The ratio of similarity is k = DE/AB = ${fracN(qq, p)}. Areas scale by k² = ${fracN(qq * qq, p * p)}, so the area is ${S}·${fracN(qq * qq, p * p)} = ${ans} cm².`,
+      `Tỉ số đồng dạng k = DE/AB = ${fracN(qq, p)}. Tỉ số diện tích bằng k² = ${fracN(qq * qq, p * p)}, nên diện tích là ${S}·${fracN(qq * qq, p * p)} = ${ans} cm².`,
+    );
+  }
+  if (d === 2) {
+    let a = int(r, 1, 5), b = int(r, 1, 5);
+    if (gcd(a, b) !== 1) b = 1;
+    const n = a + b, t = int(r, 1, 4), S = n * n * t, small = a * a * t, trap = r() < 0.6;
+    const head = `In triangle ABC (area ${S} cm²), M is on AB and N is on AC with MN ∥ BC and AM = ${a} cm, MB = ${b} cm.`;
+    const headVi = `Tam giác ABC có diện tích ${S} cm². M thuộc AB, N thuộc AC sao cho MN ∥ BC, AM = ${a} cm, MB = ${b} cm.`;
+    const how = `Triangle AMN ~ triangle ABC with ratio AM/AB = ${a}/${n}, so area(AMN) = ${S}·(${a}/${n})² = ${small} cm²`;
+    const howVi = `Tam giác AMN đồng dạng với tam giác ABC theo tỉ số AM/AB = ${a}/${n}, nên S(AMN) = ${S}·(${a}/${n})² = ${small} cm²`;
+    if (trap)
+      return q(r, `${head} Find the area of the trapezoid MNCB (cm²).`, `${headVi} Tính diện tích hình thang MNCB (cm²).`, S - small,
+        [(S * b) / n, small, S - (S * a) / n, (S * b * b) / (n * n)], `${how}, and the trapezoid is ${S} − ${small} = ${S - small} cm².`, `${howVi}, nên hình thang có diện tích ${S} − ${small} = ${S - small} cm².`);
+    return q(r, `${head} Find the area of triangle AMN (cm²).`, `${headVi} Tính diện tích tam giác AMN (cm²).`, small,
+      [(S * a) / n, (S * a) / b, S - small, (S * b * b) / (n * n)], `${how}.`, `${howVi}.`);
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const k = int(r, 1, 3), u = int(r, 1, 3), v = int(r, u + 1, 5);
+      const a = k * u * u, b = k * (v * v - u * u), ans = k * u * v;
+      return q(
+        r,
+        `From a point M outside a circle, draw the tangent MT (T on the circle) and a secant MAB (A between M and B). MA = ${a} cm, AB = ${b} cm. Find MT (cm).`,
+        `Từ điểm M nằm ngoài đường tròn, kẻ tiếp tuyến MT (T là tiếp điểm) và cát tuyến MAB (A nằm giữa M và B). MA = ${a} cm, AB = ${b} cm. Tính MT (cm).`,
+        ans,
+        [Math.sqrt(a * b), a + b, (2 * a + b) / 2, Math.sqrt(b * (a + b)), ans + 1],
+        `Triangles MTA and MBT are similar (common angle M, and ∠MTA = ∠MBT by the tangent–chord angle), so MT² = MA·MB = ${a}·${a + b} = ${ans * ans}, MT = ${ans} cm. Careful: MB = MA + AB = ${a + b}, not AB.`,
+        `Tam giác MTA đồng dạng với tam giác MBT (chung góc M, ∠MTA = ∠MBT vì góc tạo bởi tiếp tuyến và dây cung), nên MT² = MA·MB = ${a}·${a + b} = ${ans * ans}, MT = ${ans} cm. Chú ý: MB = MA + AB = ${a + b}, không phải AB.`,
+      );
+    }
+    let a = 0, b = 0, c = 0;
+    do {
+      a = int(r, 2, 12);
+      b = int(r, 2, 12);
+      c = int(r, 2, 12);
+    } while ((a * b) % c !== 0 || c === a || c === b);
+    const ans = (a * b) / c;
+    return q(
+      r,
+      `Chords AB and CD of a circle meet at E. AE = ${a} cm, EB = ${b} cm, CE = ${c} cm. Find ED (cm).`,
+      `Hai dây AB và CD của một đường tròn cắt nhau tại E. AE = ${a} cm, EB = ${b} cm, CE = ${c} cm. Tính ED (cm).`,
+      ans,
+      [(a * c) / b, (b * c) / a, a + b - c, a * b, ans + 1],
+      `Triangles AEC and DEB are similar (∠EAC = ∠EDB, inscribed angles on the same arc), so EA·EB = EC·ED: ED = ${a}·${b}/${c} = ${ans} cm.`,
+      `Tam giác AEC đồng dạng với tam giác DEB (∠EAC = ∠EDB, hai góc nội tiếp cùng chắn một cung), nên EA·EB = EC·ED: ED = ${a}·${b}/${c} = ${ans} cm.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.55) {
+      const al = int(r, 20, 80), ask = pick(r, ['AOB', 'ACB', 'OAB'] as const);
+      const ans = { AOB: 2 * al, ACB: al, OAB: 90 - al }[ask];
+      const how = `The angle between a tangent and a chord equals the inscribed angle on that arc: ∠ACB = ${al}°, and the central angle is twice it: ∠AOB = ${2 * al}°. Triangle OAB is isosceles, so ∠OAB = (180° − ${2 * al}°)/2 = ${90 - al}°.`;
+      const howVi = `Góc tạo bởi tiếp tuyến và dây cung bằng góc nội tiếp cùng chắn cung đó: ∠ACB = ${al}°, góc ở tâm gấp đôi: ∠AOB = ${2 * al}°. Tam giác OAB cân tại O nên ∠OAB = (180° − ${2 * al}°)/2 = ${90 - al}°.`;
+      return q(
+        r,
+        `A and B are on a circle with centre O. The tangent at A makes an angle of ${al}° with the chord AB, and C is a point on the major arc AB. Find ∠${ask} (in degrees).`,
+        `A, B là hai điểm trên đường tròn tâm O. Tiếp tuyến tại A tạo với dây AB một góc ${al}°, C là một điểm trên cung lớn AB. Tính ∠${ask} (độ).`,
+        ans,
+        [al, 2 * al, 90 - al, 180 - al, 180 - 2 * al, 90 + al].filter((x) => x !== ans),
+        how,
+        howVi,
+      );
+    }
+    const th = 2 * int(r, 15, 70), ans = (180 - th) / 2;
+    return q(
+      r,
+      `From a point M outside a circle with centre O, the tangents MA and MB are drawn (A, B on the circle), and ∠AMB = ${th}°. C is a point on the major arc AB. Find ∠ACB (in degrees).`,
+      `Từ điểm M nằm ngoài đường tròn tâm O, kẻ hai tiếp tuyến MA, MB (A, B là tiếp điểm), ∠AMB = ${th}°. C là một điểm trên cung lớn AB. Tính ∠ACB (độ).`,
+      ans,
+      [th / 2, 180 - th, th, 90 + th / 2],
+      `∠OAM = ∠OBM = 90°, so in quadrilateral OAMB: ∠AOB = 180° − ${th}° = ${180 - th}°. The inscribed angle is half the central angle: ∠ACB = ${ans}°.`,
+      `∠OAM = ∠OBM = 90° nên trong tứ giác OAMB: ∠AOB = 180° − ${th}° = ${180 - th}°. Góc nội tiếp bằng nửa góc ở tâm cùng chắn một cung: ∠ACB = ${ans}°.`,
+    );
+  }
+  const kind = pick(r, ['secants', 'ratios', 'arcsIn', 'arcsOut'] as const);
+  if (kind === 'secants') {
+    let a = 0, b = 0, c = 0;
+    do {
+      a = int(r, 2, 9);
+      b = int(r, 2, 12);
+      c = int(r, 2, 12);
+    } while ((a * (a + b)) % c !== 0 || c * c >= a * (a + b) || c === a);
+    const MD = (a * (a + b)) / c, ans = MD - c;
+    return q(
+      r,
+      `From a point M outside a circle, two secants MAB and MCD are drawn (A between M and B, C between M and D). MA = ${a} cm, AB = ${b} cm, MC = ${c} cm. Find CD (cm).`,
+      `Từ điểm M nằm ngoài đường tròn, kẻ hai cát tuyến MAB và MCD (A nằm giữa M và B, C nằm giữa M và D). MA = ${a} cm, AB = ${b} cm, MC = ${c} cm. Tính CD (cm).`,
+      ans,
+      [MD, (a * b) / c, a + b - c, (b * c) / a, ans + 1],
+      `Triangles MAC and MDB are similar, so MA·MB = MC·MD: ${a}·${a + b} = ${c}·MD, MD = ${MD}. Then CD = MD − MC = ${MD} − ${c} = ${ans} cm.`,
+      `Tam giác MAC đồng dạng với tam giác MDB nên MA·MB = MC·MD: ${a}·${a + b} = ${c}·MD, MD = ${MD}. Vậy CD = MD − MC = ${MD} − ${c} = ${ans} cm.`,
+    );
+  }
+  if (kind === 'ratios') {
+    let p = 0, qq = 0, s0 = 0, t0 = 0;
+    do {
+      [p, qq, s0, t0] = [int(r, 1, 4), int(r, 1, 4), int(r, 1, 4), int(r, 1, 4)];
+    } while (gcd(p, qq) !== 1 || gcd(s0, t0) !== 1);
+    const S = (p + qq) * (s0 + t0) * int(r, 1, 3), ans = (S * p * s0) / ((p + qq) * (s0 + t0));
+    return q(
+      r,
+      `In triangle ABC (area ${S} cm²), M is on AB with AM : MB = ${p} : ${qq}, and N is on AC with AN : NC = ${s0} : ${t0}. Find the area of triangle AMN (cm²).`,
+      `Tam giác ABC có diện tích ${S} cm². M thuộc AB với AM : MB = ${p} : ${qq}, N thuộc AC với AN : NC = ${s0} : ${t0}. Tính diện tích tam giác AMN (cm²).`,
+      ans,
+      [(S * p) / (p + qq), (S * s0) / (s0 + t0), (S * p * s0) / (qq * t0), S - ans, (S * p * p) / ((p + qq) * (p + qq))],
+      `Triangles sharing angle A: area(AMN)/area(ABC) = (AM/AB)·(AN/AC) = (${p}/${p + qq})·(${s0}/${s0 + t0}). So area(AMN) = ${S}·${fracN(p * s0, (p + qq) * (s0 + t0))} = ${ans} cm².`,
+      `Hai tam giác chung góc A: S(AMN)/S(ABC) = (AM/AB)·(AN/AC) = (${p}/${p + qq})·(${s0}/${s0 + t0}). Vậy S(AMN) = ${S}·${fracN(p * s0, (p + qq) * (s0 + t0))} = ${ans} cm².`,
+    );
+  }
+  if (kind === 'arcsIn') {
+    let x = 0, y = 0;
+    do {
+      x = 10 * int(r, 3, 15);
+      y = 10 * int(r, 3, 15);
+    } while (x + y > 280 || x === y);
+    const ans = (x + y) / 2;
+    return q(
+      r,
+      `Chords AB and CD of a circle meet at E inside the circle. The arc AC not containing B, D is ${x}°, and the arc BD not containing A, C is ${y}°. Find ∠AEC (in degrees).`,
+      `Hai dây AB và CD của một đường tròn cắt nhau tại E nằm trong đường tròn. Cung AC không chứa B, D có số đo ${x}°, cung BD không chứa A, C có số đo ${y}°. Tính ∠AEC (độ).`,
+      ans,
+      [Math.abs(x - y) / 2, x + y, 180 - ans, Math.max(x, y) / 2],
+      `An angle with its vertex inside the circle is half the sum of the two arcs it cuts off: ∠AEC = (${x}° + ${y}°)/2 = ${ans}°. (∠AEC is an exterior angle of triangle EBC: ∠ABC + ∠BCD = ${x / 2}° + ${y / 2}°.)`,
+      `Góc có đỉnh ở bên trong đường tròn bằng nửa tổng số đo hai cung bị chắn: ∠AEC = (${x}° + ${y}°)/2 = ${ans}°. (∠AEC là góc ngoài của tam giác EBC: ∠ABC + ∠BCD = ${x / 2}° + ${y / 2}°.)`,
+    );
+  }
+  let x = 0, y = 0;
+  do {
+    x = 10 * int(r, 6, 22);
+    y = 10 * int(r, 2, 12);
+  } while (x - y < 20 || x + y > 300);
+  const ans = (x - y) / 2;
+  return q(
+    r,
+    `From a point M outside a circle, two secants MAB and MCD are drawn (A between M and B, C between M and D). The arc BD not containing A, C is ${x}°, and the arc AC not containing B, D is ${y}°. Find ∠BMD (in degrees).`,
+    `Từ điểm M nằm ngoài đường tròn, kẻ hai cát tuyến MAB và MCD (A nằm giữa M và B, C nằm giữa M và D). Cung BD không chứa A, C có số đo ${x}°, cung AC không chứa B, D có số đo ${y}°. Tính ∠BMD (độ).`,
+    ans,
+    [(x + y) / 2, x - y, x / 2, 180 - (x + y) / 2],
+    `An angle with its vertex outside the circle is half the difference of the arcs it cuts off: ∠BMD = (${x}° − ${y}°)/2 = ${ans}°. (In triangle MAD: ∠BAD = ∠AMD + ∠ADM, i.e. ${x / 2}° = ∠BMD + ${y / 2}°.)`,
+    `Góc có đỉnh ở bên ngoài đường tròn bằng nửa hiệu số đo hai cung bị chắn: ∠BMD = (${x}° − ${y}°)/2 = ${ans}°. (Trong tam giác MAD: ∠BAD = ∠AMD + ∠ADM, tức là ${x / 2}° = ∠BMD + ${y / 2}°.)`,
+  );
+};
+
 const EXAM = ['Thi vào 10 chuyên Toán', 'HSG Toán 9'];
 
 export const advancedConcepts: ConceptSeed[] = [
@@ -1072,6 +1229,18 @@ export const advancedConcepts: ConceptSeed[] = [
       'Diagonals of an n-gon: n(n − 3)/2; triangles from n points: n(n − 1)(n − 2)/6. Inclusion–exclusion: |A ∪ B| = |A| + |B| − |A ∩ B| — and "divisible by a and b" means divisible by lcm(a, b), not by ab. "At least one" is easiest as total minus "none". Digits: deal with the restricted places first (last digit, first digit ≠ 0) and split into cases when they interact. Pigeonhole: build the worst case — the most you can take without the property — then add 1.',
     examRefs: [`${EXAM[0]} · Tổ hợp`, `${EXAM[1]} · Nguyên lí Dirichlet, tổ hợp`],
   },
+  {
+    id: 'math.adv.geometry',
+    domain: 'Advanced',
+    skill: 'Geometry',
+    name: 'Similar triangles & circle theorems',
+    missionName: 'Circle of Secrets',
+    description: 'Area ratio k² of similar triangles, power of a point (MT² = MA·MB, EA·EB = EC·ED), angle chasing with tangent–chord and inscribed angles.',
+    prerequisites: ['math.geometry.circles', 'math.geometry.angles', 'math.geometry.pythagoras'],
+    lesson:
+      'Similar triangles with ratio k: lengths scale by k, areas by k². Two triangles sharing an angle: area ratio = product of the ratios of the sides around it. Power of a point: for chords meeting at E, EA·EB = EC·ED; from an outside point M, MA·MB = MC·MD = MT² (MT a tangent) — always measure from M to both intersection points. Angles: inscribed angle = half the central angle = the tangent–chord angle on the same arc; opposite angles of a cyclic quadrilateral add to 180°; a vertex inside the circle gives half the sum of the arcs, outside gives half the difference.',
+    examRefs: [`${EXAM[0]} · Hình học phẳng`, `${EXAM[1]} · Hình học`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
@@ -1082,6 +1251,7 @@ export const advancedGenerators: Record<string, Generator> = {
   'math.adv.equations': equations,
   'math.adv.vieta': vietaParam,
   'math.adv.combinatorics': combinatorics,
+  'math.adv.geometry': geometry,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -1099,4 +1269,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Bước 1: điều kiện để phương trình có nghiệm (Δ ≥ 0, hoặc Δ > 0 nếu cần hai nghiệm phân biệt). Bước 2: viết S = x₁ + x₂ và P = x₁x₂ theo m bằng định lí Vi-ét. Bước 3: biến đổi điều kiện về S và P — (x₁ − x₂)² = S² − 4P; x₁ = kx₂ cho một hệ với S và P. Bước 4: giải tìm m rồi loại các giá trị không thỏa mãn bước 1. Nghiệm nguyên: khử m giữa S và P rồi phân tích thành tích, ví dụ (x₁ − 1)(x₂ − 1) = n. Số c nằm giữa hai nghiệm của f(x) = x² + px + q khi và chỉ khi f(c) < 0. Khi tìm cực trị theo m, đỉnh có thể nằm ngoài miền cho phép — khi đó đáp án ở đầu mút.',
   'math.adv.combinatorics':
     'Số đường chéo của đa giác n cạnh: n(n − 3)/2; số tam giác từ n điểm: n(n − 1)(n − 2)/6. Nguyên lí bù trừ: |A ∪ B| = |A| + |B| − |A ∩ B| — và "chia hết cho cả a và b" nghĩa là chia hết cho BCNN(a, b), không phải cho ab. "Ít nhất một" thường dễ đếm bằng tổng trừ đi trường hợp "không có". Bài lập số: xử lí các vị trí có điều kiện trước (chữ số tận cùng, chữ số đầu khác 0) và chia trường hợp khi chúng ảnh hưởng nhau. Nguyên lí Dirichlet: dựng trường hợp xấu nhất — lấy nhiều nhất mà chưa có tính chất cần tìm — rồi cộng thêm 1.',
+  'math.adv.geometry':
+    'Hai tam giác đồng dạng theo tỉ số k: độ dài tỉ lệ k, diện tích tỉ lệ k². Hai tam giác chung một góc: tỉ số diện tích bằng tích tỉ số hai cạnh kề góc đó. Phương tích của một điểm: hai dây cắt nhau tại E thì EA·EB = EC·ED; từ điểm M ở ngoài, MA·MB = MC·MD = MT² (MT là tiếp tuyến) — luôn đo từ M đến cả hai giao điểm. Góc: góc nội tiếp bằng nửa góc ở tâm và bằng góc tạo bởi tiếp tuyến và dây cung cùng chắn một cung; tứ giác nội tiếp có tổng hai góc đối bằng 180°; góc có đỉnh bên trong đường tròn bằng nửa tổng hai cung bị chắn, đỉnh bên ngoài bằng nửa hiệu.',
 };
