@@ -8,7 +8,7 @@
  */
 import type { ConceptSeed } from '../helpers';
 import type { Generated, Generator } from './generators';
-import { fracN, gcd, int, num, numeric, pick } from './util';
+import { fracN, gcd, int, num, numeric, nz, pick, signed, terms } from './util';
 
 type G = Generated;
 const vi = (g: G, promptVi: string, explanationVi?: string): G => ({ ...g, promptVi, explanationVi });
@@ -230,7 +230,148 @@ const numberTheory: Generator = (d, r) => {
   );
 };
 
-void [qf, qs, divisors]; // used by the concepts below as they are added
+void [qf, qs]; // used by the concepts below as they are added
+
+// ── Diophantine equations: factoring tricks, perfect squares, counting solutions ──
+const tau = (n: number) => divisors(Math.abs(n)).length;
+const isSquare = (n: number) => n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
+const RICH = [12, 18, 20, 24, 28, 30, 36, 40, 42, 45, 48, 50, 54, 56, 60, 63, 72, 80, 84, 90, 96];
+
+const diophantine: Generator = (d, r) => {
+  const PAIRS = 'How many ordered pairs of positive integers (x, y) satisfy';
+  const PAIRS_VI = 'Có bao nhiêu cặp số nguyên dương (x; y) thỏa mãn';
+  if (d <= 1) {
+    const M = pick(r, RICH), N = M - 1, t = tau(M);
+    return q(
+      r,
+      `${PAIRS} xy + x + y = ${N}?`,
+      `${PAIRS_VI} xy + x + y = ${N}?`,
+      t - 2,
+      [t, t - 1, Math.ceil((t - 2) / 2), 2 * t],
+      `Add 1 to both sides: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Both factors are at least 2, so x + 1 can be any divisor of ${M} except 1 and ${M}: ${t} − 2 = ${t - 2} pairs.`,
+      `Cộng 1 vào hai vế: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Hai thừa số đều lớn hơn hoặc bằng 2, nên x + 1 là một ước bất kì của ${M} trừ 1 và ${M}: có ${t} − 2 = ${t - 2} cặp.`,
+    );
+  }
+  if (d === 2) {
+    if (r() < 0.5) {
+      let a = 0, b = 0;
+      do {
+        a = int(r, 2, 9);
+        b = int(r, 2, 9);
+      } while (a === b || gcd(a, b) !== 1);
+      let N = 0, sols: number[][] = [];
+      do {
+        N = int(r, 40, 130);
+        sols = [];
+        for (let x = 1; a * x < N; x++) if ((N - a * x) % b === 0) sols.push([x, (N - a * x) / b]);
+      } while (sols.length < 2);
+      const [x0, y0] = sols[0];
+      return q(
+        r,
+        `${PAIRS} ${a}x + ${b}y = ${N}?`,
+        `${PAIRS_VI} ${a}x + ${b}y = ${N}?`,
+        sols.length,
+        [Math.floor(N / (a * b)), sols.length + 1, sols.length - 1, Math.floor(N / a)],
+        `One solution is x = ${x0}, y = ${y0}. The others come from x = ${x0} + ${b}t, y = ${y0} − ${a}t (t ≥ 0), as long as y stays positive: ${sols.length} pairs.`,
+        `Một nghiệm là x = ${x0}, y = ${y0}. Các nghiệm khác là x = ${x0} + ${b}t, y = ${y0} − ${a}t (t ≥ 0), miễn là y còn dương: có ${sols.length} cặp.`,
+      );
+    }
+    let p = 0, qq = 0, M = 0, cnt = 0;
+    do {
+      p = int(r, 1, 5);
+      qq = int(r, 1, 5);
+      M = pick(r, RICH);
+      cnt = divisors(M).filter((u) => u > qq && M / u > p).length;
+    } while (M - p * qq <= 0 || cnt < 1 || p === qq);
+    const c = M - p * qq;
+    const e = `${terms([[1, 'xy'], [p, 'x'], [qq, 'y']])} = ${c}`;
+    return q(
+      r,
+      `${PAIRS} ${e}?`,
+      `${PAIRS_VI} ${e}?`,
+      cnt,
+      [tau(M), tau(M) - 2, divisors(M).filter((u) => u > qq).length, cnt + 1],
+      `Factor: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Now x + ${qq} must be a divisor of ${M} bigger than ${qq}, with ${M}/(x + ${qq}) bigger than ${p}: ${cnt} pair${cnt === 1 ? '' : 's'}.`,
+      `Phân tích: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Khi đó x + ${qq} là ước của ${M} lớn hơn ${qq}, và ${M}/(x + ${qq}) lớn hơn ${p}: có ${cnt} cặp.`,
+    );
+  }
+  if (d === 3) {
+    let p = 0, qq = 0, M = 0;
+    do {
+      p = nz(r, -5, 5);
+      qq = nz(r, -5, 5);
+      M = pick(r, RICH.slice(0, 12)) * pick(r, [1, -1]);
+    } while (p === qq);
+    const c = M - p * qq, t = tau(M);
+    const e = `${terms([[1, 'xy'], [p, 'x'], [qq, 'y']])} = ${num(c)}`;
+    return q(
+      r,
+      `How many ordered pairs of integers (x, y) satisfy ${e}?`,
+      `Có bao nhiêu cặp số nguyên (x; y) thỏa mãn ${e}?`,
+      2 * t,
+      [t, 2 * t - 2, t - 2, 4 * t],
+      `Factor: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. x ${signed(qq)} can be any divisor of ${num(M)}, positive or negative: 2·${t} = ${2 * t} pairs.`,
+      `Phân tích: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. x ${signed(qq)} là một ước bất kì (dương hoặc âm) của ${num(M)}: có 2·${t} = ${2 * t} cặp.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.5) {
+      let k = 0, ns: number[] = [];
+      do {
+        k = int(r, 12, 150);
+        ns = [];
+        for (let n = 0; n <= k; n++) if (isSquare(n * n + k)) ns.push(n);
+      } while (k % 4 === 2 || ns.length < 2);
+      const ans = ns.reduce((x, n) => x + (n === 0 ? 1 : 2), 0);
+      const list = ns.map((n) => (n === 0 ? '0' : `±${n}`)).join(', ');
+      return q(
+        r,
+        `How many integers n make n² + ${k} a perfect square?`,
+        `Có bao nhiêu số nguyên n để n² + ${k} là số chính phương?`,
+        ans,
+        [ns.length, tau(k), Math.floor(tau(k) / 2), ans + 2],
+        `Write n² + ${k} = m² (m ≥ 0): (m − |n|)(m + |n|) = ${k}. The two factors have the same parity; each such factor pair gives |n| = (big − small)/2. So n = ${list}: ${ans} integers (count negative n too).`,
+        `Đặt n² + ${k} = m² (m ≥ 0): (m − |n|)(m + |n|) = ${k}. Hai thừa số cùng tính chẵn lẻ; mỗi cặp như vậy cho |n| = (lớn − nhỏ)/2. Vậy n = ${list}: có ${ans} số nguyên (nhớ đếm cả n âm).`,
+      );
+    }
+    let N = 0, sols: number[][] = [];
+    do {
+      N = int(r, 30, 240);
+      sols = [];
+      for (let y = 1; 2 * y + 1 <= N; y++) if (isSquare(N + y * y)) sols.push([Math.round(Math.sqrt(N + y * y)), y]);
+    } while (N % 4 === 2 || sols.length < 2);
+    const pairs = sols.map(([x, y]) => `(${x}, ${y})`).join(', ');
+    return q(
+      r,
+      `${PAIRS} x² − y² = ${N}?`,
+      `${PAIRS_VI} x² − y² = ${N}?`,
+      sols.length,
+      [Math.floor(tau(N) / 2), sols.length + 1, tau(N), Math.ceil(tau(N) / 2)],
+      `(x − y)(x + y) = ${N} with 0 < x − y < x + y and both factors of the same parity (their sum 2x is even). That gives ${pairs}: ${sols.length} pairs.`,
+      `(x − y)(x + y) = ${N} với 0 < x − y < x + y và hai thừa số cùng tính chẵn lẻ (tổng của chúng là 2x chẵn). Ta được ${pairs.replace(/, (?=\d)/g, '; ')}: có ${sols.length} cặp.`,
+    );
+  }
+  const n = int(r, 2, 12), t = tau(n * n);
+  if (r() < 0.5)
+    return q(
+      r,
+      `${PAIRS} 1/x + 1/y = 1/${n}?`,
+      `${PAIRS_VI} 1/x + 1/y = 1/${n}?`,
+      t,
+      [tau(n), (t + 1) / 2, t - 1, 2 * t],
+      `Clear denominators: ${n}y + ${n}x = xy, so (x − ${n})(y − ${n}) = ${n * n}. Here x, y > ${n}, so x − ${n} is any positive divisor of ${n * n}: ${t} pairs.`,
+      `Quy đồng: ${n}y + ${n}x = xy, nên (x − ${n})(y − ${n}) = ${n * n}. Vì x, y > ${n} nên x − ${n} là một ước dương bất kì của ${n * n}: có ${t} cặp.`,
+    );
+  return q(
+    r,
+    `How many ordered pairs of non-zero integers (x, y) satisfy 1/x + 1/y = 1/${n}?`,
+    `Có bao nhiêu cặp số nguyên khác 0 (x; y) thỏa mãn 1/x + 1/y = 1/${n}?`,
+    2 * t - 1,
+    [2 * t, t, 2 * t - 2, t - 1],
+    `(x − ${n})(y − ${n}) = ${n * n}, and x − ${n} can be any of the 2·${t} divisors of ${n * n}, positive or negative — except −${n}, which gives x = 0. So 2·${t} − 1 = ${2 * t - 1} pairs.`,
+    `(x − ${n})(y − ${n}) = ${n * n}, x − ${n} là một trong 2·${t} ước (dương hoặc âm) của ${n * n} — trừ ước −${n} vì khi đó x = 0. Vậy có 2·${t} − 1 = ${2 * t - 1} cặp.`,
+  );
+};
 
 const EXAM = ['Thi vào 10 chuyên Toán', 'HSG Toán 9'];
 
@@ -247,13 +388,28 @@ export const advancedConcepts: ConceptSeed[] = [
       'Work with remainders: if a ≡ r (mod m) then aⁿ ≡ rⁿ (mod m). Powers repeat in a cycle — find the first power that leaves remainder 1, then use n = qk + s. Last digits of powers repeat every 4. n³ − n = (n − 1)n(n + 1), a product of three consecutive integers, is always divisible by 6. If N = pᵃ·qᵇ·rᶜ, N has (a + 1)(b + 1)(c + 1) divisors. gcd(a, b)·lcm(a, b) = a·b. A prime > 3 is never a multiple of 3 — test remainders mod 3.',
     examRefs: [`${EXAM[0]} · Số học`, `${EXAM[1]} · Số học`],
   },
+  {
+    id: 'math.adv.diophantine',
+    domain: 'Advanced',
+    skill: 'Number theory',
+    name: 'Integer equations',
+    missionName: 'Integer Hunt',
+    description: 'Integer solutions by factoring (xy + x + y = 11 → (x + 1)(y + 1) = 12), perfect squares, counting solutions.',
+    prerequisites: ['math.adv.number-theory', 'math.algebra.expressions'],
+    lesson:
+      'Turn the equation into a product equal to a number: xy + px + qy = c becomes (x + q)(y + p) = c + pq, then each factor is a divisor. Count divisors carefully — positive only, or negative too? Are some excluded (a factor equal to 1, or x = 0)? For perfect squares, write n² + k = m² and factor (m − n)(m + n) = k; the two factors have the same parity. 1/x + 1/y = 1/n becomes (x − n)(y − n) = n².',
+    examRefs: [`${EXAM[0]} · Phương trình nghiệm nguyên`, `${EXAM[1]} · Phương trình nghiệm nguyên`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
   'math.adv.number-theory': numberTheory,
+  'math.adv.diophantine': diophantine,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
   'math.adv.number-theory':
     'Làm việc với số dư: nếu a ≡ r (mod m) thì aⁿ ≡ rⁿ (mod m). Lũy thừa lặp lại theo chu kì — tìm lũy thừa đầu tiên chia dư 1, rồi viết n = qk + s. Chữ số tận cùng của lũy thừa lặp lại sau 4 bước. n³ − n = (n − 1)n(n + 1) là tích ba số nguyên liên tiếp nên luôn chia hết cho 6. Nếu N = pᵃ·qᵇ·rᶜ thì N có (a + 1)(b + 1)(c + 1) ước. ƯCLN(a, b)·BCNN(a, b) = a·b. Số nguyên tố lớn hơn 3 không chia hết cho 3 — hãy xét số dư khi chia cho 3.',
+  'math.adv.diophantine':
+    'Biến đổi phương trình thành dạng tích bằng một số: xy + px + qy = c trở thành (x + q)(y + p) = c + pq, rồi mỗi thừa số là một ước. Đếm ước cẩn thận — chỉ ước dương hay cả ước âm? Có trường hợp nào bị loại (thừa số bằng 1, hay x = 0)? Với số chính phương, đặt n² + k = m² rồi phân tích (m − n)(m + n) = k; hai thừa số cùng tính chẵn lẻ. 1/x + 1/y = 1/n trở thành (x − n)(y − n) = n².',
 };

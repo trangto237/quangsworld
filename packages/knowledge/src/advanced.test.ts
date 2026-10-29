@@ -37,6 +37,17 @@ function fn(e: string, v = 'n'): (x: number) => number {
 
 void [val, close]; // used by later checkers
 
+/** "xy + 3x − 2y" → (x, y) => …, for brute-force searches. */
+function fn2(e: string): (x: number, y: number) => number {
+  const js = e
+    .replace(/−/g, '-')
+    .replace(/xy/g, 'x*y')
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `**${unsup(m)}`)
+    .replace(/(\d)\s*(?=[xy(])/g, '$1*');
+  return Function('x', 'y', `return (${js});`) as (x: number, y: number) => number;
+}
+const isSq = (n: number) => n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
+
 const bigPow = (a: number, n: number) => BigInt(a) ** BigInt(n);
 const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
 const isPrime = (n: number) => {
@@ -89,6 +100,38 @@ const checkers: Record<string, (p: string) => string | null> = {
     m = p.match(/^What is the smallest positive integer n such that (\d+)ⁿ − 1 is divisible by (\d+)\?$/);
     if (m) {
       for (let n = 1; n < 200; n++) if ((bigPow(+m[1], n) - 1n) % BigInt(m[2]) === 0n) return String(n);
+    }
+    return null;
+  },
+
+  'math.adv.diophantine': (p) => {
+    let m = p.match(/^How many ordered pairs of non-zero integers \(x, y\) satisfy 1\/x \+ 1\/y = 1\/(\d+)\?$/);
+    if (m) {
+      const n = +m[1];
+      let c = 0;
+      for (let x = -400; x <= 400; x++) for (let y = -400; y <= 400; y++) if (x && y && n * (x + y) === x * y) c++;
+      return String(c);
+    }
+    m = p.match(/^How many ordered pairs of positive integers \(x, y\) satisfy 1\/x \+ 1\/y = 1\/(\d+)\?$/);
+    if (m) {
+      const n = +m[1];
+      let c = 0;
+      for (let x = 1; x <= 400; x++) for (let y = 1; y <= 400; y++) if (n * (x + y) === x * y) c++;
+      return String(c);
+    }
+    m = p.match(/^How many ordered pairs of (positive integers|integers) \(x, y\) satisfy (.+) = (−?\d+)\?$/);
+    if (m) {
+      const f = fn2(m[2]), c = val(m[3]);
+      const [lo, hi] = m[1] === 'integers' ? [-150, 150] : [1, 250];
+      let cnt = 0;
+      for (let x = lo; x <= hi; x++) for (let y = lo; y <= hi; y++) if (f(x, y) === c) cnt++;
+      return String(cnt);
+    }
+    m = p.match(/^How many integers n make n² \+ (\d+) a perfect square\?$/);
+    if (m) {
+      let c = 0;
+      for (let n = -1000; n <= 1000; n++) if (isSq(n * n + +m[1])) c++;
+      return String(c);
     }
     return null;
   },
