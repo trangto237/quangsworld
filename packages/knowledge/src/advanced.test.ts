@@ -477,6 +477,14 @@ const checkers: Record<string, (p: string, g: Generated) => string | number | nu
 
   'math.adv.geometry': (p) => {
     const ns = (p.match(/\d+/g) ?? []).map(Number);
+    if (p.startsWith('Triangle ABC is similar to triangle DEF. Their areas are')) {
+      const [S1, S2, p1] = ns;
+      // Build ABC, then the similar copy with the stated area; measure DE.
+      const A: Pt = [0, 0], B: Pt = [p1, 0], C: Pt = [2.1, (2 * S1) / p1];
+      const k = Math.sqrt(S2 / area(A, B, C)), D: Pt = [3, 1], E: Pt = [3 + k * p1, 1], F: Pt = [3 + k * C[0], 1 + k * C[1]];
+      expect(close(area(D, E, F), S2)).toBe(true);
+      return len(D, E);
+    }
     if (p.startsWith('Triangle ABC is similar to triangle DEF')) {
       const [p1, q1, S] = ns;
       const A: Pt = [0, 0], B: Pt = [p1, 0], C: Pt = [1.3, (2 * S) / p1];

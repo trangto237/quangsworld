@@ -230,399 +230,6 @@ const numberTheory: Generator = (d, r) => {
   );
 };
 
-
-// ── Equations: radicals (reject extraneous roots), substitution, symmetric systems ──
-const xs = (...v: number[]) => roots(v.map((x) => [x, 1] as [number, number]));
-const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
-const rt = (inside: string) => (inside === 'x' ? '√x' : `√(${inside})`);
-
-const equations: Generator = (d, r) => {
-  if (d <= 1) {
-    const b = nz(r, -3, 6), x0 = b + int(r, 2, 6), a = (x0 - b) ** 2 - x0, x1 = 2 * b + 1 - x0;
-    const e = `${rt(poly([1, a]))} = ${poly([1, -b])}`;
-    return qs(
-      `Solve: ${e}`,
-      `Giải phương trình: ${e}`,
-      xs(x0),
-      [xs(x0, x1), xs(x1), xs(x0, -x0), xs(x0 + 1)],
-      `Condition: x ≥ ${num(b)} (the right side equals a square root, so it can't be negative). Squaring: ${poly([1, a])} = ${lin(-b)}², i.e. ${poly([1, -(2 * b + 1), b * b - a])} = 0, so x = ${num(x0)} or x = ${num(x1)}. But ${num(x1)} < ${num(b)}: reject it (it solves the squared equation only).`,
-      `Điều kiện: x ≥ ${num(b)} (vế phải bằng một căn bậc hai nên không âm). Bình phương: ${poly([1, a])} = ${lin(-b)}², tức là ${poly([1, -(2 * b + 1), b * b - a])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}. Nhưng ${num(x1)} < ${num(b)} nên loại (nó chỉ là nghiệm của phương trình sau khi bình phương).`,
-    );
-  }
-  if (d === 2) {
-    const u = int(r, 1, 5);
-    let t2 = 0;
-    if (r() < 0.5) t2 = -(int(r, 1, 6) ** 2);
-    if (t2 === -u * u) t2 -= 2 * u + 1;
-    else {
-      let w = int(r, 1, 6);
-      if (w === u) w = u + 1;
-      t2 = w * w;
-    }
-    const t1 = u * u, e = `${terms([[1, 'x⁴'], [-(t1 + t2), 'x²'], [t1 * t2, '']])} = 0`;
-    const w = Math.round(Math.sqrt(Math.abs(t2))); // t2 = −w² when it is rejected
-    const ans = t2 > 0 ? xs(-w, -u, u, w) : xs(-u, u);
-    return qs(
-      `Solve: ${e}`,
-      `Giải phương trình: ${e}`,
-      ans,
-      [t2 > 0 ? xs(u, w) : xs(-w, -u, u, w), xs(t1, t2), t2 > 0 ? xs(-u, u) : xs(u), xs(u, -w), xs(-u - 1, u + 1)],
-      `Put t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, so t = ${t1} or t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 is rejected; t = ${t1} gives x = ±${u}.` : `x² = ${t1} gives x = ±${u}, x² = ${t2} gives x = ±${w}.`}`,
-      `Đặt t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, nên t = ${t1} hoặc t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 bị loại; t = ${t1} cho x = ±${u}.` : `x² = ${t1} cho x = ±${u}, x² = ${t2} cho x = ±${w}.`}`,
-    );
-  }
-  if (d === 3) {
-    let z1 = 0, z2 = 0;
-    const cnt = (S: number, P: number) => (S * S > 4 * P ? 2 : 0);
-    const trap = r() < 0.6; // usually one of the two cases has no real solution
-    do {
-      z1 = int(r, -5, 8);
-      z2 = int(r, -5, 8);
-    } while (z1 >= z2 || z1 + z2 === -1 || z1 * z1 === 4 * z2 || z2 * z2 === 4 * z1 || cnt(z1, z2) + cnt(z2, z1) === 0 || (trap && cnt(z1, z2) + cnt(z2, z1) !== 2));
-    const A = z1 + z2, B = z1 * z2, ans = cnt(z1, z2) + cnt(z2, z1);
-    const sys = `x + y + xy = ${num(A)} and x²y + xy² = ${num(B)}`;
-    const sysVi = `x + y + xy = ${num(A)} và x²y + xy² = ${num(B)}`;
-    const cs = (S: number, P: number, vi_: boolean) =>
-      `S = ${num(S)}, P = ${num(P)}: S² − 4P = ${num(S * S - 4 * P)} ${S * S > 4 * P ? (vi_ ? '> 0, cho 2 cặp' : '> 0, giving 2 pairs') : vi_ ? '< 0, loại' : '< 0, no real pair'}`;
-    return q(
-      r,
-      `How many pairs of real numbers (x, y) satisfy ${sys}?`,
-      `Hệ phương trình ${sysVi} có bao nhiêu nghiệm thực (x; y)?`,
-      ans,
-      [4, ans === 4 ? 2 : 1, 0, 3].filter((v) => v !== ans),
-      `Let S = x + y, P = xy: S + P = ${num(A)} and SP = ${num(B)}, so S and P are the roots of ${poly([1, -A, B], 'z')} = 0: ${num(z1)} and ${num(z2)}. x, y are real only if S² ≥ 4P. ${cs(z1, z2, false)}; ${cs(z2, z1, false)}. Total: ${ans}.`,
-      `Đặt S = x + y, P = xy: S + P = ${num(A)} và SP = ${num(B)}, nên S, P là nghiệm của ${poly([1, -A, B], 'z')} = 0: ${num(z1)} và ${num(z2)}. x, y là số thực khi và chỉ khi S² ≥ 4P. ${cs(z1, z2, true)}; ${cs(z2, z1, true)}. Tổng cộng: ${ans} nghiệm.`,
-    );
-  }
-  if (d === 4) {
-    if (r() < 0.55) {
-      const u0 = int(r, 1, 5), a = int(r, -3, 3), t1 = u0 * u0 + 3 * u0, k = t1 * (t1 + 2);
-      const x0 = u0 - a, x1 = -3 - u0 - a;
-      const e = `${[a, a + 1, a + 2, a + 3].map(lin).join('')} = ${k}`;
-      const tt = `x² ${signed(2 * a + 3)}x ${signed(a * a + 3 * a)}`.replace(' + 0', '');
-      return qs(
-        `Solve: ${e}`,
-        `Giải phương trình: ${e}`,
-        xs(x1, x0),
-        [xs(x0), xs(x0, -x0), xs(x1, x0, -1 - a, -2 - a), xs(x1 + 1, x0 - 1)],
-        `Multiply the outer pair and the inner pair: ${lin(a)}${lin(a + 3)} = t and ${lin(a + 1)}${lin(a + 2)} = t + 2, with t = ${tt}. Then t(t + 2) = ${k}, so t = ${t1} or t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} gives no real x (Δ < 0); t = ${t1} gives x = ${num(x0)} or x = ${num(x1)}.`,
-        `Nhân cặp ngoài và cặp trong: ${lin(a)}${lin(a + 3)} = t và ${lin(a + 1)}${lin(a + 2)} = t + 2, với t = ${tt}. Khi đó t(t + 2) = ${k}, nên t = ${t1} hoặc t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} không cho x thực (Δ < 0); t = ${t1} cho x = ${num(x0)} hoặc x = ${num(x1)}.`,
-      );
-    }
-    let u = int(r, 1, 4), v = int(r, 2, 6);
-    if (v <= u) v = u + 1;
-    const x0 = int(r, -4, 10), a = u * u - x0, b = v * v - x0, c = u + v;
-    const e = `${rt(poly([1, a]))} + ${rt(poly([1, b]))} = ${c}`;
-    return qs(
-      `Solve: ${e}`,
-      `Giải phương trình: ${e}`,
-      xs(x0),
-      [xs(x0 + 1), xs(x0, x0 + c), xs(c * c - a - b), xs(-x0)],
-      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, so ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Adding to the given equation: 2${rt(poly([1, b]))} = ${c + v - u}, so ${rt(poly([1, b]))} = ${v} and x = ${v * v} ${signed(-b)} = ${num(x0)}. (The left side increases with x, so this is the only solution.)`,
-      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, nên ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Cộng với phương trình đã cho: 2${rt(poly([1, b]))} = ${c + v - u}, nên ${rt(poly([1, b]))} = ${v} và x = ${v * v} ${signed(-b)} = ${num(x0)}. (Vế trái đồng biến theo x nên đây là nghiệm duy nhất.)`,
-    );
-  }
-  const t1 = int(r, 2, 6), t2 = -int(r, 1, t1 - 1), m = t1 + t2;
-  let x0 = 0, x1 = 0;
-  do {
-    x0 = int(r, -6, 5);
-    x1 = int(r, -5, 7);
-  } while (x0 >= x1 || x0 + x1 === 0);
-  const p = -(x0 + x1), qq = x0 * x1 + t1 * t1, c = qq + t1 * t2;
-  const inner = poly([1, p, qq]);
-  const e = `${poly([1, p, c])} = ${m === 1 ? '' : m}${rt(inner)}`;
-  // The rejected root t = t2 < 0: x² + px + q = t2² — the "solutions" a careless solver would add.
-  const D2 = p * p - 4 * (qq - t2 * t2);
-  const extra = D2 >= 0 && isSquare(D2) && (D2 > 0) ? [(-p - Math.sqrt(D2)) / 2, (-p + Math.sqrt(D2)) / 2].filter(Number.isInteger) : [];
-  return qs(
-    `Solve: ${e}`,
-    `Giải phương trình: ${e}`,
-    xs(x0, x1),
-    [extra.length ? xs(x0, x1, ...extra) : xs(x0, x1, -x0), xs(x0), xs(x1), xs(-x0, -x1)],
-    `Put t = ${rt(inner)} ≥ 0. Then ${poly([1, p, c])} = t² ${signed(c - qq)}, so t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} or t = ${num(t2)} (rejected, t ≥ 0). t = ${t1}: ${inner} = ${t1 * t1}, i.e. ${poly([1, p, x0 * x1])} = 0, so x = ${num(x0)} or x = ${num(x1)}.`,
-    `Đặt t = ${rt(inner)} ≥ 0. Khi đó ${poly([1, p, c])} = t² ${signed(c - qq)}, nên t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} hoặc t = ${num(t2)} (loại vì t ≥ 0). Với t = ${t1}: ${inner} = ${t1 * t1}, tức là ${poly([1, p, x0 * x1])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}.`,
-  );
-};
-
-// ── Inequalities: min/max by completing the square, AM–GM, Cauchy–Schwarz ──
-const inequalities: Generator = (d, r) => {
-  const MIN = 'Find the minimum value of', MIN_VI = 'Tìm giá trị nhỏ nhất của';
-  const sq = (v: string, k: number) => (k === 0 ? `${v}²` : `(${v} ${signed(k)})²`);
-  if (d <= 1) {
-    const p = nz(r, -6, 6), c = int(r, -10, 20);
-    if (r() < 0.25) {
-      const e = poly([-1, 2 * p, c]), ans = c + p * p;
-      return q(r, `Find the maximum value of A = ${e}.`, `Tìm giá trị lớn nhất của A = ${e}.`, ans, [c, c - p * p, p, p * p],
-        `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, with equality at x = ${num(p)}.`, `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`);
-    }
-    const e = poly([1, -2 * p, c]), ans = c - p * p;
-    const how = `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, with equality when x = ${num(p)}.`;
-    const howVi = `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`;
-    if (r() < 0.35)
-      return q(r, `For which value of x does A = ${e} take its smallest value?`, `A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, p, [-p, 2 * p, ans, -2 * p], how, howVi);
-    return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c + p * p, -p * p, p], how, howVi);
-  }
-  if (d === 2) {
-    const kind = pick(r, ['xy', 'mixed', 'a'] as const);
-    if (kind === 'xy') {
-      const a = nz(r, -4, 4), b = nz(r, -4, 4), c = int(r, 0, 30), ans = c - a * a - b * b;
-      const e = terms([[1, 'x²'], [1, 'y²'], [2 * a, 'x'], [2 * b, 'y'], [c, '']]);
-      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - a * a, c + a * a + b * b, c - 4 * a * a - 4 * b * b],
-        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-a)}, y = ${num(-b)}.`,
-        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-a)}, y = ${num(-b)}.`);
-    }
-    if (kind === 'mixed') {
-      const b = nz(r, -5, 5), c = int(r, 0, 30), ans = c - b * b;
-      const e = terms([[1, 'x²'], [-2, 'xy'], [2, 'y²'], [2 * b, 'y'], [c, '']]);
-      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - 2 * b * b, c + b * b, c - 4 * b * b],
-        `Split 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = y = ${num(-b)}.`,
-        `Tách 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = y = ${num(-b)}.`);
-    }
-    const a = int(r, 2, 4), k = nz(r, -4, 4), c = int(r, -5, 25), ans = c - a * k * k;
-    const e = poly([a, 2 * a * k, c]);
-    return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c - k * k, c + a * k * k, c, c - a * a * k * k],
-      `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-k)}.`,
-      `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-k)}.`);
-  }
-  if (d === 3) {
-    if (r() < 0.65) {
-      const s0 = int(r, 1, 3);
-      let p = int(r, 1, 5), qq = int(r, 1, 6);
-      if (p === qq) qq++;
-      const a = s0 * p * p, b = s0 * qq * qq, ans = 2 * s0 * p * qq;
-      const ax = `${a === 1 ? '' : a}x`, e = `${ax} + ${b}/x`;
-      const how = `AM–GM: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, with equality when ${ax} = ${b}/x, i.e. x = ${fracN(qq, p)}.`;
-      const howVi = `Bất đẳng thức Cô-si: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, dấu bằng khi ${ax} = ${b}/x, tức là x = ${fracN(qq, p)}.`;
-      if (r() < 0.3)
-        return qf(r, `For x > 0, at which x does A = ${e} take its smallest value?`, `Với x > 0, A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, [qq, p], [[p, qq], [b, a], [qq * qq, p * p], [1, 1]], how, howVi);
-      return q(r, `${MIN} A = ${e} for x > 0.`, `${MIN_VI} A = ${e} với x > 0.`, ans, [a + b, ans / 2, 2 * (a + b), Math.round(Math.sqrt(a * b))], how, howVi);
-    }
-    const k = int(r, 2, 7), h = int(r, 1, 6), ans = 2 * k + h;
-    const e = `x + ${k * k}/(x − ${h})`;
-    return q(r, `${MIN} A = ${e} for x > ${h}.`, `${MIN_VI} A = ${e} với x > ${h}.`, ans, [2 * k, 2 * k - h, k + h, k * k + h],
-      `Write A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. By AM–GM the first two terms are ≥ 2√${k * k} = ${2 * k}, so A ≥ ${ans}, with equality at x − ${h} = ${k}, i.e. x = ${h + k}.`,
-      `Viết A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. Theo Cô-si, tổng hai số hạng đầu ≥ 2√${k * k} = ${2 * k}, nên A ≥ ${ans}, dấu bằng khi x − ${h} = ${k}, tức là x = ${h + k}.`);
-  }
-  if (d === 4) {
-    if (r() < 0.55) {
-      let a = 0, m = 0, n = 0;
-      do {
-        a = int(r, -4, 3);
-        m = int(r, 1, 3);
-        n = int(r, 1, 3);
-      } while ((m * (m + n)) % 2 !== 0 || (2 * a + 2 * m + n) ** 2 < 2 * (a * (a + 2 * m + n) + (a + m) * (a + m + n)));
-      const [b, c, dd] = [a + m, a + m + n, a + 2 * m + n];
-      const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
-      const k = (m * (m + n)) / 2, ans = -k * k;
-      const e = [a, b, c, dd].map(lin).join('');
-      const t = `x² ${signed(a + dd)}x`;
-      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [a * b * c * dd, -k, 0, -4 * k * k],
-        `Pair the outside and inside factors: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} and ${lin(b)}${lin(c)} = t ${signed(b * c)}, with t = ${t}. Then A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, reached when t = ${num(-(a * dd + b * c) / 2)}.`,
-        `Ghép thừa số ngoài với ngoài, trong với trong: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} và ${lin(b)}${lin(c)} = t ${signed(b * c)}, với t = ${t}. Khi đó A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, đạt được khi t = ${num(-(a * dd + b * c) / 2)}.`);
-    }
-    const S = 2 * int(r, 1, 6), kind = pick(r, ['sq', 'cube', 'prod'] as const);
-    const head = `Real numbers x, y satisfy x + y = ${S}.`, headVi = `Các số thực x, y thỏa mãn x + y = ${S}.`;
-    if (kind === 'prod')
-      return q(r, `${head} Find the maximum value of xy.`, `${headVi} Tìm giá trị lớn nhất của xy.`, (S * S) / 4, [S * S, (S * S) / 2, S, S - 1],
-        `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, equality at x = y = ${S / 2}.`, `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, dấu bằng khi x = y = ${S / 2}.`);
-    if (kind === 'sq')
-      return q(r, `${head} Find the minimum value of x² + y².`, `${headVi} Tìm giá trị nhỏ nhất của x² + y².`, (S * S) / 2, [S * S, (S * S) / 4, 0, S],
-        `2(x² + y²) ≥ (x + y)² = ${S * S}, so x² + y² ≥ ${(S * S) / 2}, equality at x = y = ${S / 2}.`, `2(x² + y²) ≥ (x + y)² = ${S * S}, nên x² + y² ≥ ${(S * S) / 2}, dấu bằng khi x = y = ${S / 2}.`);
-    return q(r, `${head} Find the minimum value of x³ + y³.`, `${headVi} Tìm giá trị nhỏ nhất của x³ + y³.`, S ** 3 / 4, [S ** 3 / 8, 0, S ** 3, S ** 3 / 2],
-      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, and xy ≤ (x + y)²/4 = ${(S * S) / 4}. So x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, equality at x = y = ${S / 2}.`,
-      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, mà xy ≤ (x + y)²/4 = ${(S * S) / 4}. Vậy x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, dấu bằng khi x = y = ${S / 2}.`);
-  }
-  const kind = pick(r, ['titu', 'line', 'prod'] as const);
-  if (kind === 'titu') {
-    let p = int(r, 1, 5), qq = int(r, 1, 5);
-    if (p === qq) qq = (qq % 5) + 1;
-    const S = int(r, 1, 6);
-    return qf(
-      r,
-      `Positive numbers x, y satisfy x + y = ${S}. Find the minimum value of A = ${p * p}/x + ${qq * qq}/y.`,
-      `Các số dương x, y thỏa mãn x + y = ${S}. Tìm giá trị nhỏ nhất của A = ${p * p}/x + ${qq * qq}/y.`,
-      [(p + qq) ** 2, S],
-      [[p * p + qq * qq, S], [4 * p * qq, S], [2 * (p * p + qq * qq), S], [(p + qq) ** 2, 2 * S]],
-      `Cauchy–Schwarz (Engel form): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, with equality when x/${p} = y/${qq}, i.e. x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
-      `Bất đẳng thức Bunhiacốpxki (dạng phân thức): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, dấu bằng khi x/${p} = y/${qq}, tức là x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
-    );
-  }
-  const a = int(r, 1, 5), c = int(r, 2, 15);
-  let b = int(r, 1, 5);
-  if (b === a) b = (b % 5) + 1;
-  const [ax, by] = [`${a === 1 ? '' : a}x`, `${b === 1 ? '' : b}y`];
-  const line = `${ax} + ${by} = ${c}`;
-  if (kind === 'line')
-    return qf(
-      r,
-      `Real numbers x, y satisfy ${line}. Find the minimum value of x² + y².`,
-      `Các số thực x, y thỏa mãn ${line}. Tìm giá trị nhỏ nhất của x² + y².`,
-      [c * c, a * a + b * b],
-      [[c * c, (a + b) ** 2], [c, a * a + b * b], [c * c, 2 * (a * a + b * b)], [c * c, a * a]],
-      `Cauchy–Schwarz: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), so x² + y² ≥ ${fracN(c * c, a * a + b * b)}, with equality when x/${a} = y/${b}.`,
-      `Bất đẳng thức Bunhiacốpxki: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), nên x² + y² ≥ ${fracN(c * c, a * a + b * b)}, dấu bằng khi x/${a} = y/${b}.`,
-    );
-  return qf(
-    r,
-    `Positive numbers x, y satisfy ${line}. Find the maximum value of xy.`,
-    `Các số dương x, y thỏa mãn ${line}. Tìm giá trị lớn nhất của xy.`,
-    [c * c, 4 * a * b],
-    [[c * c, 4 * (a + b)], [c * c, 2 * a * b], [c * c, a * b], [c, 4 * a * b]],
-    `AM–GM on ${ax} and ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), so xy ≤ ${fracN(c * c, 4 * a * b)}, with equality when ${ax} = ${by} = ${fracN(c, 2)}.`,
-    `Cô-si cho ${ax} và ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), nên xy ≤ ${fracN(c * c, 4 * a * b)}, dấu bằng khi ${ax} = ${by} = ${fracN(c, 2)}.`,
-  );
-};
-
-// ── Identities: values from conditions, symmetric expressions ─────────
-const identities: Generator = (d, r) => {
-  const ab = () => {
-    let S = 0, P = 0;
-    do {
-      S = nz(r, -9, 9);
-      P = nz(r, -12, 12);
-    } while (S * S < 4 * P);
-    return [S, P];
-  };
-  const given = (S: number, P: number) => [`Real numbers a, b satisfy a + b = ${num(S)} and ab = ${num(P)}.`, `Cho các số thực a, b thỏa mãn a + b = ${num(S)} và ab = ${num(P)}.`];
-  const p = (n: number) => (n < 0 ? `(${num(n)})` : String(n));
-  if (d <= 1) {
-    const [S, P] = ab();
-    const [en, viG] = given(S, P);
-    if (r() < 0.6)
-      return q(r, `${en} Find a² + b².`, `${viG} Tính a² + b².`, S * S - 2 * P, [S * S, S * S - P, S * S + 2 * P, S - 2 * P],
-        `a² + b² = (a + b)² − 2ab = ${p(S)}² − 2·${p(P)} = ${S * S - 2 * P}.`, `a² + b² = (a + b)² − 2ab = ${p(S)}² − 2·${p(P)} = ${S * S - 2 * P}.`);
-    return q(r, `${en} Find (a − b)².`, `${viG} Tính (a − b)².`, S * S - 4 * P, [S * S - 2 * P, S * S + 4 * P, S * S, (S - P) ** 2],
-      `(a − b)² = (a + b)² − 4ab = ${p(S)}² − 4·${p(P)} = ${S * S - 4 * P}.`, `(a − b)² = (a + b)² − 4ab = ${p(S)}² − 4·${p(P)} = ${S * S - 4 * P}.`);
-  }
-  if (d === 2) {
-    const kind = pick(r, ['cube', 'cubeDiff', 'eval'] as const);
-    if (kind === 'cube') {
-      const [S, P] = ab();
-      const [en, viG] = given(S, P);
-      const ans = S ** 3 - 3 * P * S;
-      return q(r, `${en} Find a³ + b³.`, `${viG} Tính a³ + b³.`, ans, [S ** 3 - 3 * P, S ** 3, S ** 3 + 3 * P * S, S ** 3 - P * S],
-        `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`, `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`);
-    }
-    if (kind === 'cubeDiff') {
-      let D = 0, P = 0;
-      do {
-        D = int(r, 1, 7);
-        P = nz(r, -6, 12);
-      } while (D * D + 4 * P < 0);
-      const ans = D ** 3 + 3 * P * D;
-      return q(
-        r,
-        `Real numbers a, b satisfy a − b = ${D} and ab = ${num(P)}. Find a³ − b³.`,
-        `Cho các số thực a, b thỏa mãn a − b = ${D} và ab = ${num(P)}. Tính a³ − b³.`,
-        ans,
-        [D ** 3 - 3 * P * D, D ** 3 + 3 * P, D ** 3, D ** 3 + P * D],
-        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
-        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
-      );
-    }
-    const k = pick(r, [10, 20, 30, 50, 100]), c = nz(r, -9, 9), x = k + 1, ans = k ** 3 + 1 + c;
-    const e = `x³ − 3x² + 3x ${signed(c)}`;
-    return q(
-      r,
-      `Evaluate ${e} at x = ${x}.`,
-      `Tính giá trị của biểu thức ${e} tại x = ${x}.`,
-      ans,
-      [k ** 3 + c, k ** 3 - 1 + c, x ** 3 + c, k ** 3 + c - 2],
-      `x³ − 3x² + 3x − 1 = (x − 1)³, so the expression is (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
-      `x³ − 3x² + 3x − 1 = (x − 1)³, nên biểu thức bằng (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
-    );
-  }
-  if (d === 3) {
-    const t = pick(r, [3, 4, 5, 6, -3, -4, -5]);
-    const kind = pick(r, ['cube', 'minus', 'quad'] as const);
-    if (kind === 'cube') {
-      const ans = t ** 3 - 3 * t;
-      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x³ + 1/x³.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x³ + 1/x³.`, ans, [t ** 3, t ** 3 - 3, t ** 3 + 3 * t, t ** 3 - t],
-        `Cube both sides: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, so x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`,
-        `Lập phương hai vế: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, nên x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`);
-    }
-    if (kind === 'minus') {
-      const u = pick(r, [1, 2, 3, 4, 5, -2, -3]);
-      return q(r, `A real number x satisfies x − 1/x = ${num(u)}. Find x² + 1/x².`, `Số thực x thỏa mãn x − 1/x = ${num(u)}. Tính x² + 1/x².`, u * u + 2, [u * u - 2, u * u, u * u + 1, 2 * u + 2],
-        `Square both sides: x² − 2 + 1/x² = ${u * u}, so x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (The middle term of (x − 1/x)² is −2·x·(1/x) = −2.)`,
-        `Bình phương hai vế: x² − 2 + 1/x² = ${u * u}, nên x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (Hạng tử giữa của (x − 1/x)² là −2·x·(1/x) = −2.)`);
-    }
-    const e = `${poly([1, -t, 1])} = 0`;
-    return q(r, `A real number x satisfies ${e}. Find x² + 1/x².`, `Số thực x thỏa mãn ${e}. Tính x² + 1/x².`, t * t - 2, [t * t + 2, t * t, t * t - 1, 2 - t],
-      `x ≠ 0, so divide by x: x + 1/x = ${num(t)}. Then x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`,
-      `x ≠ 0 nên chia hai vế cho x: x + 1/x = ${num(t)}. Khi đó x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`);
-  }
-  if (d === 4) {
-    const kind = pick(r, ['four', 'five', 'zero', 'ab4'] as const);
-    const t = pick(r, [3, 4, 5, -3, -4]), t2 = t * t - 2, t3 = t ** 3 - 3 * t;
-    if (kind === 'four')
-      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁴ + 1/x⁴.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁴ + 1/x⁴.`, t2 * t2 - 2, [t ** 4 - 2, t2 * t2, t ** 4 - 4, t2 * t2 + 2],
-        `x² + 1/x² = ${t * t} − 2 = ${t2}, then square again: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`,
-        `x² + 1/x² = ${t * t} − 2 = ${t2}, bình phương tiếp: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`);
-    if (kind === 'five') {
-      const ans = t2 * t3 - t;
-      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁵ + 1/x⁵.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁵ + 1/x⁵.`, ans, [t2 * t3, t2 * t3 + t, t ** 5 - 5 * t, t ** 5],
-        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Multiply: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, so x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`,
-        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Nhân lại: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, nên x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`);
-    }
-    if (kind === 'zero') {
-      const k = nz(r, -20, 20);
-      return q(r, `Real numbers a, b, c satisfy a + b + c = 0 and abc = ${num(k)}. Find a³ + b³ + c³.`, `Cho các số thực a, b, c thỏa mãn a + b + c = 0 và abc = ${num(k)}. Tính a³ + b³ + c³.`, 3 * k, [0, k, -3 * k, 9 * k],
-        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, so a³ + b³ + c³ = 3abc = ${num(3 * k)}.`,
-        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, nên a³ + b³ + c³ = 3abc = ${num(3 * k)}.`);
-    }
-    const [S, P] = ab();
-    const [en, viG] = given(S, P);
-    const s2 = S * S - 2 * P, ans = s2 * s2 - 2 * P * P;
-    return q(r, `${en} Find a⁴ + b⁴.`, `${viG} Tính a⁴ + b⁴.`, ans, [s2 * s2, s2 * s2 - 2 * P, S ** 4 - 2 * P * P, s2 * s2 + 2 * P * P],
-      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, and a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`,
-      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, và a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`);
-  }
-  // d5: three variables
-  let a = 0, b = 0, c = 0;
-  do {
-    a = nz(r, -6, 7);
-    b = nz(r, -6, 7);
-    c = nz(r, -6, 7);
-  } while (a + b + c === 0 || a * b + b * c + c * a === 0);
-  const S = a + b + c, Q = a * b + b * c + c * a, R = a * b * c;
-  const kind = pick(r, ['cube', 'pairs', 'recip'] as const);
-  if (kind === 'pairs') {
-    const T = a * a + b * b + c * c;
-    return q(
-      r,
-      `Real numbers a, b, c satisfy a + b + c = ${num(S)} and a² + b² + c² = ${T}. Find ab + bc + ca.`,
-      `Cho các số thực a, b, c thỏa mãn a + b + c = ${num(S)} và a² + b² + c² = ${T}. Tính ab + bc + ca.`,
-      Q,
-      [S * S - T, T - S * S, (T - S * S) / 2, (S * S + T) / 2],
-      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), so ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
-      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), nên ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
-    );
-  }
-  const given3 = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} and abc = ${num(R)}`;
-  const given3Vi = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} và abc = ${num(R)}`;
-  if (kind === 'recip')
-    return qf(
-      r,
-      `Real numbers a, b, c satisfy ${given3}. Find 1/a + 1/b + 1/c.`,
-      `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính 1/a + 1/b + 1/c.`,
-      [Q, R],
-      [[R, Q], [S, R], [-Q, R], [1, S]],
-      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
-      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
-    );
-  const ans = S ** 3 - 3 * S * Q + 3 * R;
-  return q(
-    r,
-    `Real numbers a, b, c satisfy ${given3}. Find a³ + b³ + c³.`,
-    `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính a³ + b³ + c³.`,
-    ans,
-    [S ** 3 - 3 * S * Q, 3 * R, S ** 3 - 3 * S * Q - 3 * R, S ** 3 - S * Q + 3 * R],
-    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Then a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), so a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
-    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Mà a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), nên a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
-  );
-};
-
 // ── Diophantine equations: factoring tricks, perfect squares, counting solutions ──
 const tau = (n: number) => divisors(Math.abs(n)).length;
 const isSquare = (n: number) => n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
@@ -761,6 +368,386 @@ const diophantine: Generator = (d, r) => {
     [2 * t, t, 2 * t - 2, t - 1],
     `(x − ${n})(y − ${n}) = ${n * n}, and x − ${n} can be any of the 2·${t} divisors of ${n * n}, positive or negative — except −${n}, which gives x = 0. So 2·${t} − 1 = ${2 * t - 1} pairs.`,
     `(x − ${n})(y − ${n}) = ${n * n}, x − ${n} là một trong 2·${t} ước (dương hoặc âm) của ${n * n} — trừ ước −${n} vì khi đó x = 0. Vậy có 2·${t} − 1 = ${2 * t - 1} cặp.`,
+  );
+};
+
+// ── Identities: values from conditions, symmetric expressions ─────────
+const identities: Generator = (d, r) => {
+  const ab = () => {
+    let S = 0, P = 0;
+    do {
+      S = nz(r, -9, 9);
+      P = nz(r, -12, 12);
+    } while (S * S < 4 * P);
+    return [S, P];
+  };
+  const given = (S: number, P: number) => [`Real numbers a, b satisfy a + b = ${num(S)} and ab = ${num(P)}.`, `Cho các số thực a, b thỏa mãn a + b = ${num(S)} và ab = ${num(P)}.`];
+  const p = (n: number) => (n < 0 ? `(${num(n)})` : String(n));
+  if (d <= 1) {
+    const kind = pick(r, ['cube', 'cubeDiff', 'eval'] as const);
+    if (kind === 'cube') {
+      const [S, P] = ab();
+      const [en, viG] = given(S, P);
+      const ans = S ** 3 - 3 * P * S;
+      return q(r, `${en} Find a³ + b³.`, `${viG} Tính a³ + b³.`, ans, [S ** 3 - 3 * P, S ** 3, S ** 3 + 3 * P * S, S ** 3 - P * S],
+        `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`, `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`);
+    }
+    if (kind === 'cubeDiff') {
+      let D = 0, P = 0;
+      do {
+        D = int(r, 1, 7);
+        P = nz(r, -6, 12);
+      } while (D * D + 4 * P < 0);
+      const ans = D ** 3 + 3 * P * D;
+      return q(
+        r,
+        `Real numbers a, b satisfy a − b = ${D} and ab = ${num(P)}. Find a³ − b³.`,
+        `Cho các số thực a, b thỏa mãn a − b = ${D} và ab = ${num(P)}. Tính a³ − b³.`,
+        ans,
+        [D ** 3 - 3 * P * D, D ** 3 + 3 * P, D ** 3, D ** 3 + P * D],
+        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
+        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
+      );
+    }
+    const k = pick(r, [10, 20, 30, 50, 100]), c = nz(r, -9, 9), x = k + 1, ans = k ** 3 + 1 + c;
+    const e = `x³ − 3x² + 3x ${signed(c)}`;
+    return q(
+      r,
+      `Evaluate ${e} at x = ${x}.`,
+      `Tính giá trị của biểu thức ${e} tại x = ${x}.`,
+      ans,
+      [k ** 3 + c, k ** 3 - 1 + c, x ** 3 + c, k ** 3 + c - 2],
+      `x³ − 3x² + 3x − 1 = (x − 1)³, so the expression is (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
+      `x³ − 3x² + 3x − 1 = (x − 1)³, nên biểu thức bằng (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
+    );
+  }
+  if (d === 2) {
+    const t = pick(r, [3, 4, 5, 6, -3, -4, -5]);
+    const kind = pick(r, ['cube', 'minus', 'quad'] as const);
+    if (kind === 'cube') {
+      const ans = t ** 3 - 3 * t;
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x³ + 1/x³.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x³ + 1/x³.`, ans, [t ** 3, t ** 3 - 3, t ** 3 + 3 * t, t ** 3 - t],
+        `Cube both sides: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, so x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`,
+        `Lập phương hai vế: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, nên x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`);
+    }
+    if (kind === 'minus') {
+      const u = pick(r, [1, 2, 3, 4, 5, -2, -3]);
+      return q(r, `A real number x satisfies x − 1/x = ${num(u)}. Find x² + 1/x².`, `Số thực x thỏa mãn x − 1/x = ${num(u)}. Tính x² + 1/x².`, u * u + 2, [u * u - 2, u * u, u * u + 1, 2 * u + 2],
+        `Square both sides: x² − 2 + 1/x² = ${u * u}, so x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (The middle term of (x − 1/x)² is −2·x·(1/x) = −2.)`,
+        `Bình phương hai vế: x² − 2 + 1/x² = ${u * u}, nên x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (Hạng tử giữa của (x − 1/x)² là −2·x·(1/x) = −2.)`);
+    }
+    const e = `${poly([1, -t, 1])} = 0`;
+    return q(r, `A real number x satisfies ${e}. Find x² + 1/x².`, `Số thực x thỏa mãn ${e}. Tính x² + 1/x².`, t * t - 2, [t * t + 2, t * t, t * t - 1, 2 - t],
+      `x ≠ 0, so divide by x: x + 1/x = ${num(t)}. Then x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`,
+      `x ≠ 0 nên chia hai vế cho x: x + 1/x = ${num(t)}. Khi đó x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`);
+  }
+  if (d === 3 || (d === 5 && r() < 0.4)) {
+    const kind = d === 5 ? 'five' : pick(r, ['four', 'zero', 'ab4'] as const);
+    const t = pick(r, [3, 4, 5, -3, -4]), t2 = t * t - 2, t3 = t ** 3 - 3 * t;
+    if (kind === 'four')
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁴ + 1/x⁴.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁴ + 1/x⁴.`, t2 * t2 - 2, [t ** 4 - 2, t2 * t2, t ** 4 - 4, t2 * t2 + 2],
+        `x² + 1/x² = ${t * t} − 2 = ${t2}, then square again: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`,
+        `x² + 1/x² = ${t * t} − 2 = ${t2}, bình phương tiếp: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`);
+    if (kind === 'five') {
+      const ans = t2 * t3 - t;
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁵ + 1/x⁵.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁵ + 1/x⁵.`, ans, [t2 * t3, t2 * t3 + t, t ** 5 - 5 * t, t ** 5],
+        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Multiply: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, so x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`,
+        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Nhân lại: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, nên x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`);
+    }
+    if (kind === 'zero') {
+      const k = nz(r, -20, 20);
+      return q(r, `Real numbers a, b, c satisfy a + b + c = 0 and abc = ${num(k)}. Find a³ + b³ + c³.`, `Cho các số thực a, b, c thỏa mãn a + b + c = 0 và abc = ${num(k)}. Tính a³ + b³ + c³.`, 3 * k, [0, k, -3 * k, 9 * k],
+        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, so a³ + b³ + c³ = 3abc = ${num(3 * k)}.`,
+        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, nên a³ + b³ + c³ = 3abc = ${num(3 * k)}.`);
+    }
+    const [S, P] = ab();
+    const [en, viG] = given(S, P);
+    const s2 = S * S - 2 * P, ans = s2 * s2 - 2 * P * P;
+    return q(r, `${en} Find a⁴ + b⁴.`, `${viG} Tính a⁴ + b⁴.`, ans, [s2 * s2, s2 * s2 - 2 * P, S ** 4 - 2 * P * P, s2 * s2 + 2 * P * P],
+      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, and a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`,
+      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, và a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`);
+  }
+  // d4–5: three variables
+  let a = 0, b = 0, c = 0;
+  do {
+    a = nz(r, -6, 7);
+    b = nz(r, -6, 7);
+    c = nz(r, -6, 7);
+  } while (a + b + c === 0 || a * b + b * c + c * a === 0);
+  const S = a + b + c, Q = a * b + b * c + c * a, R = a * b * c;
+  const kind = d === 4 ? pick(r, ['pairs', 'recip'] as const) : 'cube';
+  if (kind === 'pairs') {
+    const T = a * a + b * b + c * c;
+    return q(
+      r,
+      `Real numbers a, b, c satisfy a + b + c = ${num(S)} and a² + b² + c² = ${T}. Find ab + bc + ca.`,
+      `Cho các số thực a, b, c thỏa mãn a + b + c = ${num(S)} và a² + b² + c² = ${T}. Tính ab + bc + ca.`,
+      Q,
+      [S * S - T, T - S * S, (T - S * S) / 2, (S * S + T) / 2],
+      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), so ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
+      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), nên ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
+    );
+  }
+  const given3 = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} and abc = ${num(R)}`;
+  const given3Vi = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} và abc = ${num(R)}`;
+  if (kind === 'recip')
+    return qf(
+      r,
+      `Real numbers a, b, c satisfy ${given3}. Find 1/a + 1/b + 1/c.`,
+      `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính 1/a + 1/b + 1/c.`,
+      [Q, R],
+      [[R, Q], [S, R], [-Q, R], [1, S]],
+      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
+      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
+    );
+  const ans = S ** 3 - 3 * S * Q + 3 * R;
+  return q(
+    r,
+    `Real numbers a, b, c satisfy ${given3}. Find a³ + b³ + c³.`,
+    `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính a³ + b³ + c³.`,
+    ans,
+    [S ** 3 - 3 * S * Q, 3 * R, S ** 3 - 3 * S * Q - 3 * R, S ** 3 - S * Q + 3 * R],
+    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Then a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), so a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
+    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Mà a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), nên a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
+  );
+};
+
+// ── Inequalities: min/max by completing the square, AM–GM, Cauchy–Schwarz ──
+const inequalities: Generator = (d, r) => {
+  const MIN = 'Find the minimum value of', MIN_VI = 'Tìm giá trị nhỏ nhất của';
+  const sq = (v: string, k: number) => (k === 0 ? `${v}²` : `(${v} ${signed(k)})²`);
+  if (d <= 1) {
+    const kind = pick(r, ['max', 'scaled', 'scaled', 'argmin'] as const);
+    if (kind === 'scaled') {
+      const a = int(r, 2, 4), k = nz(r, -4, 4), c = int(r, -5, 25), ans = c - a * k * k;
+      const e = poly([a, 2 * a * k, c]);
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c - k * k, c + a * k * k, c, c - a * a * k * k],
+        `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-k)}.`,
+        `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-k)}.`);
+    }
+    const p = nz(r, -6, 6), c = int(r, -10, 20);
+    if (kind === 'max') {
+      const e = poly([-1, 2 * p, c]), ans = c + p * p;
+      return q(r, `Find the maximum value of A = ${e}.`, `Tìm giá trị lớn nhất của A = ${e}.`, ans, [c, c - p * p, p, p * p],
+        `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, with equality at x = ${num(p)}.`, `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`);
+    }
+    const e = poly([1, -2 * p, c]), ans = c - p * p;
+    return q(r, `For which value of x does A = ${e} take its smallest value?`, `A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, p, [-p, 2 * p, ans, -2 * p],
+      `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, with equality when x = ${num(p)}.`, `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`);
+  }
+  if (d === 2) {
+    if (r() < 0.5) {
+      const a = nz(r, -4, 4), b = nz(r, -4, 4), c = int(r, 0, 30), ans = c - a * a - b * b;
+      const e = terms([[1, 'x²'], [1, 'y²'], [2 * a, 'x'], [2 * b, 'y'], [c, '']]);
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - a * a, c + a * a + b * b, c - 4 * a * a - 4 * b * b],
+        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-a)}, y = ${num(-b)}.`,
+        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-a)}, y = ${num(-b)}.`);
+    }
+    const b = nz(r, -5, 5), c = int(r, 0, 30), ans = c - b * b;
+    const e = terms([[1, 'x²'], [-2, 'xy'], [2, 'y²'], [2 * b, 'y'], [c, '']]);
+    return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - 2 * b * b, c + b * b, c - 4 * b * b],
+      `Split 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = y = ${num(-b)}.`,
+      `Tách 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = y = ${num(-b)}.`);
+  }
+  if (d === 3) {
+    if (r() < 0.65) {
+      const s0 = int(r, 1, 3);
+      let p = int(r, 1, 5), qq = int(r, 1, 6);
+      if (p === qq) qq++;
+      const a = s0 * p * p, b = s0 * qq * qq, ans = 2 * s0 * p * qq;
+      const ax = `${a === 1 ? '' : a}x`, e = `${ax} + ${b}/x`;
+      const how = `AM–GM: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, with equality when ${ax} = ${b}/x, i.e. x = ${fracN(qq, p)}.`;
+      const howVi = `Bất đẳng thức Cô-si: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, dấu bằng khi ${ax} = ${b}/x, tức là x = ${fracN(qq, p)}.`;
+      if (r() < 0.3)
+        return qf(r, `For x > 0, at which x does A = ${e} take its smallest value?`, `Với x > 0, A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, [qq, p], [[p, qq], [b, a], [qq * qq, p * p], [1, 1]], how, howVi);
+      return q(r, `${MIN} A = ${e} for x > 0.`, `${MIN_VI} A = ${e} với x > 0.`, ans, [a + b, ans / 2, 2 * (a + b), Math.round(Math.sqrt(a * b))], how, howVi);
+    }
+    const k = int(r, 2, 7), h = int(r, 1, 6), ans = 2 * k + h;
+    const e = `x + ${k * k}/(x − ${h})`;
+    return q(r, `${MIN} A = ${e} for x > ${h}.`, `${MIN_VI} A = ${e} với x > ${h}.`, ans, [2 * k, 2 * k - h, k + h, k * k + h],
+      `Write A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. By AM–GM the first two terms are ≥ 2√${k * k} = ${2 * k}, so A ≥ ${ans}, with equality at x − ${h} = ${k}, i.e. x = ${h + k}.`,
+      `Viết A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. Theo Cô-si, tổng hai số hạng đầu ≥ 2√${k * k} = ${2 * k}, nên A ≥ ${ans}, dấu bằng khi x − ${h} = ${k}, tức là x = ${h + k}.`);
+  }
+  if (d === 4) {
+    if (r() < 0.55) {
+      let a = 0, m = 0, n = 0;
+      do {
+        a = int(r, -4, 3);
+        m = int(r, 1, 3);
+        n = int(r, 1, 3);
+      } while ((m * (m + n)) % 2 !== 0 || (2 * a + 2 * m + n) ** 2 < 2 * (a * (a + 2 * m + n) + (a + m) * (a + m + n)));
+      const [b, c, dd] = [a + m, a + m + n, a + 2 * m + n];
+      const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
+      const k = (m * (m + n)) / 2, ans = -k * k;
+      const e = [a, b, c, dd].map(lin).join('');
+      const t = `x² ${signed(a + dd)}x`;
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [a * b * c * dd, -k, 0, -4 * k * k],
+        `Pair the outside and inside factors: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} and ${lin(b)}${lin(c)} = t ${signed(b * c)}, with t = ${t}. Then A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, reached when t = ${num(-(a * dd + b * c) / 2)}.`,
+        `Ghép thừa số ngoài với ngoài, trong với trong: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} và ${lin(b)}${lin(c)} = t ${signed(b * c)}, với t = ${t}. Khi đó A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, đạt được khi t = ${num(-(a * dd + b * c) / 2)}.`);
+    }
+    const S = 2 * int(r, 1, 6), kind = pick(r, ['sq', 'cube', 'prod'] as const);
+    const head = `Real numbers x, y satisfy x + y = ${S}.`, headVi = `Các số thực x, y thỏa mãn x + y = ${S}.`;
+    if (kind === 'prod')
+      return q(r, `${head} Find the maximum value of xy.`, `${headVi} Tìm giá trị lớn nhất của xy.`, (S * S) / 4, [S * S, (S * S) / 2, S, S - 1],
+        `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, equality at x = y = ${S / 2}.`, `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, dấu bằng khi x = y = ${S / 2}.`);
+    if (kind === 'sq')
+      return q(r, `${head} Find the minimum value of x² + y².`, `${headVi} Tìm giá trị nhỏ nhất của x² + y².`, (S * S) / 2, [S * S, (S * S) / 4, 0, S],
+        `2(x² + y²) ≥ (x + y)² = ${S * S}, so x² + y² ≥ ${(S * S) / 2}, equality at x = y = ${S / 2}.`, `2(x² + y²) ≥ (x + y)² = ${S * S}, nên x² + y² ≥ ${(S * S) / 2}, dấu bằng khi x = y = ${S / 2}.`);
+    return q(r, `${head} Find the minimum value of x³ + y³.`, `${headVi} Tìm giá trị nhỏ nhất của x³ + y³.`, S ** 3 / 4, [S ** 3 / 8, 0, S ** 3, S ** 3 / 2],
+      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, and xy ≤ (x + y)²/4 = ${(S * S) / 4}. So x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, equality at x = y = ${S / 2}.`,
+      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, mà xy ≤ (x + y)²/4 = ${(S * S) / 4}. Vậy x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, dấu bằng khi x = y = ${S / 2}.`);
+  }
+  const kind = pick(r, ['titu', 'line', 'prod'] as const);
+  if (kind === 'titu') {
+    let p = int(r, 1, 5), qq = int(r, 1, 5);
+    if (p === qq) qq = (qq % 5) + 1;
+    const S = int(r, 1, 6);
+    return qf(
+      r,
+      `Positive numbers x, y satisfy x + y = ${S}. Find the minimum value of A = ${p * p}/x + ${qq * qq}/y.`,
+      `Các số dương x, y thỏa mãn x + y = ${S}. Tìm giá trị nhỏ nhất của A = ${p * p}/x + ${qq * qq}/y.`,
+      [(p + qq) ** 2, S],
+      [[p * p + qq * qq, S], [4 * p * qq, S], [2 * (p * p + qq * qq), S], [(p + qq) ** 2, 2 * S]],
+      `Cauchy–Schwarz (Engel form): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, with equality when x/${p} = y/${qq}, i.e. x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
+      `Bất đẳng thức Bunhiacốpxki (dạng phân thức): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, dấu bằng khi x/${p} = y/${qq}, tức là x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
+    );
+  }
+  const a = int(r, 1, 5), c = int(r, 2, 15);
+  let b = int(r, 1, 5);
+  if (b === a) b = (b % 5) + 1;
+  const [ax, by] = [`${a === 1 ? '' : a}x`, `${b === 1 ? '' : b}y`];
+  const line = `${ax} + ${by} = ${c}`;
+  if (kind === 'line')
+    return qf(
+      r,
+      `Real numbers x, y satisfy ${line}. Find the minimum value of x² + y².`,
+      `Các số thực x, y thỏa mãn ${line}. Tìm giá trị nhỏ nhất của x² + y².`,
+      [c * c, a * a + b * b],
+      [[c * c, (a + b) ** 2], [c, a * a + b * b], [c * c, 2 * (a * a + b * b)], [c * c, a * a]],
+      `Cauchy–Schwarz: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), so x² + y² ≥ ${fracN(c * c, a * a + b * b)}, with equality when x/${a} = y/${b}.`,
+      `Bất đẳng thức Bunhiacốpxki: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), nên x² + y² ≥ ${fracN(c * c, a * a + b * b)}, dấu bằng khi x/${a} = y/${b}.`,
+    );
+  return qf(
+    r,
+    `Positive numbers x, y satisfy ${line}. Find the maximum value of xy.`,
+    `Các số dương x, y thỏa mãn ${line}. Tìm giá trị lớn nhất của xy.`,
+    [c * c, 4 * a * b],
+    [[c * c, 4 * (a + b)], [c * c, 2 * a * b], [c * c, a * b], [c, 4 * a * b]],
+    `AM–GM on ${ax} and ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), so xy ≤ ${fracN(c * c, 4 * a * b)}, with equality when ${ax} = ${by} = ${fracN(c, 2)}.`,
+    `Cô-si cho ${ax} và ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), nên xy ≤ ${fracN(c * c, 4 * a * b)}, dấu bằng khi ${ax} = ${by} = ${fracN(c, 2)}.`,
+  );
+};
+
+// ── Equations: radicals (reject extraneous roots), substitution, symmetric systems ──
+const xs = (...v: number[]) => roots(v.map((x) => [x, 1] as [number, number]));
+const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
+const rt = (inside: string) => (inside === 'x' ? '√x' : `√(${inside})`);
+
+const equations: Generator = (d, r) => {
+  if (d <= 1) {
+    const b = nz(r, -3, 6), x0 = b + int(r, 2, 6), a = (x0 - b) ** 2 - x0, x1 = 2 * b + 1 - x0;
+    const e = `${rt(poly([1, a]))} = ${poly([1, -b])}`;
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      xs(x0),
+      [xs(x0, x1), xs(x1), xs(x0, -x0), xs(x0 + 1)],
+      `Condition: x ≥ ${num(b)} (the right side equals a square root, so it can't be negative). Squaring: ${poly([1, a])} = ${lin(-b)}², i.e. ${poly([1, -(2 * b + 1), b * b - a])} = 0, so x = ${num(x0)} or x = ${num(x1)}. But ${num(x1)} < ${num(b)}: reject it (it solves the squared equation only).`,
+      `Điều kiện: x ≥ ${num(b)} (vế phải bằng một căn bậc hai nên không âm). Bình phương: ${poly([1, a])} = ${lin(-b)}², tức là ${poly([1, -(2 * b + 1), b * b - a])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}. Nhưng ${num(x1)} < ${num(b)} nên loại (nó chỉ là nghiệm của phương trình sau khi bình phương).`,
+    );
+  }
+  if (d === 2) {
+    const u = int(r, 1, 5);
+    let t2 = 0;
+    if (r() < 0.5) t2 = -(int(r, 1, 6) ** 2);
+    if (t2 === -u * u) t2 -= 2 * u + 1;
+    else {
+      let w = int(r, 1, 6);
+      if (w === u) w = u + 1;
+      t2 = w * w;
+    }
+    const t1 = u * u, e = `${terms([[1, 'x⁴'], [-(t1 + t2), 'x²'], [t1 * t2, '']])} = 0`;
+    const w = Math.round(Math.sqrt(Math.abs(t2))); // t2 = −w² when it is rejected
+    const ans = t2 > 0 ? xs(-w, -u, u, w) : xs(-u, u);
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      ans,
+      [t2 > 0 ? xs(u, w) : xs(-w, -u, u, w), xs(t1, t2), t2 > 0 ? xs(-u, u) : xs(u), xs(u, -w), xs(-u - 1, u + 1)],
+      `Put t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, so t = ${t1} or t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 is rejected; t = ${t1} gives x = ±${u}.` : `x² = ${t1} gives x = ±${u}, x² = ${t2} gives x = ±${w}.`}`,
+      `Đặt t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, nên t = ${t1} hoặc t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 bị loại; t = ${t1} cho x = ±${u}.` : `x² = ${t1} cho x = ±${u}, x² = ${t2} cho x = ±${w}.`}`,
+    );
+  }
+  if (d === 3) {
+    let z1 = 0, z2 = 0;
+    const cnt = (S: number, P: number) => (S * S > 4 * P ? 2 : 0);
+    const trap = r() < 0.6; // usually one of the two cases has no real solution
+    do {
+      z1 = int(r, -5, 8);
+      z2 = int(r, -5, 8);
+    } while (z1 >= z2 || z1 + z2 === -1 || z1 * z1 === 4 * z2 || z2 * z2 === 4 * z1 || cnt(z1, z2) + cnt(z2, z1) === 0 || (trap && cnt(z1, z2) + cnt(z2, z1) !== 2));
+    const A = z1 + z2, B = z1 * z2, ans = cnt(z1, z2) + cnt(z2, z1);
+    const sys = `x + y + xy = ${num(A)} and x²y + xy² = ${num(B)}`;
+    const sysVi = `x + y + xy = ${num(A)} và x²y + xy² = ${num(B)}`;
+    const cs = (S: number, P: number, vi_: boolean) =>
+      `S = ${num(S)}, P = ${num(P)}: S² − 4P = ${num(S * S - 4 * P)} ${S * S > 4 * P ? (vi_ ? '> 0, cho 2 cặp' : '> 0, giving 2 pairs') : vi_ ? '< 0, loại' : '< 0, no real pair'}`;
+    return q(
+      r,
+      `How many pairs of real numbers (x, y) satisfy ${sys}?`,
+      `Hệ phương trình ${sysVi} có bao nhiêu nghiệm thực (x; y)?`,
+      ans,
+      [4, ans === 4 ? 2 : 1, 0, 3].filter((v) => v !== ans),
+      `Let S = x + y, P = xy: S + P = ${num(A)} and SP = ${num(B)}, so S and P are the roots of ${poly([1, -A, B], 'z')} = 0: ${num(z1)} and ${num(z2)}. x, y are real only if S² ≥ 4P. ${cs(z1, z2, false)}; ${cs(z2, z1, false)}. Total: ${ans}.`,
+      `Đặt S = x + y, P = xy: S + P = ${num(A)} và SP = ${num(B)}, nên S, P là nghiệm của ${poly([1, -A, B], 'z')} = 0: ${num(z1)} và ${num(z2)}. x, y là số thực khi và chỉ khi S² ≥ 4P. ${cs(z1, z2, true)}; ${cs(z2, z1, true)}. Tổng cộng: ${ans} nghiệm.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.55) {
+      const u0 = int(r, 1, 5), a = int(r, -3, 3), t1 = u0 * u0 + 3 * u0, k = t1 * (t1 + 2);
+      const x0 = u0 - a, x1 = -3 - u0 - a;
+      const e = `${[a, a + 1, a + 2, a + 3].map(lin).join('')} = ${k}`;
+      const tt = `x² ${signed(2 * a + 3)}x ${signed(a * a + 3 * a)}`.replace(' + 0', '');
+      return qs(
+        `Solve: ${e}`,
+        `Giải phương trình: ${e}`,
+        xs(x1, x0),
+        [xs(x0), xs(x0, -x0), xs(x1, x0, -1 - a, -2 - a), xs(x1 + 1, x0 - 1)],
+        `Multiply the outer pair and the inner pair: ${lin(a)}${lin(a + 3)} = t and ${lin(a + 1)}${lin(a + 2)} = t + 2, with t = ${tt}. Then t(t + 2) = ${k}, so t = ${t1} or t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} gives no real x (Δ < 0); t = ${t1} gives x = ${num(x0)} or x = ${num(x1)}.`,
+        `Nhân cặp ngoài và cặp trong: ${lin(a)}${lin(a + 3)} = t và ${lin(a + 1)}${lin(a + 2)} = t + 2, với t = ${tt}. Khi đó t(t + 2) = ${k}, nên t = ${t1} hoặc t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} không cho x thực (Δ < 0); t = ${t1} cho x = ${num(x0)} hoặc x = ${num(x1)}.`,
+      );
+    }
+    let u = int(r, 1, 4), v = int(r, 2, 6);
+    if (v <= u) v = u + 1;
+    const x0 = int(r, -4, 10), a = u * u - x0, b = v * v - x0, c = u + v;
+    const e = `${rt(poly([1, a]))} + ${rt(poly([1, b]))} = ${c}`;
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      xs(x0),
+      [xs(x0 + 1), xs(x0, x0 + c), xs(c * c - a - b), xs(-x0)],
+      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, so ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Adding to the given equation: 2${rt(poly([1, b]))} = ${c + v - u}, so ${rt(poly([1, b]))} = ${v} and x = ${v * v} ${signed(-b)} = ${num(x0)}. (The left side increases with x, so this is the only solution.)`,
+      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, nên ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Cộng với phương trình đã cho: 2${rt(poly([1, b]))} = ${c + v - u}, nên ${rt(poly([1, b]))} = ${v} và x = ${v * v} ${signed(-b)} = ${num(x0)}. (Vế trái đồng biến theo x nên đây là nghiệm duy nhất.)`,
+    );
+  }
+  const t1 = int(r, 2, 6), t2 = -int(r, 1, t1 - 1), m = t1 + t2;
+  let x0 = 0, x1 = 0;
+  do {
+    x0 = int(r, -6, 5);
+    x1 = int(r, -5, 7);
+  } while (x0 >= x1 || x0 + x1 === 0);
+  const p = -(x0 + x1), qq = x0 * x1 + t1 * t1, c = qq + t1 * t2;
+  const inner = poly([1, p, qq]);
+  const e = `${poly([1, p, c])} = ${m === 1 ? '' : m}${rt(inner)}`;
+  // The rejected root t = t2 < 0: x² + px + q = t2² — the "solutions" a careless solver would add.
+  const D2 = p * p - 4 * (qq - t2 * t2);
+  const extra = D2 >= 0 && isSquare(D2) && (D2 > 0) ? [(-p - Math.sqrt(D2)) / 2, (-p + Math.sqrt(D2)) / 2].filter(Number.isInteger) : [];
+  return qs(
+    `Solve: ${e}`,
+    `Giải phương trình: ${e}`,
+    xs(x0, x1),
+    [extra.length ? xs(x0, x1, ...extra) : xs(x0, x1, -x0), xs(x0), xs(x1), xs(-x0, -x1)],
+    `Put t = ${rt(inner)} ≥ 0. Then ${poly([1, p, c])} = t² ${signed(c - qq)}, so t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} or t = ${num(t2)} (rejected, t ≥ 0). t = ${t1}: ${inner} = ${t1 * t1}, i.e. ${poly([1, p, x0 * x1])} = 0, so x = ${num(x0)} or x = ${num(x1)}.`,
+    `Đặt t = ${rt(inner)} ≥ 0. Khi đó ${poly([1, p, c])} = t² ${signed(c - qq)}, nên t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} hoặc t = ${num(t2)} (loại vì t ≥ 0). Với t = ${t1}: ${inner} = ${t1 * t1}, tức là ${poly([1, p, x0 * x1])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}.`,
   );
 };
 
@@ -991,6 +978,16 @@ const geometry: Generator = (d, r) => {
     let p = int(r, 2, 9), qq = int(r, 2, 9);
     if (p === qq) qq = p + int(r, 1, 3);
     const t = int(r, 1, 5), S = p * p * t, ans = qq * qq * t;
+    if (r() < 0.5)
+      return q(
+        r,
+        `Triangle ABC is similar to triangle DEF. Their areas are ${S} cm² and ${ans} cm², and AB = ${p} cm. Find DE (cm).`,
+        `Tam giác ABC đồng dạng với tam giác DEF, diện tích hai tam giác lần lượt là ${S} cm² và ${ans} cm², AB = ${p} cm. Tính DE (cm).`,
+        qq,
+        [(p * ans) / S, (p * S) / ans, qq * qq, qq + 1, qq - 1],
+        `The area ratio is k² = ${ans}/${S} = ${fracN(qq * qq, p * p)}, so the ratio of similarity is k = ${fracN(qq, p)} (take the square root!) and DE = ${p}·${fracN(qq, p)} = ${qq} cm.`,
+        `Tỉ số diện tích là k² = ${ans}/${S} = ${fracN(qq * qq, p * p)}, nên tỉ số đồng dạng k = ${fracN(qq, p)} (phải lấy căn bậc hai!) và DE = ${p}·${fracN(qq, p)} = ${qq} cm.`,
+      );
     return q(
       r,
       `Triangle ABC is similar to triangle DEF, with AB = ${p} cm and DE = ${qq} cm. The area of ABC is ${S} cm². Find the area of DEF (cm²).`,
