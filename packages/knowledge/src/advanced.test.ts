@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { concepts, generators } from '@atlas/content';
 import { rng } from '@atlas/shared';
+import type { Generated } from '@atlas/content';
 
 const SEEDS = 150;
 const gen = (id: string, d: number, seed: number) => generators[id](d, rng(seed * 11 + d));
@@ -123,7 +124,7 @@ const isPrime = (n: number) => {
 };
 
 /** Each checker re-derives the answer of a prompt and returns it as a string (or null if it doesn't recognise the prompt). */
-const checkers: Record<string, (p: string) => string | number | null> = {
+const checkers: Record<string, (p: string, g: Generated) => string | number | null> = {
   'math.adv.number-theory': (p) => {
     let m = p.match(/^What is the last digit of (\d+)([⁰¹²³⁴⁵⁶⁷⁸⁹]+)\?$/);
     if (m) return String(bigPow(+m[1], unsup(m[2])) % 10n);
@@ -298,6 +299,63 @@ const checkers: Record<string, (p: string) => string | number | null> = {
     }
     return null;
   },
+
+  'math.adv.vieta': (p, g) => {
+    const m0 = p.match(/(x² .+ = 0)/);
+    if (!m0) return null;
+    const P = fnv(m0[1].replace(' = 0', ''), ['x', 'm']);
+    /** Real roots of the quadratic for this m (sorted), or null when there are none. */
+    const rootsAt = (m: number): [number, number] | null => {
+      const c0 = P(0, m), c1 = (P(1, m) - P(-1, m)) / 2, c2 = (P(1, m) + P(-1, m)) / 2 - c0;
+      const D = c1 * c1 - 4 * c2 * c0;
+      if (D < -1e-9) return null;
+      const s = Math.sqrt(Math.max(0, D));
+      return [(-c1 - s) / (2 * c2), (-c1 + s) / (2 * c2)];
+    };
+    const ms = (v: number[]) => v.map((x) => Math.round(x * 1e6) / 1e6).map((x) => `m = ${x < 0 ? `−${-x}` : x}`).join('; ');
+    /** The m in [−60, 60] where cond(roots) crosses 0, among m that give real roots. */
+    const solveM = (cond: (x1: number, x2: number) => number) =>
+      ms(realRoots((m) => {
+        const rt = rootsAt(m);
+        return rt ? cond(...rt) : NaN;
+      }, -40, 40, 4e-3));
+    let m = p.match(/with x₁² \+ x₂² = (\d+)\.$/);
+    if (m) return solveM((a, b) => a * a + b * b - +m![1]);
+    m = p.match(/with \|x₁ − x₂\| = (\d+)\.$/);
+    if (m) return solveM((a, b) => Math.abs(a - b) - +m![1]);
+    m = p.match(/with x₁ = (\d+)x₂\.$/);
+    if (m) return solveM((a, b) => (a - +m![1] * b) * (b - +m![1] * a));
+    m = p.match(/^(How many integers m|Find the sum of all integers m) .+ both integers[.?]$/);
+    if (m) {
+      const good: number[] = [];
+      for (let k = -300; k <= 300; k++) {
+        const rt = rootsAt(k);
+        if (rt && rt.every((x) => Math.abs(x - Math.round(x)) < 1e-9)) good.push(k);
+      }
+      return m[1].startsWith('How') ? good.length : good.reduce((x, y) => x + y, 0);
+    }
+    m = p.match(/with x₁ < (\S+) < x₂\.$/);
+    if (m) {
+      // Sample m and check that "x₁ < c < x₂" holds exactly when the stated answer "m < v" / "m > v" does.
+      const c = val(m[1]), [, rel, v] = g.answer.match(/^m ([<>]) (\S+)$/)!, bound = val(v);
+      for (let i = -3000; i <= 3000; i++) {
+        const k = i / 100;
+        if (Math.abs(k - bound) < 0.02) continue;
+        const rt = rootsAt(k), holds = !!rt && rt[0] < c && c < rt[1];
+        expect(holds, `${p} at m = ${k}`).toBe(rel === '<' ? k < bound : k > bound);
+      }
+      return g.answer;
+    }
+    if (/x₁² \+ x₂² is as small as possible\.$/.test(p)) {
+      let best = Infinity, arg = NaN;
+      for (let i = -4000; i <= 4000; i++) {
+        const k = i / 100, rt = rootsAt(k);
+        if (rt && rt[0] ** 2 + rt[1] ** 2 < best - 1e-12) [best, arg] = [rt[0] ** 2 + rt[1] ** 2, k];
+      }
+      return ms([arg]);
+    }
+    return null;
+  },
 };
 
 const ids = concepts.filter((c) => c.id.startsWith('math.adv.')).map((c) => c.id);
@@ -334,11 +392,11 @@ describe('advanced maths (chuyên / HSG)', () => {
       for (let d = 1; d <= 5; d++)
         for (let s = 1; s <= SEEDS; s++) {
           const g = gen(id, d, s);
-          const got = checkers[id](g.prompt);
+          const got = checkers[id](g.prompt, g);
           expect(got, `unrecognised: ${g.prompt}`).not.toBeNull();
           if (typeof got === 'number') expect(close(val(g.answer), got, 1e-6 * Math.max(1, Math.abs(got))), `${id} d${d} s${s}: ${g.prompt} → ${g.answer}, expected ${got}`).toBe(true);
           else expect(g.answer, `${id} d${d} s${s}: ${g.prompt}`).toBe(got);
         }
-    });
+    }, 60000);
 });
 

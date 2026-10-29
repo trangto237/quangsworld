@@ -764,6 +764,110 @@ const diophantine: Generator = (d, r) => {
   );
 };
 
+// ── Viète with a parameter: conditions on the roots, the Δ check, integer roots ──
+const ms = (...v: number[]) => [...new Set(v)].sort((a, b) => a - b).map((m) => `m = ${num(m)}`).join('; ');
+/** x² − 2(m + a)x + m² + b = 0 */
+const eqA = (a: number, b: number) => `x² − 2${a === 0 ? 'm' : `(m ${signed(a)})`}x + m²${b === 0 ? '' : ` ${signed(b)}`} = 0`;
+
+const vietaParam: Generator = (d, r) => {
+  const ROOTS = 'has roots x₁, x₂ with', ROOTS_VI = 'có hai nghiệm x₁, x₂ thỏa mãn';
+  if (d <= 2) {
+    let a = 0, b = 0, m0 = 0;
+    const dl = (m: number) => 2 * a * m + a * a - b; // Δ'
+    if (d === 1) {
+      do {
+        a = nz(r, -3, 3);
+        b = int(r, -6, 8);
+        m0 = int(r, -6, 6);
+      } while (dl(m0) <= 0 || dl(-4 * a - m0) >= 0);
+      const Q = 2 * m0 * m0 + 8 * a * m0 + 4 * a * a - 2 * b, m1 = -4 * a - m0, e = eqA(a, b);
+      const bound = fracN(b - a * a, 2 * a);
+      return qs(
+        `Find m so that ${e} ${ROOTS} x₁² + x₂² = ${Q}.`,
+        `Tìm m để phương trình ${e} ${ROOTS_VI} x₁² + x₂² = ${Q}.`,
+        ms(m0),
+        [ms(m0, m1), ms(m1), ms(-m0), ms(m0 + 1)],
+        `Roots exist when Δ' = (m ${signed(a)})² − (m²${b === 0 ? '' : ` ${signed(b)}`}) = ${terms([[2 * a, 'm'], [a * a - b, '']])} ≥ 0, i.e. m ${a > 0 ? '≥' : '≤'} ${bound}. Viète: x₁ + x₂ = 2(m ${signed(a)}), x₁x₂ = m²${b === 0 ? '' : ` ${signed(b)}`}, so x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${terms([[2, 'm²'], [8 * a, 'm'], [4 * a * a - 2 * b, '']])} = ${Q}. This gives m = ${num(m0)} or m = ${num(m1)}, but m = ${num(m1)} fails the Δ' condition.`,
+        `Phương trình có nghiệm khi Δ' = (m ${signed(a)})² − (m²${b === 0 ? '' : ` ${signed(b)}`}) = ${terms([[2 * a, 'm'], [a * a - b, '']])} ≥ 0, tức là m ${a > 0 ? '≥' : '≤'} ${bound}. Theo Vi-ét: x₁ + x₂ = 2(m ${signed(a)}), x₁x₂ = m²${b === 0 ? '' : ` ${signed(b)}`}, nên x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${terms([[2, 'm²'], [8 * a, 'm'], [4 * a * a - 2 * b, '']])} = ${Q}. Ta được m = ${num(m0)} hoặc m = ${num(m1)}, nhưng m = ${num(m1)} không thỏa mãn điều kiện Δ'.`,
+      );
+    }
+    const j = int(r, 1, 4), k = 2 * j;
+    a = nz(r, -3, 3);
+    m0 = nz(r, -6, 6);
+    b = 2 * a * m0 + a * a - j * j;
+    const e = eqA(a, b);
+    const wrong = (rhs: number) => `m = ${fracN(rhs - a * a + b, 2 * a)}`;
+    return qs(
+      `Find m so that ${e} ${ROOTS} |x₁ − x₂| = ${k}.`,
+      `Tìm m để phương trình ${e} ${ROOTS_VI} |x₁ − x₂| = ${k}.`,
+      ms(m0),
+      [wrong(k * k), wrong(k), ms(-m0), wrong(2 * k)],
+      `(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = 4(m ${signed(a)})² − 4(m²${b === 0 ? '' : ` ${signed(b)}`}) = 4Δ' = ${terms([[8 * a, 'm'], [4 * (a * a - b), '']])}. Set it equal to ${k}² = ${k * k}: m = ${num(m0)}. Then Δ' = ${j * j} > 0, so the roots exist.`,
+      `(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = 4(m ${signed(a)})² − 4(m²${b === 0 ? '' : ` ${signed(b)}`}) = 4Δ' = ${terms([[8 * a, 'm'], [4 * (a * a - b), '']])}. Cho bằng ${k}² = ${k * k}: m = ${num(m0)}. Khi đó Δ' = ${j * j} > 0 nên phương trình có hai nghiệm.`,
+    );
+  }
+  if (d === 3) {
+    const k = int(r, 2, 4), t = int(r, 1, 3), a = int(r, -4, 4), P = k * t * t, M = (k + 1) * t;
+    const ma = a === 0 ? 'm' : `m ${signed(a)}`, e = `x² − ${a === 0 ? 'm' : `(${ma})`}x + ${P} = 0`;
+    return qs(
+      `Find all m so that ${e} ${ROOTS} x₁ = ${k}x₂.`,
+      `Tìm tất cả các giá trị của m để phương trình ${e} ${ROOTS_VI} x₁ = ${k}x₂.`,
+      ms(-a - M, -a + M),
+      [ms(-a + M), ms(-M, M), ms(-a - k * t, -a + k * t), ms(-a + M, a + M)],
+      `Viète: x₁ + x₂ = ${ma}, x₁x₂ = ${P}. With x₁ = ${k}x₂: ${k}x₂² = ${P}, so x₂ = ±${t}, and then ${ma} = ${k + 1}x₂ = ±${M}. Both signs work (roots ${k * t}, ${t} or −${k * t}, −${t}): m = ${num(-a + M)} or m = ${num(-a - M)}.`,
+      `Theo Vi-ét: x₁ + x₂ = ${ma}, x₁x₂ = ${P}. Với x₁ = ${k}x₂: ${k}x₂² = ${P}, nên x₂ = ±${t}, khi đó ${ma} = ${k + 1}x₂ = ±${M}. Cả hai dấu đều thỏa mãn (nghiệm ${k * t}, ${t} hoặc −${k * t}, −${t}): m = ${num(-a + M)} hoặc m = ${num(-a - M)}.`,
+    );
+  }
+  if (d === 4) {
+    const N = pick(r, [6, 8, 10, 12, 15, 18, 20, 24, -6, -8, -10, -12, -15, -18, -20]), c = N - 1;
+    const set = new Set<number>(), pos = new Set<number>();
+    for (const u of divisors(Math.abs(N))) {
+      for (const sgn of [1, -1]) set.add(sgn * u + N / (sgn * u) + 2);
+      if (N > 0) pos.add(u + N / u + 2);
+    }
+    const vals = [...set].sort((x, y) => x - y);
+    const e = `x² − mx + m ${signed(c)} = 0`;
+    const ask = r() < 0.6;
+    const how = `Viète: x₁ + x₂ = m and x₁x₂ = m ${signed(c)}, so x₁x₂ − x₁ − x₂ = ${num(c)}, i.e. (x₁ − 1)(x₂ − 1) = ${num(N)}. Each way of writing ${num(N)} as a product of two integers (negative ones too) gives m = x₁ + x₂: m ∈ {${vals.map(num).join(', ')}}.`;
+    const howVi = `Theo Vi-ét: x₁ + x₂ = m và x₁x₂ = m ${signed(c)}, nên x₁x₂ − x₁ − x₂ = ${num(c)}, tức là (x₁ − 1)(x₂ − 1) = ${num(N)}. Mỗi cách viết ${num(N)} thành tích hai số nguyên (kể cả số âm) cho một giá trị m = x₁ + x₂: m ∈ {${vals.map(num).join('; ')}}.`;
+    const sum = vals.reduce((x, y) => x + y, 0);
+    if (ask)
+      return q(r, `How many integers m make ${e} have two roots (possibly equal) that are both integers?`, `Có bao nhiêu số nguyên m để phương trình ${e} có hai nghiệm (có thể trùng nhau) đều là số nguyên?`,
+        vals.length, [pos.size || vals.length / 2, tau(N), 2 * tau(N), vals.length + 1], how, howVi);
+    return q(r, `Find the sum of all integers m for which ${e} has two roots (possibly equal) that are both integers.`, `Tính tổng tất cả các số nguyên m để phương trình ${e} có hai nghiệm (có thể trùng nhau) đều là số nguyên.`,
+      sum, [[...pos].reduce((x, y) => x + y, 0), sum + 2 * vals.length, -sum, vals[vals.length - 1]], how, howVi);
+  }
+  if (r() < 0.5) {
+    const a = int(r, -3, 3), b = nz(r, -9, 9), c = pick(r, [-2, -1, 0, 2, 3]);
+    const K = 2 - 2 * c, L = c * c - 2 * a * c + b, bound = fracN(-L, K);
+    const sign = K > 0 ? '<' : '>', flip = K > 0 ? '>' : '<', weak = K > 0 ? '≤' : '≥';
+    const e = `x² − 2${a === 0 ? 'm' : `(m ${signed(a)})`}x + 2m ${signed(b)} = 0`;
+    const fc = `f(${num(c)}) = ${terms([[K, 'm'], [L, '']])}`;
+    return qs(
+      `Find all m so that ${e} ${ROOTS} x₁ < ${num(c)} < x₂.`,
+      `Tìm m để phương trình ${e} ${ROOTS_VI} x₁ < ${num(c)} < x₂.`,
+      `m ${sign} ${bound}`,
+      [`m ${flip} ${bound}`, `m ${weak} ${bound}`, `m ${sign} ${fracN(L, K)}`, `m ${flip} ${fracN(L, K)}`],
+      `Let f(x) be the left side. Since the coefficient of x² is 1 > 0, the number ${num(c)} lies strictly between the roots exactly when f(${num(c)}) < 0 (then Δ > 0 automatically). ${fc} < 0 ⇔ m ${sign} ${bound}.`,
+      `Gọi f(x) là vế trái. Vì hệ số của x² là 1 > 0 nên số ${num(c)} nằm giữa hai nghiệm khi và chỉ khi f(${num(c)}) < 0 (khi đó tự động Δ > 0). ${fc} < 0 ⇔ m ${sign} ${bound}.`,
+    );
+  }
+  let a = 0, b = 0;
+  do {
+    a = nz(r, -3, 3);
+    b = int(r, -9, 12);
+  } while ((b - a * a) % (2 * a) !== 0 || b <= -3 * a * a || (b - a * a) / (2 * a) === -2 * a);
+  const mStar = (b - a * a) / (2 * a), e = eqA(a, b);
+  return qs(
+    `Find m so that ${e} has roots x₁, x₂ and x₁² + x₂² is as small as possible.`,
+    `Tìm m để phương trình ${e} có nghiệm x₁, x₂ và x₁² + x₂² đạt giá trị nhỏ nhất.`,
+    ms(mStar),
+    [ms(-2 * a), ms(2 * a), ms(-mStar), ms(mStar + (a > 0 ? 1 : -1))],
+    `Roots exist when Δ' = ${terms([[2 * a, 'm'], [a * a - b, '']])} ≥ 0, i.e. m ${a > 0 ? '≥' : '≤'} ${num(mStar)}. x₁² + x₂² = ${terms([[2, 'm²'], [8 * a, 'm'], [4 * a * a - 2 * b, '']])} = 2(m ${signed(2 * a)})² ${signed(-4 * a * a - 2 * b)}; its vertex m = ${num(-2 * a)} is not allowed, and on the allowed range the expression ${a > 0 ? 'increases' : 'decreases'} — so the minimum is at the end point m = ${num(mStar)}.`,
+    `Phương trình có nghiệm khi Δ' = ${terms([[2 * a, 'm'], [a * a - b, '']])} ≥ 0, tức là m ${a > 0 ? '≥' : '≤'} ${num(mStar)}. x₁² + x₂² = ${terms([[2, 'm²'], [8 * a, 'm'], [4 * a * a - 2 * b, '']])} = 2(m ${signed(2 * a)})² ${signed(-4 * a * a - 2 * b)}; đỉnh m = ${num(-2 * a)} không thỏa mãn điều kiện, và trên miền cho phép biểu thức ${a > 0 ? 'đồng biến' : 'nghịch biến'} — nên giá trị nhỏ nhất đạt tại đầu mút m = ${num(mStar)}.`,
+  );
+};
+
 const EXAM = ['Thi vào 10 chuyên Toán', 'HSG Toán 9'];
 
 export const advancedConcepts: ConceptSeed[] = [
@@ -827,6 +931,18 @@ export const advancedConcepts: ConceptSeed[] = [
       'With √A = B: first require B ≥ 0, then square — and check every root, because squaring adds fake ones. Look for a substitution: t = x² (t ≥ 0) for x⁴ + bx² + c = 0; pair (x + a)(x + d) and (x + b)(x + c) when a + d = b + c; t = √(…) ≥ 0 when the same expression appears inside and outside a root. In a symmetric system put S = x + y, P = xy; real x, y exist only when S² ≥ 4P.',
     examRefs: [`${EXAM[0]} · Phương trình vô tỉ, hệ phương trình`, `${EXAM[1]} · Phương trình, hệ phương trình`],
   },
+  {
+    id: 'math.adv.vieta',
+    domain: 'Advanced',
+    skill: 'Quadratics',
+    name: 'Viète with a parameter',
+    missionName: 'Parameter Labyrinth',
+    description: 'Find m from a condition on the roots — x₁² + x₂², |x₁ − x₂|, x₁ = kx₂, integer roots, a number between the roots — always with the Δ check.',
+    prerequisites: ['math.algebra.vieta', 'math.adv.identities'],
+    lesson:
+      'Step 1: the condition for roots to exist (Δ ≥ 0, or Δ > 0 for two distinct roots). Step 2: Viète, S = x₁ + x₂ and P = x₁x₂ in terms of m. Step 3: rewrite the condition in S and P — (x₁ − x₂)² = S² − 4P; x₁ = kx₂ gives a system with S and P. Step 4: solve for m and throw away the values that break step 1. Integer roots: eliminate m between S and P and factor, e.g. (x₁ − 1)(x₂ − 1) = n. A number c lies strictly between the roots of f(x) = x² + px + q exactly when f(c) < 0. When minimising in m, the vertex may be outside the allowed range — then the answer is an end point.',
+    examRefs: [`${EXAM[0]} · Định lí Vi-ét và ứng dụng`, `${EXAM[1]} · Phương trình bậc hai chứa tham số`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
@@ -835,6 +951,7 @@ export const advancedGenerators: Record<string, Generator> = {
   'math.adv.identities': identities,
   'math.adv.inequalities': inequalities,
   'math.adv.equations': equations,
+  'math.adv.vieta': vietaParam,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -848,4 +965,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Thêm bớt để tạo bình phương: A = (x − p)² + m ≥ m, dấu bằng khi x = p; với hai biến thì tạo nhiều bình phương. Bất đẳng thức Cô-si: với a, b ≥ 0, a + b ≥ 2√(ab), dấu bằng khi a = b — nên ax + b/x ≥ 2√(ab) với x > 0. Biến đổi cho phù hợp: x + k/(x − h) = (x − h) + k/(x − h) + h. Bất đẳng thức Bunhiacốpxki: (ax + by)² ≤ (a² + b²)(x² + y²) và p²/x + q²/y ≥ (p + q)²/(x + y). Luôn kiểm tra dấu bằng có xảy ra được không.',
   'math.adv.equations':
     'Với √A = B: đặt điều kiện B ≥ 0 rồi mới bình phương — và thử lại mọi nghiệm, vì bình phương có thể sinh nghiệm ngoại lai. Tìm cách đặt ẩn phụ: t = x² (t ≥ 0) cho x⁴ + bx² + c = 0; ghép (x + a)(x + d) và (x + b)(x + c) khi a + d = b + c; t = √(…) ≥ 0 khi cùng một biểu thức xuất hiện cả trong và ngoài căn. Với hệ đối xứng, đặt S = x + y, P = xy; x, y là số thực khi và chỉ khi S² ≥ 4P.',
+  'math.adv.vieta':
+    'Bước 1: điều kiện để phương trình có nghiệm (Δ ≥ 0, hoặc Δ > 0 nếu cần hai nghiệm phân biệt). Bước 2: viết S = x₁ + x₂ và P = x₁x₂ theo m bằng định lí Vi-ét. Bước 3: biến đổi điều kiện về S và P — (x₁ − x₂)² = S² − 4P; x₁ = kx₂ cho một hệ với S và P. Bước 4: giải tìm m rồi loại các giá trị không thỏa mãn bước 1. Nghiệm nguyên: khử m giữa S và P rồi phân tích thành tích, ví dụ (x₁ − 1)(x₂ − 1) = n. Số c nằm giữa hai nghiệm của f(x) = x² + px + q khi và chỉ khi f(c) < 0. Khi tìm cực trị theo m, đỉnh có thể nằm ngoài miền cho phép — khi đó đáp án ở đầu mút.',
 };
