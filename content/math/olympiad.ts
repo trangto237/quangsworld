@@ -8,6 +8,7 @@ import type { ConceptSeed } from '../helpers';
 import { makeBank } from '../helpers';
 
 const LOGIC = 'math.olympiad.logic';
+const ARITH = 'math.olympiad.arithmetic';
 
 export const olympiadConcepts: ConceptSeed[] = [
   {
@@ -21,11 +22,24 @@ export const olympiadConcepts: ConceptSeed[] = [
       'Knights and liars: suppose one person is a knight, follow the consequences, and throw out any case that contradicts itself. Clocks: the minute hand turns 6° a minute and the hour hand 0.5°, so the gap changes by 5.5° a minute; calendars: 7 days later is the same weekday, so count days mod 7. Working backwards: start from the end and undo each step in reverse order (halve ↔ double, +2 ↔ −2).',
     examRefs: ['TIMO / FIMO style'],
   },
+  {
+    id: ARITH,
+    domain: 'Advanced',
+    skill: 'Olympiad',
+    name: 'Olympiad arithmetic',
+    missionName: 'Clever Counting House',
+    description: 'Telescoping sums, 1 + 2 + … + n, number patterns, repeating digits, fraction tricks and averages.',
+    lesson:
+      'Telescoping: split each term, e.g. 1/(n(n + 1)) = 1/n − 1/(n + 1), and almost everything cancels; products like (1 + 1/2)(1 + 1/3)… cancel the same way. Gauss: 1 + 2 + … + n = n(n + 1)/2, and any arithmetic sequence sums to (first + last) × number of terms ÷ 2. Averages: work with totals (average × count), and for repeating decimals or digits, find the period and use the remainder.',
+    examRefs: ['TIMO / FIMO style'],
+  },
 ];
 
 export const olympiadLessonsVi: Record<string, string> = {
   [LOGIC]:
     'Người nói thật – kẻ nói dối: giả sử một người nói thật, suy ra hệ quả và loại mọi trường hợp tự mâu thuẫn. Đồng hồ: kim phút quay 6° mỗi phút, kim giờ 0,5°, nên khoảng cách đổi 5,5° mỗi phút; lịch: sau 7 ngày lại là thứ cũ, nên đếm số ngày chia dư cho 7. Tính ngược: đi từ cuối lên, làm phép ngược từng bước theo thứ tự ngược lại (chia đôi ↔ nhân đôi, +2 ↔ −2).',
+  [ARITH]:
+    'Rút gọn kiểu "triệt tiêu": tách mỗi số hạng, ví dụ 1/(n(n + 1)) = 1/n − 1/(n + 1), gần như mọi thứ tự triệt tiêu; tích dạng (1 + 1/2)(1 + 1/3)… cũng triệt tiêu như vậy. Gauss: 1 + 2 + … + n = n(n + 1)/2, và tổng một dãy cách đều = (số đầu + số cuối) × số số hạng : 2. Trung bình cộng: làm việc với tổng (trung bình × số lượng); với số thập phân tuần hoàn hay chữ số lặp, tìm chu kì rồi dùng số dư.',
 };
 
 const { add, list } = makeBank('Atlas olympiad bank', 'oly-');
@@ -130,6 +144,118 @@ add(LOGIC, 5, 'Tom lies on Mondays, Tuesdays and Wednesdays and tells the truth 
   promptVi: 'Tom nói dối vào thứ Hai, thứ Ba, thứ Tư và nói thật các ngày khác. Jerry nói dối vào thứ Năm, thứ Sáu, thứ Bảy và nói thật các ngày khác. Một hôm cả hai cùng nói: "Hôm qua tôi đã nói dối." Hôm đó là thứ mấy?',
   explanation: 'The sentence is said only on a day when today and yesterday are of different types. For Tom that is Monday or Thursday; for Jerry, Thursday or Sunday. Both: Thursday.',
   explanationVi: 'Câu này chỉ được nói vào ngày mà hôm nay và hôm qua khác kiểu (thật/dối). Với Tom: thứ Hai hoặc thứ Năm; với Jerry: thứ Năm hoặc Chủ nhật. Chung: thứ Năm.',
+});
+
+// ── Arithmetic ───────────────────────────────────────────────────────────
+add(ARITH, 3, 'Calculate: 1/(1·2) + 1/(2·3) + 1/(3·4) + … + 1/(2024·2025)', ['2024/2025', '1/2025', '2025/2026', '2023/2024'], {
+  promptVi: 'Tính: 1/(1·2) + 1/(2·3) + 1/(3·4) + … + 1/(2024·2025)',
+  explanation: '1/(n(n + 1)) = 1/n − 1/(n + 1), so the sum telescopes to 1 − 1/2025 = 2024/2025.',
+  explanationVi: '1/(n(n + 1)) = 1/n − 1/(n + 1), nên tổng triệt tiêu còn 1 − 1/2025 = 2024/2025.',
+});
+add(ARITH, 4, 'Calculate: 1/(1·3) + 1/(3·5) + 1/(5·7) + … + 1/(99·101)', ['50/101', '100/101', '49/101', '50/99'], {
+  promptVi: 'Tính: 1/(1·3) + 1/(3·5) + 1/(5·7) + … + 1/(99·101)',
+  explanation: '1/(n(n + 2)) = ½(1/n − 1/(n + 2)), so the sum is ½(1 − 1/101) = ½ · 100/101 = 50/101.',
+  explanationVi: '1/(n(n + 2)) = ½(1/n − 1/(n + 2)), nên tổng bằng ½(1 − 1/101) = ½ · 100/101 = 50/101.',
+});
+add(ARITH, 3, 'Calculate: (2 + 4 + 6 + … + 200) − (1 + 3 + 5 + … + 199)', ['100', '200', '50', '1'], {
+  promptVi: 'Tính: (2 + 4 + 6 + … + 200) − (1 + 3 + 5 + … + 199)',
+  explanation: 'Pair them up: (2 − 1) + (4 − 3) + … + (200 − 199) is 100 differences of 1, so 100.',
+  explanationVi: 'Ghép cặp: (2 − 1) + (4 − 3) + … + (200 − 199) gồm 100 hiệu bằng 1, nên kết quả là 100.',
+});
+add(ARITH, 3, 'Calculate: 1 − 2 + 3 − 4 + 5 − 6 + … − 2024 + 2025', ['1013', '−1013', '1012', '2025'], {
+  promptVi: 'Tính: 1 − 2 + 3 − 4 + 5 − 6 + … − 2024 + 2025',
+  explanation: 'The 1012 pairs (1 − 2), (3 − 4), …, (2023 − 2024) each give −1, total −1012; then + 2025 gives 1013.',
+  explanationVi: '1012 cặp (1 − 2), (3 − 4), …, (2023 − 2024) mỗi cặp bằng −1, tổng −1012; cộng thêm 2025 được 1013.',
+});
+add(ARITH, 4, '1/7 = 0.142857142857… What is the 2026th digit after the decimal point?', ['8', '5', '2', '4'], {
+  promptVi: '1/7 = 0,142857142857… Chữ số thứ 2026 sau dấu phẩy là chữ số nào?',
+  explanation: 'The digits repeat in blocks of 6: 142857. 2026 = 6 × 337 + 4, so it is the 4th digit of the block: 8.',
+  explanationVi: 'Các chữ số lặp theo nhóm 6 chữ số: 142857. 2026 = 6 × 337 + 4, nên đó là chữ số thứ 4 của nhóm: 8.',
+});
+add(ARITH, 4, 'The odd numbers are written in rows: row 1 is "1", row 2 is "3 5", row 3 is "7 9 11", row 4 is "13 15 17 19", and so on (row n has n numbers). What is the sum of the numbers in row 12?', ['1728', '1584', '144', '1872'], {
+  promptVi: 'Các số lẻ được viết thành hàng: hàng 1 là "1", hàng 2 là "3 5", hàng 3 là "7 9 11", hàng 4 là "13 15 17 19", … (hàng n có n số). Tổng các số ở hàng 12 là bao nhiêu?',
+  explanation: 'Row sums are 1, 8, 27, 64, … = n³ (the first n rows hold the first n(n + 1)/2 odd numbers). Row 12: 12³ = 1728.',
+  explanationVi: 'Tổng các hàng là 1, 8, 27, 64, … = n³ (n hàng đầu chứa n(n + 1)/2 số lẻ đầu tiên). Hàng 12: 12³ = 1728.',
+});
+add(ARITH, 3, 'The average of five numbers is 18. When one number is removed, the average of the other four is 16. Which number was removed?', ['26', '2', '17', '34'], {
+  promptVi: 'Trung bình cộng của năm số là 18. Bỏ đi một số thì trung bình cộng của bốn số còn lại là 16. Số bị bỏ đi là bao nhiêu?',
+  explanation: 'Totals: 5 × 18 = 90 and 4 × 16 = 64, so the removed number is 90 − 64 = 26.',
+  explanationVi: 'Tổng: 5 × 18 = 90 và 4 × 16 = 64, nên số bị bỏ là 90 − 64 = 26.',
+});
+add(ARITH, 4, 'After 4 tests Quang\'s average mark is 7.5. What mark must he get in the 5th test to raise his average to 8?', ['10', '8.5', '9.5', '9'], {
+  promptVi: 'Sau 4 bài kiểm tra, điểm trung bình của Quang là 7,5. Bài thứ 5 Quang phải được bao nhiêu điểm để điểm trung bình tăng lên 8?',
+  explanation: 'He needs a total of 5 × 8 = 40 and has 4 × 7.5 = 30, so he needs 10.',
+  explanationVi: 'Cần tổng 5 × 8 = 40 điểm, đã có 4 × 7,5 = 30, nên bài thứ 5 cần 10 điểm.',
+});
+add(ARITH, 4, 'Calculate: (1 − 1/4)(1 − 1/9)(1 − 1/16) … (1 − 1/100)', ['11/20', '1/10', '9/10', '11/100'], {
+  promptVi: 'Tính: (1 − 1/4)(1 − 1/9)(1 − 1/16) … (1 − 1/100)',
+  explanation: '1 − 1/k² = (k − 1)(k + 1)/k². Multiplying for k = 2 to 10, the fractions cancel to (1/2) × (11/10) = 11/20.',
+  explanationVi: '1 − 1/k² = (k − 1)(k + 1)/k². Nhân với k = 2 đến 10, các phân số triệt tiêu còn (1/2) × (11/10) = 11/20.',
+});
+add(ARITH, 3, 'Calculate: (1 + 1/2)(1 + 1/3)(1 + 1/4) … (1 + 1/99)', ['50', '100', '99/2', '49'], {
+  promptVi: 'Tính: (1 + 1/2)(1 + 1/3)(1 + 1/4) … (1 + 1/99)',
+  explanation: 'The product is 3/2 × 4/3 × 5/4 × … × 100/99; everything cancels except 100/2 = 50.',
+  explanationVi: 'Tích bằng 3/2 × 4/3 × 5/4 × … × 100/99; mọi thừa số triệt tiêu, còn 100/2 = 50.',
+});
+add(ARITH, 5, 'Calculate: 1·2 + 2·3 + 3·4 + … + 20·21', ['3080', '2870', '3290', '1540'], {
+  promptVi: 'Tính: 1·2 + 2·3 + 3·4 + … + 20·21',
+  explanation: 'Since 3k(k + 1) = k(k + 1)(k + 2) − (k − 1)k(k + 1), the sum telescopes to 20·21·22 ÷ 3 = 3080.',
+  explanationVi: 'Vì 3k(k + 1) = k(k + 1)(k + 2) − (k − 1)k(k + 1), tổng triệt tiêu còn 20·21·22 : 3 = 3080.',
+});
+add(ARITH, 4, 'Given 1² + 2² + … + n² = n(n + 1)(2n + 1)/6, calculate 11² + 12² + 13² + … + 20².', ['2485', '2870', '385', '2255'], {
+  promptVi: 'Biết 1² + 2² + … + n² = n(n + 1)(2n + 1)/6, tính 11² + 12² + 13² + … + 20².',
+  explanation: '(1² + … + 20²) − (1² + … + 10²) = 2870 − 385 = 2485.',
+  explanationVi: '(1² + … + 20²) − (1² + … + 10²) = 2870 − 385 = 2485.',
+});
+add(ARITH, 5, 'Calculate: 1/(1 + 2) + 1/(1 + 2 + 3) + 1/(1 + 2 + 3 + 4) + … + 1/(1 + 2 + … + 20)', ['19/21', '20/21', '19/42', '10/21'], {
+  promptVi: 'Tính: 1/(1 + 2) + 1/(1 + 2 + 3) + 1/(1 + 2 + 3 + 4) + … + 1/(1 + 2 + … + 20)',
+  explanation: '1 + 2 + … + n = n(n + 1)/2, so each term is 2/(n(n + 1)) = 2(1/n − 1/(n + 1)). For n = 2 to 20: 2(1/2 − 1/21) = 19/21.',
+  explanationVi: '1 + 2 + … + n = n(n + 1)/2, nên mỗi số hạng là 2/(n(n + 1)) = 2(1/n − 1/(n + 1)). Với n = 2 đến 20: 2(1/2 − 1/21) = 19/21.',
+});
+add(ARITH, 4, 'How many digits are used to write all the whole numbers from 1 to 200?', ['492', '600', '489', '200'], {
+  promptVi: 'Cần dùng bao nhiêu chữ số để viết tất cả các số tự nhiên từ 1 đến 200?',
+  explanation: '1–9: 9 digits; 10–99: 90 × 2 = 180; 100–200: 101 × 3 = 303. Total 9 + 180 + 303 = 492.',
+  explanationVi: '1–9: 9 chữ số; 10–99: 90 × 2 = 180; 100–200: 101 × 3 = 303. Tổng 9 + 180 + 303 = 492.',
+});
+add(ARITH, 3, 'In the sequence 3, 7, 11, 15, …, which term is 403?', ['the 101st', 'the 100th', 'the 102nd', 'the 400th'], {
+  promptVi: 'Trong dãy số 3, 7, 11, 15, …, số 403 là số hạng thứ bao nhiêu?',
+  explanation: 'The terms go up by 4: the nth term is 3 + 4(n − 1). 3 + 4(n − 1) = 403 gives n − 1 = 100, n = 101.',
+  explanationVi: 'Dãy tăng đều 4: số hạng thứ n là 3 + 4(n − 1). 3 + 4(n − 1) = 403 cho n − 1 = 100, n = 101.',
+});
+add(ARITH, 5, 'The pages of a book are numbered 1, 2, 3, … and 1392 digits are used in total. How many pages does the book have?', ['500', '464', '501', '499'], {
+  promptVi: 'Các trang sách được đánh số 1, 2, 3, … và dùng tất cả 1392 chữ số. Quyển sách có bao nhiêu trang?',
+  explanation: 'Pages 1–99 use 9 + 180 = 189 digits. The remaining 1392 − 189 = 1203 digits are 1203 ÷ 3 = 401 three-digit pages, from 100 to 500.',
+  explanationVi: 'Trang 1–99 dùng 9 + 180 = 189 chữ số. Còn 1392 − 189 = 1203 chữ số, ứng với 1203 : 3 = 401 trang có ba chữ số, từ 100 đến 500.',
+});
+add(ARITH, 4, 'What is the sum of the digits of 11111 × 11111?', ['25', '10', '20', '45'], {
+  promptVi: 'Tổng các chữ số của 11111 × 11111 là bao nhiêu?',
+  explanation: '11 × 11 = 121, 111 × 111 = 12321, … so 11111 × 11111 = 123454321, whose digits add up to 25.',
+  explanationVi: '11 × 11 = 121, 111 × 111 = 12321, … nên 11111 × 11111 = 123454321, tổng các chữ số là 25.',
+});
+add(ARITH, 3, 'Calculate: 2025 × 2027 − 2026²', ['−1', '1', '0', '−2'], {
+  promptVi: 'Tính: 2025 × 2027 − 2026²',
+  explanation: '2025 × 2027 = (2026 − 1)(2026 + 1) = 2026² − 1, so the answer is −1.',
+  explanationVi: '2025 × 2027 = (2026 − 1)(2026 + 1) = 2026² − 1, nên kết quả là −1.',
+});
+add(ARITH, 4, 'Calculate: 1 + 1/2 + 1/4 + 1/8 + … + 1/1024', ['2047/1024', '2', '1023/1024', '2049/1024'], {
+  promptVi: 'Tính: 1 + 1/2 + 1/4 + 1/8 + … + 1/1024',
+  explanation: 'Adding 1/1024 would complete the sum to 2 (each term fills half of the gap to 2), so the sum is 2 − 1/1024 = 2047/1024.',
+  explanationVi: 'Thêm 1/1024 thì tổng tròn thành 2 (mỗi số hạng lấp một nửa khoảng còn thiếu tới 2), nên tổng bằng 2 − 1/1024 = 2047/1024.',
+});
+add(ARITH, 4, 'The sum of 15 consecutive whole numbers is 2025. What is the largest of them?', ['142', '135', '149', '143'], {
+  promptVi: 'Tổng của 15 số tự nhiên liên tiếp là 2025. Số lớn nhất trong đó là bao nhiêu?',
+  explanation: 'The middle (8th) number is the average: 2025 ÷ 15 = 135. The largest is 7 more: 142.',
+  explanationVi: 'Số ở giữa (số thứ 8) bằng trung bình cộng: 2025 : 15 = 135. Số lớn nhất hơn nó 7: 142.',
+});
+add(ARITH, 4, 'Write the repeating decimal 0.363636… as a fraction in lowest terms.', ['4/11', '9/25', '36/100', '6/11'], {
+  promptVi: 'Viết số thập phân vô hạn tuần hoàn 0,363636… dưới dạng phân số tối giản.',
+  explanation: 'If x = 0.3636…, then 100x = 36.3636…, so 99x = 36 and x = 36/99 = 4/11.',
+  explanationVi: 'Đặt x = 0,3636…, thì 100x = 36,3636…, nên 99x = 36 và x = 36/99 = 4/11.',
+});
+add(ARITH, 4, 'A car drives from A to B at 60 km/h and returns from B to A along the same road at 40 km/h. What is its average speed for the whole trip?', ['48 km/h', '50 km/h', '45 km/h', '52 km/h'], {
+  promptVi: 'Một ô tô đi từ A đến B với vận tốc 60 km/h rồi quay về từ B đến A trên cùng con đường với vận tốc 40 km/h. Vận tốc trung bình cả đi lẫn về là bao nhiêu?',
+  explanation: 'Take AB = 120 km: going takes 2 h, returning 3 h, so 240 km in 5 h = 48 km/h (not the plain average 50).',
+  explanationVi: 'Lấy AB = 120 km: đi hết 2 giờ, về hết 3 giờ, nên 240 km trong 5 giờ = 48 km/h (không phải trung bình 50).',
 });
 
 export const olympiadQuestions = list;
