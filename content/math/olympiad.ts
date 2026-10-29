@@ -10,6 +10,7 @@ import { makeBank } from '../helpers';
 const LOGIC = 'math.olympiad.logic';
 const ARITH = 'math.olympiad.arithmetic';
 const NT = 'math.olympiad.number-theory';
+const COMB = 'math.olympiad.combinatorics';
 
 export const olympiadConcepts: ConceptSeed[] = [
   {
@@ -45,6 +46,17 @@ export const olympiadConcepts: ConceptSeed[] = [
       "Last digits and remainders repeat in cycles: find the cycle length and use the remainder of the exponent (7, 9, 3, 1 for powers of 7). Divisibility tests: by 4 look at the last two digits, by 3 or 9 at the digit sum; and remainders multiply and add, so replace a number by its remainder. Factorise into primes: n = pᵃqᵇ… has (a + 1)(b + 1)… divisors; 'together again' means LCM, 'split into equal groups' means GCD.",
     examRefs: ['TIMO / FIMO style'],
   },
+  {
+    id: COMB,
+    domain: 'Advanced',
+    skill: 'Olympiad',
+    name: 'Olympiad counting',
+    missionName: 'Maze of Ways',
+    description: 'Grid paths, arrangements with conditions, handshakes, the pigeonhole principle, and counting shapes in a figure.',
+    lesson:
+      "Count with the multiplication rule (choices for each step multiply) and divide out repeats: 6 people shaking hands make 6 × 5 ÷ 2 handshakes, and a grid path of a rights and b ups is a choice of C(a + b, a). For 'not next to each other' or 'at least one', count everything and subtract the opposite case. Pigeonhole: imagine the worst luck (one of each, or all of the wrong kind first), then add one.",
+    examRefs: ['TIMO / FIMO style'],
+  },
 ];
 
 export const olympiadLessonsVi: Record<string, string> = {
@@ -54,6 +66,8 @@ export const olympiadLessonsVi: Record<string, string> = {
     'Rút gọn kiểu "triệt tiêu": tách mỗi số hạng, ví dụ 1/(n(n + 1)) = 1/n − 1/(n + 1), gần như mọi thứ tự triệt tiêu; tích dạng (1 + 1/2)(1 + 1/3)… cũng triệt tiêu như vậy. Gauss: 1 + 2 + … + n = n(n + 1)/2, và tổng một dãy cách đều = (số đầu + số cuối) × số số hạng : 2. Trung bình cộng: làm việc với tổng (trung bình × số lượng); với số thập phân tuần hoàn hay chữ số lặp, tìm chu kì rồi dùng số dư.',
   [NT]:
     "Chữ số tận cùng và số dư lặp theo chu kì: tìm độ dài chu kì rồi dùng số dư của số mũ (lũy thừa của 7 tận cùng 7, 9, 3, 1). Dấu hiệu chia hết: cho 4 xét hai chữ số cuối, cho 3 hoặc 9 xét tổng các chữ số; số dư cộng và nhân được, nên có thể thay một số bằng số dư của nó. Phân tích ra thừa số nguyên tố: n = pᵃqᵇ… có (a + 1)(b + 1)… ước; 'lại gặp nhau cùng lúc' là BCNN, 'chia đều thành các nhóm' là ƯCLN.",
+  [COMB]:
+    "Đếm bằng quy tắc nhân (số cách ở mỗi bước nhân với nhau) rồi chia bớt các lần đếm lặp: 6 người bắt tay có 6 × 5 : 2 cái bắt tay, và đường đi trên lưới gồm a bước phải, b bước lên là một cách chọn C(a + b, a). Với 'không đứng cạnh nhau' hay 'ít nhất một', đếm tất cả rồi trừ trường hợp ngược lại. Nguyên lí Dirichlet: hình dung trường hợp xui nhất (mỗi loại một cái, hoặc lấy hết loại không cần trước), rồi cộng thêm một.",
 };
 
 const { add, list } = makeBank('Atlas olympiad bank', 'oly-');
@@ -382,6 +396,118 @@ add(NT, 5, 'What is the greatest common divisor of 2¹² − 1 and 2¹⁸ − 1?
   promptVi: 'Ước chung lớn nhất của 2¹² − 1 và 2¹⁸ − 1 là bao nhiêu?',
   explanation: 'GCD(2ᵃ − 1, 2ᵇ − 1) = 2^GCD(a, b) − 1. GCD(12, 18) = 6, so the answer is 2⁶ − 1 = 63.',
   explanationVi: 'ƯCLN(2ᵃ − 1, 2ᵇ − 1) = 2^ƯCLN(a, b) − 1. ƯCLN(12, 18) = 6, nên kết quả là 2⁶ − 1 = 63.',
+});
+
+// ── Combinatorics ────────────────────────────────────────────────────────
+add(COMB, 3, 'An ant walks along the lines of a grid from the point (0; 0) to the point (4; 3), each step going one unit right or one unit up. How many different routes are there?', ['35', '12', '7', '70'], {
+  promptVi: 'Một con kiến đi theo các đường lưới từ điểm (0; 0) đến điểm (4; 3), mỗi bước đi sang phải một đơn vị hoặc lên trên một đơn vị. Có bao nhiêu đường đi khác nhau?',
+  explanation: 'Every route is 7 steps, 4 of them "right". Choose which 3 are "up": C(7, 3) = 35.',
+  explanationVi: 'Mỗi đường đi gồm 7 bước, trong đó 4 bước "phải". Chọn 3 bước "lên": C(7, 3) = 35.',
+});
+add(COMB, 4, 'Moving only one unit right or one unit up along grid lines, how many routes go from (0; 0) to (4; 4) without passing through the point (2; 2)?', ['34', '70', '36', '32'], {
+  promptVi: 'Chỉ đi sang phải hoặc lên trên một đơn vị theo các đường lưới, có bao nhiêu đường đi từ (0; 0) đến (4; 4) mà không đi qua điểm (2; 2)?',
+  explanation: 'All routes: C(8, 4) = 70. Routes through (2; 2): C(4, 2) × C(4, 2) = 36. So 70 − 36 = 34.',
+  explanationVi: 'Tất cả: C(8, 4) = 70. Đi qua (2; 2): C(4, 2) × C(4, 2) = 36. Vậy 70 − 36 = 34.',
+});
+add(COMB, 3, 'At a party, each of 12 guests shakes hands once with every other guest. How many handshakes are there?', ['66', '132', '144', '78'], {
+  promptVi: 'Trong một bữa tiệc, mỗi người trong 12 khách bắt tay đúng một lần với mỗi người khác. Có tất cả bao nhiêu cái bắt tay?',
+  explanation: 'Each handshake is a pair of guests: 12 × 11 ÷ 2 = 66.',
+  explanationVi: 'Mỗi cái bắt tay ứng với một cặp khách: 12 × 11 : 2 = 66.',
+});
+add(COMB, 4, 'In a chess tournament every two players met exactly once, and 45 games were played. How many players were there?', ['10', '9', '15', '45'], {
+  promptVi: 'Trong một giải cờ vua, hai kì thủ bất kì gặp nhau đúng một lần, và có tất cả 45 ván đấu. Giải có bao nhiêu kì thủ?',
+  explanation: 'n players play n(n − 1)/2 games. n(n − 1) = 90 = 10 × 9, so n = 10.',
+  explanationVi: 'n kì thủ đấu n(n − 1)/2 ván. n(n − 1) = 90 = 10 × 9, nên n = 10.',
+});
+add(COMB, 3, 'How many diagonals does a convex 12-sided polygon have?', ['54', '66', '108', '48'], {
+  promptVi: 'Một đa giác lồi 12 cạnh có bao nhiêu đường chéo?',
+  explanation: 'Each vertex joins 12 − 3 = 9 others by a diagonal, and each diagonal is counted twice: 12 × 9 ÷ 2 = 54.',
+  explanationVi: 'Mỗi đỉnh nối với 12 − 3 = 9 đỉnh khác bằng đường chéo, mỗi đường chéo được đếm hai lần: 12 × 9 : 2 = 54.',
+});
+add(COMB, 4, 'How many different "words" (any order of letters) can be made by rearranging all six letters of BANANA?', ['60', '720', '120', '36'], {
+  promptVi: 'Có thể tạo được bao nhiêu "từ" khác nhau (thứ tự chữ cái bất kì) bằng cách sắp xếp lại cả sáu chữ cái của BANANA?',
+  explanation: 'There are 6! orders, but swapping the three A\'s or the two N\'s gives the same word: 720 ÷ (3! × 2!) = 60.',
+  explanationVi: 'Có 6! cách xếp, nhưng đổi chỗ ba chữ A hoặc hai chữ N cho cùng một từ: 720 : (3! × 2!) = 60.',
+});
+add(COMB, 4, 'In how many ways can 5 friends, including An and Binh, stand in a row so that An and Binh stand next to each other?', ['48', '24', '120', '72'], {
+  promptVi: 'Có bao nhiêu cách xếp 5 bạn, trong đó có An và Bình, đứng thành một hàng sao cho An và Bình đứng cạnh nhau?',
+  explanation: 'Glue An and Binh into one block: 4 items give 4! = 24 orders, and the block can be An–Binh or Binh–An: 24 × 2 = 48.',
+  explanationVi: 'Gộp An và Bình thành một khối: 4 phần tử có 4! = 24 cách xếp, khối có 2 cách (An–Bình hoặc Bình–An): 24 × 2 = 48.',
+});
+add(COMB, 5, 'In how many ways can 5 friends, including An and Binh, stand in a row so that An and Binh are NOT next to each other?', ['72', '48', '96', '60'], {
+  promptVi: 'Có bao nhiêu cách xếp 5 bạn, trong đó có An và Bình, đứng thành một hàng sao cho An và Bình KHÔNG đứng cạnh nhau?',
+  explanation: 'All orders: 5! = 120. Orders with them together: 2 × 4! = 48. So 120 − 48 = 72.',
+  explanationVi: 'Tất cả: 5! = 120. Hai bạn đứng cạnh nhau: 2 × 4! = 48. Vậy 120 − 48 = 72.',
+});
+add(COMB, 3, 'A drawer holds 6 red, 8 blue and 10 white socks. In the dark, what is the smallest number of socks you must take to be sure of getting two of the same colour?', ['4', '3', '11', '2'], {
+  promptVi: 'Một ngăn kéo có 6 chiếc tất đỏ, 8 chiếc xanh và 10 chiếc trắng. Trong bóng tối, phải lấy ra ít nhất bao nhiêu chiếc để chắc chắn có hai chiếc cùng màu?',
+  explanation: 'With 3 socks you might get one of each colour; a 4th sock must repeat a colour (pigeonhole principle).',
+  explanationVi: 'Lấy 3 chiếc có thể được mỗi màu một chiếc; chiếc thứ 4 chắc chắn trùng màu (nguyên lí Dirichlet).',
+});
+add(COMB, 4, 'A drawer holds 6 red, 8 blue and 10 white socks. In the dark, what is the smallest number of socks you must take to be sure of getting three of the same colour?', ['7', '9', '6', '4'], {
+  promptVi: 'Một ngăn kéo có 6 chiếc tất đỏ, 8 chiếc xanh và 10 chiếc trắng. Trong bóng tối, phải lấy ra ít nhất bao nhiêu chiếc để chắc chắn có ba chiếc cùng màu?',
+  explanation: 'The worst case is 2 of each colour, 6 socks; the 7th sock makes three of one colour.',
+  explanationVi: 'Trường hợp xấu nhất là mỗi màu 2 chiếc, tức 6 chiếc; chiếc thứ 7 tạo ra ba chiếc cùng màu.',
+});
+add(COMB, 4, 'A drawer holds 6 red, 8 blue and 10 white socks. In the dark, what is the smallest number of socks you must take to be sure of getting two RED socks?', ['20', '4', '19', '8'], {
+  promptVi: 'Một ngăn kéo có 6 chiếc tất đỏ, 8 chiếc xanh và 10 chiếc trắng. Trong bóng tối, phải lấy ra ít nhất bao nhiêu chiếc để chắc chắn có hai chiếc màu ĐỎ?',
+  explanation: 'In the worst case you first take all 8 + 10 = 18 blue and white socks; then 2 more are red: 20.',
+  explanationVi: 'Trường hợp xấu nhất là lấy hết 8 + 10 = 18 chiếc xanh và trắng trước; thêm 2 chiếc nữa là đỏ: 20.',
+});
+add(COMB, 5, 'A year can have 366 days (including 29 February). What is the smallest number of students a school must have to be sure that at least 3 of them share a birthday?', ['733', '367', '732', '1099'], {
+  promptVi: 'Một năm có thể có 366 ngày (tính cả ngày 29/2). Trường phải có ít nhất bao nhiêu học sinh để chắc chắn có ít nhất 3 bạn trùng ngày sinh nhật?',
+  explanation: 'With 2 × 366 = 732 students, each day could have exactly 2. One more student forces a third on some day: 733.',
+  explanationVi: 'Với 2 × 366 = 732 học sinh, có thể mỗi ngày đúng 2 bạn. Thêm một bạn nữa thì có ngày có 3 bạn: 733.',
+});
+add(COMB, 4, 'A rectangle is divided into a grid of unit squares with 3 rows and 4 columns. How many rectangles (of any size, squares included) can be seen in the grid?', ['60', '12', '30', '72'], {
+  promptVi: 'Một hình chữ nhật được chia thành lưới ô vuông đơn vị gồm 3 hàng và 4 cột. Trong hình có bao nhiêu hình chữ nhật (mọi kích thước, kể cả hình vuông)?',
+  explanation: 'A rectangle is fixed by 2 of the 4 horizontal lines and 2 of the 5 vertical lines: C(4, 2) × C(5, 2) = 6 × 10 = 60.',
+  explanationVi: 'Mỗi hình chữ nhật được xác định bởi 2 trong 4 đường ngang và 2 trong 5 đường dọc: C(4, 2) × C(5, 2) = 6 × 10 = 60.',
+});
+add(COMB, 4, 'How many squares of any size are there in a 4 × 4 grid of unit squares?', ['30', '16', '20', '25'], {
+  promptVi: 'Trong một lưới ô vuông 4 × 4 có bao nhiêu hình vuông (mọi kích thước)?',
+  explanation: '1 × 1: 16, 2 × 2: 9, 3 × 3: 4, 4 × 4: 1. Total 16 + 9 + 4 + 1 = 30.',
+  explanationVi: '1 × 1: 16, 2 × 2: 9, 3 × 3: 4, 4 × 4: 1. Tổng 16 + 9 + 4 + 1 = 30.',
+});
+add(COMB, 5, 'In triangle ABC, four segments are drawn from vertex A to four different points on side BC. How many triangles are there in the figure?', ['15', '5', '10', '20'], {
+  promptVi: 'Trong tam giác ABC, kẻ bốn đoạn thẳng từ đỉnh A đến bốn điểm khác nhau trên cạnh BC. Trong hình có bao nhiêu tam giác?',
+  explanation: 'Every triangle has vertex A and two of the 6 points on BC (B, C and the four new points) as its base: C(6, 2) = 15.',
+  explanationVi: 'Mỗi tam giác có đỉnh A và đáy là hai trong 6 điểm trên BC (B, C và bốn điểm mới): C(6, 2) = 15.',
+});
+add(COMB, 5, 'How many four-digit numbers have four different digits?', ['4536', '5040', '3024', '9000'], {
+  promptVi: 'Có bao nhiêu số có bốn chữ số mà bốn chữ số đôi một khác nhau?',
+  explanation: 'First digit: 9 choices (not 0); then 9, 8 and 7 choices for the others: 9 × 9 × 8 × 7 = 4536.',
+  explanationVi: 'Chữ số đầu: 9 cách (khác 0); các chữ số sau lần lượt 9, 8, 7 cách: 9 × 9 × 8 × 7 = 4536.',
+});
+add(COMB, 3, 'Using the digits 1, 2, 3, 4, 5, each at most once, how many even three-digit numbers can be made?', ['24', '60', '48', '12'], {
+  promptVi: 'Dùng các chữ số 1, 2, 3, 4, 5, mỗi chữ số dùng nhiều nhất một lần, lập được bao nhiêu số chẵn có ba chữ số?',
+  explanation: 'The last digit is 2 or 4 (2 ways); then 4 and 3 choices for the other two digits: 2 × 4 × 3 = 24.',
+  explanationVi: 'Chữ số cuối là 2 hoặc 4 (2 cách); hai chữ số còn lại có 4 và 3 cách: 2 × 4 × 3 = 24.',
+});
+add(COMB, 5, 'A team of 3 is chosen from 5 boys and 4 girls. How many teams have at least one girl?', ['74', '84', '40', '80'], {
+  promptVi: 'Chọn một đội 3 người từ 5 bạn nam và 4 bạn nữ. Có bao nhiêu cách chọn đội có ít nhất một bạn nữ?',
+  explanation: 'All teams: C(9, 3) = 84. All-boy teams: C(5, 3) = 10. So 84 − 10 = 74.',
+  explanationVi: 'Tất cả: C(9, 3) = 84. Đội toàn nam: C(5, 3) = 10. Vậy 84 − 10 = 74.',
+});
+add(COMB, 4, 'Mai climbs a staircase of 8 steps, going up 1 or 2 steps at a time. In how many different ways can she reach the top?', ['34', '21', '55', '16'], {
+  promptVi: 'Mai leo cầu thang 8 bậc, mỗi lần bước lên 1 hoặc 2 bậc. Có bao nhiêu cách khác nhau để Mai lên đến bậc trên cùng?',
+  explanation: 'Ways(n) = Ways(n − 1) + Ways(n − 2), depending on the last stride: 1, 2, 3, 5, 8, 13, 21, 34.',
+  explanationVi: 'Số cách(n) = Số cách(n − 1) + Số cách(n − 2), tùy bước cuối: 1, 2, 3, 5, 8, 13, 21, 34.',
+});
+add(COMB, 5, 'Nine points are arranged in a 3 × 3 square grid (3 rows of 3 equally spaced points). How many triangles have all three vertices among these points?', ['76', '84', '72', '80'], {
+  promptVi: 'Chín điểm xếp thành lưới vuông 3 × 3 (3 hàng, mỗi hàng 3 điểm cách đều). Có bao nhiêu tam giác có cả ba đỉnh là các điểm này?',
+  explanation: 'C(9, 3) = 84 triples, minus the 8 collinear ones (3 rows, 3 columns, 2 diagonals): 84 − 8 = 76.',
+  explanationVi: 'Có C(9, 3) = 84 bộ ba điểm, bớt 8 bộ thẳng hàng (3 hàng, 3 cột, 2 đường chéo): 84 − 8 = 76.',
+});
+add(COMB, 4, 'In how many ways can 6 people sit around a round table, if two seatings that differ only by a rotation count as the same?', ['120', '720', '60', '360'], {
+  promptVi: 'Có bao nhiêu cách xếp 6 người ngồi quanh một bàn tròn, nếu hai cách chỉ khác nhau bởi một phép xoay được coi là như nhau?',
+  explanation: 'Fix one person\'s seat to remove rotations; the other 5 can be arranged in 5! = 120 ways.',
+  explanationVi: 'Cố định chỗ của một người để bỏ các phép xoay; 5 người còn lại có 5! = 120 cách xếp.',
+});
+add(COMB, 5, 'How many ways are there to write 10 = a + b + c with a, b, c positive whole numbers, where the order matters (so 1 + 2 + 7 and 7 + 2 + 1 are different)?', ['36', '8', '45', '28'], {
+  promptVi: 'Có bao nhiêu cách viết 10 = a + b + c với a, b, c là các số nguyên dương, có kể thứ tự (1 + 2 + 7 và 7 + 2 + 1 là khác nhau)?',
+  explanation: 'Stars and bars: put 2 dividers in the 9 gaps between 10 stars: C(9, 2) = 36.',
+  explanationVi: 'Phương pháp "chia kẹo": đặt 2 vách ngăn vào 9 khe giữa 10 ngôi sao: C(9, 2) = 36.',
 });
 
 export const olympiadQuestions = list;
