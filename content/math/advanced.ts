@@ -868,6 +868,123 @@ const vietaParam: Generator = (d, r) => {
   );
 };
 
+// ── Combinatorics: counting with restrictions, inclusion–exclusion, pigeonhole ──
+const C = (n: number, k: number): number => (k < 0 || k > n ? 0 : k === 0 ? 1 : (C(n - 1, k - 1) * n) / k);
+const P = (n: number, k: number): number => (k <= 0 ? 1 : n * P(n - 1, k - 1));
+const lcm = (a: number, b: number) => (a * b) / gcd(a, b);
+
+const combinatorics: Generator = (d, r) => {
+  if (d <= 1) {
+    if (r() < 0.5) {
+      const n = int(r, 7, 24), ans = (n * (n - 3)) / 2;
+      return q(r, `A convex polygon has ${n} sides. How many diagonals does it have?`, `Một đa giác lồi có ${n} cạnh. Đa giác đó có bao nhiêu đường chéo?`,
+        ans, [(n * (n - 1)) / 2, n * (n - 3), (n * (n - 2)) / 2, ans + n],
+        `Each vertex joins ${n} − 3 = ${n - 3} others by a diagonal (not itself, not its two neighbours). ${n}·${n - 3} counts every diagonal twice, so there are ${n}·${n - 3}/2 = ${ans}.`,
+        `Mỗi đỉnh nối với ${n} − 3 = ${n - 3} đỉnh khác bằng một đường chéo (trừ chính nó và hai đỉnh kề). ${n}·${n - 3} đếm mỗi đường chéo hai lần, nên có ${n}·${n - 3}/2 = ${ans} đường chéo.`);
+    }
+    const n = int(r, 5, 12), ans = C(n, 3);
+    return q(r, `${n} points lie in a plane, no three on a line. How many triangles have all three vertices among these points?`, `Cho ${n} điểm trong mặt phẳng, không có ba điểm nào thẳng hàng. Có bao nhiêu tam giác có ba đỉnh là ba trong các điểm đó?`,
+      ans, [n * (n - 1) * (n - 2), C(n, 2), (n * (n - 1) * (n - 2)) / 2, 3 * n],
+      `Any 3 of the points form a triangle, and order doesn't matter: ${n}·${n - 1}·${n - 2}/(3·2·1) = ${ans}.`,
+      `Ba điểm bất kì tạo thành một tam giác và không phân biệt thứ tự: ${n}·${n - 1}·${n - 2}/(3·2·1) = ${ans} tam giác.`);
+  }
+  if (d === 2) {
+    if (r() < 0.3) {
+      const n = int(r, 6, 30), D = (n * (n - 3)) / 2;
+      return q(r, `A convex polygon has ${D} diagonals. How many sides does it have?`, `Một đa giác lồi có ${D} đường chéo. Hỏi đa giác đó có bao nhiêu cạnh?`,
+        n, [n - 1, n + 1, n - 3, Math.round(Math.sqrt(2 * D))],
+        `n(n − 3)/2 = ${D}, so n(n − 3) = ${2 * D} = ${n}·${n - 3}: n = ${n}.`, `n(n − 3)/2 = ${D}, nên n(n − 3) = ${2 * D} = ${n}·${n - 3}: n = ${n}.`);
+    }
+    const [a, b] = pick(r, [[4, 6], [6, 9], [4, 10], [6, 8], [3, 5], [2, 7], [6, 15], [10, 15], [4, 14], [3, 7], [9, 12]] as const);
+    const N = int(r, 10, 99) * 10 + int(r, 0, 9), L = lcm(a, b);
+    const A = Math.floor(N / a), B = Math.floor(N / b), AB = Math.floor(N / L), either = A + B - AB;
+    const how = `Multiples of ${a}: ${A}; of ${b}: ${B}; of both, i.e. of lcm(${a}, ${b}) = ${L}: ${AB}. Divisible by ${a} or ${b}: ${A} + ${B} − ${AB} = ${either}.`;
+    const howVi = `Bội của ${a}: ${A} số; bội của ${b}: ${B} số; bội của cả hai, tức là bội của BCNN(${a}, ${b}) = ${L}: ${AB} số. Chia hết cho ${a} hoặc ${b}: ${A} + ${B} − ${AB} = ${either} số.`;
+    const wrongAB = A + B - Math.floor(N / (a * b));
+    if (r() < 0.6)
+      return q(r, `How many integers from 1 to ${N} are divisible by ${a} or ${b}?`, `Có bao nhiêu số nguyên từ 1 đến ${N} chia hết cho ${a} hoặc ${b}?`, either, [A + B, wrongAB, N - either, A + B - 2 * AB], how, howVi);
+    return q(r, `How many integers from 1 to ${N} are divisible by neither ${a} nor ${b}?`, `Có bao nhiêu số nguyên từ 1 đến ${N} không chia hết cho ${a} và cũng không chia hết cho ${b}?`,
+      N - either, [either, N - A - B, N - wrongAB, N - A - B + 2 * AB], `${how} So ${N} − ${either} = ${N - either} are divisible by neither.`, `${howVi} Vậy có ${N} − ${either} = ${N - either} số không chia hết cho cả hai.`);
+  }
+  if (d === 3) {
+    if (r() < 0.55) {
+      const ps = [...pick(r, [[2, 3, 5], [2, 3, 7], [2, 5, 7], [3, 5, 7], [2, 3, 11], [3, 5, 11]] as const)];
+      const N = int(r, 100, 999);
+      const f = (k: number) => Math.floor(N / k);
+      const [p1, p2, p3] = ps;
+      const s1 = f(p1) + f(p2) + f(p3), s2 = f(p1 * p2) + f(p1 * p3) + f(p2 * p3), s3 = f(p1 * p2 * p3), ans = N - s1 + s2 - s3;
+      return q(
+        r,
+        `How many integers from 1 to ${N} are divisible by none of ${p1}, ${p2} and ${p3}?`,
+        `Có bao nhiêu số nguyên từ 1 đến ${N} không chia hết cho số nào trong các số ${p1}, ${p2}, ${p3}?`,
+        ans,
+        [N - s1, N - s1 + s2, N - s1 + s3, s1 - s2 + s3],
+        `Inclusion–exclusion: divisible by at least one = (${f(p1)} + ${f(p2)} + ${f(p3)}) − (${f(p1 * p2)} + ${f(p1 * p3)} + ${f(p2 * p3)}) + ${s3} = ${s1 - s2 + s3}. So ${N} − ${s1 - s2 + s3} = ${ans} are divisible by none.`,
+        `Nguyên lí bù trừ: số chia hết cho ít nhất một số = (${f(p1)} + ${f(p2)} + ${f(p3)}) − (${f(p1 * p2)} + ${f(p1 * p3)} + ${f(p2 * p3)}) + ${s3} = ${s1 - s2 + s3}. Vậy có ${N} − ${s1 - s2 + s3} = ${ans} số không chia hết cho số nào.`,
+      );
+    }
+    const b = int(r, 4, 7), g = int(r, 2, 5), k = int(r, 3, 4), ans = C(b + g, k) - C(b, k);
+    return q(
+      r,
+      `A class group has ${b} boys and ${g} girls. In how many ways can a team of ${k} with at least one girl be chosen?`,
+      `Một tổ có ${b} bạn nam và ${g} bạn nữ. Có bao nhiêu cách chọn một đội ${k} bạn trong đó có ít nhất một bạn nữ?`,
+      ans,
+      [g * C(b + g - 1, k - 1), C(b + g, k), g * C(b, k - 1), C(b + g, k) - C(g, k)],
+      `Count the complement: all teams C(${b + g}, ${k}) = ${C(b + g, k)}, minus the all-boy teams C(${b}, ${k}) = ${C(b, k)}: ${ans}. (Choosing "one girl first, then the rest" counts some teams several times.)`,
+      `Đếm phần bù: tất cả các đội C(${b + g}, ${k}) = ${C(b + g, k)}, trừ các đội toàn nam C(${b}, ${k}) = ${C(b, k)}: ${ans}. (Cách "chọn trước một bạn nữ rồi chọn phần còn lại" đếm trùng nhiều đội.)`,
+    );
+  }
+  if (d === 4) {
+    const m = int(r, 4, 7), n = m + 1, k = pick(r, [3, 3, 4]);
+    const kind = pick(r, ['even', 'odd', 'five'] as const);
+    const Lset = [...Array(n).keys()].filter((x) => (kind === 'even' ? x % 2 === 0 : kind === 'odd' ? x % 2 === 1 : x % 5 === 0));
+    const zero = Lset.includes(0), nonzero = Lset.filter((x) => x > 0).length, rest = P(n - 2, k - 2);
+    const ans = rest * ((zero ? n - 1 : 0) + nonzero * (n - 2));
+    const digits = [...Array(n).keys()].join(', ');
+    const what = { even: 'even numbers', odd: 'odd numbers', five: 'numbers divisible by 5' }[kind];
+    const whatVi = { even: 'số chẵn', odd: 'số lẻ', five: 'số chia hết cho 5' }[kind];
+    const ends = Lset.join(', ');
+    return q(
+      r,
+      `Using the digits ${digits}, each at most once, how many ${k}-digit ${what} can be formed?`,
+      `Từ các chữ số ${digits} có thể lập được bao nhiêu ${whatVi} có ${k} chữ số khác nhau?`,
+      ans,
+      [Lset.length * P(n - 1, k - 1), Lset.length * (n - 1) * rest, Lset.length * (n - 2) * rest, ans + rest],
+      `The last digit must be ${ends}.${zero ? ' Split by whether it is 0 (the first digit can\'t be 0).' : ''} ${zero ? `Last digit 0: first digit ${n - 1} choices, then ${rest} ways for the middle — ${(n - 1) * rest}. ` : ''}Last digit one of the ${nonzero} non-zero choices: first digit ${n - 2} choices (not 0, not the last digit), middle ${rest} ways — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest}. Total ${ans}.`,
+      `Chữ số tận cùng phải là ${ends}.${zero ? ' Chia trường hợp theo chữ số tận cùng có bằng 0 hay không (chữ số đầu không được bằng 0).' : ''} ${zero ? `Tận cùng là 0: chữ số đầu có ${n - 1} cách, phần giữa có ${rest} cách — ${(n - 1) * rest} số. ` : ''}Tận cùng là một trong ${nonzero} chữ số khác 0: chữ số đầu có ${n - 2} cách (khác 0 và khác chữ số tận cùng), phần giữa ${rest} cách — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest} số. Tổng cộng ${ans} số.`,
+    );
+  }
+  const kind = pick(r, ['same', 'same', 'each', 'sum'] as const);
+  if (kind === 'sum') {
+    const m = int(r, 5, 14), ans = Math.floor(m / 2) + 2;
+    return q(
+      r,
+      `What is the smallest n such that among any n integers there are always two whose sum or difference is divisible by ${m}?`,
+      `Tìm số n nhỏ nhất sao cho trong n số nguyên bất kì luôn có hai số có tổng hoặc hiệu chia hết cho ${m}.`,
+      ans,
+      [m + 1, m, ans - 1, Math.ceil(m / 2) + 2],
+      `Use remainders mod ${m} as boxes: {0}${m % 2 === 0 ? `, {${m / 2}}` : ''} and the pairs {1, ${m - 1}}, {2, ${m - 2}}, …: ${ans - 1} boxes. Two numbers in the same box have sum or difference divisible by ${m}, so ${ans} numbers are enough; one number from each box (${ans - 1} numbers) shows ${ans - 1} is not.`,
+      `Lấy số dư khi chia cho ${m} làm "chuồng": {0}${m % 2 === 0 ? `, {${m / 2}}` : ''} và các cặp {1; ${m - 1}}, {2; ${m - 2}}, …: có ${ans - 1} chuồng. Hai số cùng chuồng có tổng hoặc hiệu chia hết cho ${m}, nên ${ans} số là đủ; chọn mỗi chuồng một số (${ans - 1} số) cho thấy ${ans - 1} số là chưa đủ.`,
+    );
+  }
+  const head = (cs: number[]) => `A drawer has ${cs[0]} red, ${cs[1]} blue and ${cs[2]} white socks. Without looking, what is the smallest number of socks you must take to be sure of getting`;
+  const headVi = (cs: number[]) => `Trong ngăn kéo có ${cs[0]} chiếc tất đỏ, ${cs[1]} chiếc tất xanh và ${cs[2]} chiếc tất trắng. Không nhìn, phải lấy ra ít nhất bao nhiêu chiếc để chắc chắn có`;
+  if (kind === 'each') {
+    const cs = [int(r, 3, 12), int(r, 3, 12), int(r, 3, 12)];
+    const total = cs[0] + cs[1] + cs[2], lo = Math.min(...cs), ans = total - lo + 1;
+    return q(r, `${head(cs)} at least one sock of each colour?`, `${headVi(cs)} đủ cả ba màu?`, ans, [4, total - Math.max(...cs) + 1, ans - 1, total],
+      `Worst case: you first take all socks of the two biggest colours (${total - lo}) and still miss the third. One more sock guarantees all three colours: ${total - lo} + 1 = ${ans}.`,
+      `Trường hợp xấu nhất: lấy hết tất của hai màu nhiều nhất (${total - lo} chiếc) mà vẫn thiếu màu thứ ba. Lấy thêm một chiếc là chắc chắn đủ ba màu: ${total - lo} + 1 = ${ans}.`);
+  }
+  const k = int(r, 3, 6);
+  const cs = [int(r, k, 14), int(r, 1, 14), r() < 0.5 ? int(r, 1, k - 2) : int(r, 1, 14)].sort(() => r() - 0.5);
+  const ans = cs.reduce((x, c) => x + Math.min(c, k - 1), 0) + 1;
+  const parts = cs.map((c) => Math.min(c, k - 1)).join(' + ');
+  return q(r, `${head(cs)} ${k} socks of the same colour?`, `${headVi(cs)} ${k} chiếc cùng màu?`, ans, [3 * (k - 1) + 1, 3 * k, ans - 1, 3 * (k - 1)],
+    `Worst case: as many socks as possible without ${k} of one colour — at most ${k - 1} of each colour, but a colour with fewer socks gives only what it has: ${parts} = ${ans - 1}. The next sock must make ${k} of one colour: ${ans}.`,
+    `Trường hợp xấu nhất: lấy nhiều nhất có thể mà chưa có ${k} chiếc cùng màu — mỗi màu tối đa ${k - 1} chiếc, nhưng màu nào ít tất hơn thì chỉ lấy được hết số đó: ${parts} = ${ans - 1}. Chiếc tiếp theo chắc chắn tạo ra ${k} chiếc cùng màu: ${ans}.`);
+};
+
 const EXAM = ['Thi vào 10 chuyên Toán', 'HSG Toán 9'];
 
 export const advancedConcepts: ConceptSeed[] = [
@@ -943,6 +1060,18 @@ export const advancedConcepts: ConceptSeed[] = [
       'Step 1: the condition for roots to exist (Δ ≥ 0, or Δ > 0 for two distinct roots). Step 2: Viète, S = x₁ + x₂ and P = x₁x₂ in terms of m. Step 3: rewrite the condition in S and P — (x₁ − x₂)² = S² − 4P; x₁ = kx₂ gives a system with S and P. Step 4: solve for m and throw away the values that break step 1. Integer roots: eliminate m between S and P and factor, e.g. (x₁ − 1)(x₂ − 1) = n. A number c lies strictly between the roots of f(x) = x² + px + q exactly when f(c) < 0. When minimising in m, the vertex may be outside the allowed range — then the answer is an end point.',
     examRefs: [`${EXAM[0]} · Định lí Vi-ét và ứng dụng`, `${EXAM[1]} · Phương trình bậc hai chứa tham số`],
   },
+  {
+    id: 'math.adv.combinatorics',
+    domain: 'Advanced',
+    skill: 'Combinatorics',
+    name: 'Counting & pigeonhole',
+    missionName: 'Pigeon Tower',
+    description: 'Diagonals n(n − 3)/2, inclusion–exclusion, counting with restrictions (digits, committees), the pigeonhole principle.',
+    prerequisites: ['math.combinatorics.counting', 'math.adv.number-theory'],
+    lesson:
+      'Diagonals of an n-gon: n(n − 3)/2; triangles from n points: n(n − 1)(n − 2)/6. Inclusion–exclusion: |A ∪ B| = |A| + |B| − |A ∩ B| — and "divisible by a and b" means divisible by lcm(a, b), not by ab. "At least one" is easiest as total minus "none". Digits: deal with the restricted places first (last digit, first digit ≠ 0) and split into cases when they interact. Pigeonhole: build the worst case — the most you can take without the property — then add 1.',
+    examRefs: [`${EXAM[0]} · Tổ hợp`, `${EXAM[1]} · Nguyên lí Dirichlet, tổ hợp`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
@@ -952,6 +1081,7 @@ export const advancedGenerators: Record<string, Generator> = {
   'math.adv.inequalities': inequalities,
   'math.adv.equations': equations,
   'math.adv.vieta': vietaParam,
+  'math.adv.combinatorics': combinatorics,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -967,4 +1097,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Với √A = B: đặt điều kiện B ≥ 0 rồi mới bình phương — và thử lại mọi nghiệm, vì bình phương có thể sinh nghiệm ngoại lai. Tìm cách đặt ẩn phụ: t = x² (t ≥ 0) cho x⁴ + bx² + c = 0; ghép (x + a)(x + d) và (x + b)(x + c) khi a + d = b + c; t = √(…) ≥ 0 khi cùng một biểu thức xuất hiện cả trong và ngoài căn. Với hệ đối xứng, đặt S = x + y, P = xy; x, y là số thực khi và chỉ khi S² ≥ 4P.',
   'math.adv.vieta':
     'Bước 1: điều kiện để phương trình có nghiệm (Δ ≥ 0, hoặc Δ > 0 nếu cần hai nghiệm phân biệt). Bước 2: viết S = x₁ + x₂ và P = x₁x₂ theo m bằng định lí Vi-ét. Bước 3: biến đổi điều kiện về S và P — (x₁ − x₂)² = S² − 4P; x₁ = kx₂ cho một hệ với S và P. Bước 4: giải tìm m rồi loại các giá trị không thỏa mãn bước 1. Nghiệm nguyên: khử m giữa S và P rồi phân tích thành tích, ví dụ (x₁ − 1)(x₂ − 1) = n. Số c nằm giữa hai nghiệm của f(x) = x² + px + q khi và chỉ khi f(c) < 0. Khi tìm cực trị theo m, đỉnh có thể nằm ngoài miền cho phép — khi đó đáp án ở đầu mút.',
+  'math.adv.combinatorics':
+    'Số đường chéo của đa giác n cạnh: n(n − 3)/2; số tam giác từ n điểm: n(n − 1)(n − 2)/6. Nguyên lí bù trừ: |A ∪ B| = |A| + |B| − |A ∩ B| — và "chia hết cho cả a và b" nghĩa là chia hết cho BCNN(a, b), không phải cho ab. "Ít nhất một" thường dễ đếm bằng tổng trừ đi trường hợp "không có". Bài lập số: xử lí các vị trí có điều kiện trước (chữ số tận cùng, chữ số đầu khác 0) và chia trường hợp khi chúng ảnh hưởng nhau. Nguyên lí Dirichlet: dựng trường hợp xấu nhất — lấy nhiều nhất mà chưa có tính chất cần tìm — rồi cộng thêm 1.',
 };

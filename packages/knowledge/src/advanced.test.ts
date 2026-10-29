@@ -356,6 +356,92 @@ const checkers: Record<string, (p: string, g: Generated) => string | number | nu
     }
     return null;
   },
+
+  'math.adv.combinatorics': (p) => {
+    let m = p.match(/^A convex polygon has (\d+) sides\. How many diagonals does it have\?$/);
+    const diagonals = (n: number) => {
+      let c = 0;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (j - i !== 1 && j - i !== n - 1) c++;
+      return c;
+    };
+    if (m) return diagonals(+m[1]);
+    m = p.match(/^A convex polygon has (\d+) diagonals\. How many sides does it have\?$/);
+    if (m) {
+      const ns: number[] = [];
+      for (let n = 3; n < 100; n++) if (diagonals(n) === +m[1]) ns.push(n);
+      return ns.join(', ');
+    }
+    m = p.match(/^(\d+) points lie in a plane, no three on a line\. How many triangles/);
+    if (m) {
+      let c = 0;
+      const n = +m[1];
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) c++;
+      return c;
+    }
+    m = p.match(/^How many integers from 1 to (\d+) are divisible by (neither )?(\d+) (?:or|nor) (\d+)\?$/);
+    if (m) {
+      let c = 0;
+      for (let n = 1; n <= +m[1]; n++) {
+        const hit = n % +m[3] === 0 || n % +m[4] === 0;
+        if (m[2] ? !hit : hit) c++;
+      }
+      return c;
+    }
+    m = p.match(/^How many integers from 1 to (\d+) are divisible by none of (\d+), (\d+) and (\d+)\?$/);
+    if (m) {
+      let c = 0;
+      for (let n = 1; n <= +m[1]; n++) if (n % +m[2] && n % +m[3] && n % +m[4]) c++;
+      return c;
+    }
+    m = p.match(/^A class group has (\d+) boys and (\d+) girls\. In how many ways can a team of (\d+) with at least one girl be chosen\?$/);
+    if (m) {
+      const [b, g, k] = [+m[1], +m[2], +m[3]];
+      let c = 0;
+      for (let mask = 0; mask < 1 << (b + g); mask++) {
+        const bits = [...Array(b + g).keys()].filter((i) => mask & (1 << i));
+        if (bits.length === k && bits.some((i) => i >= b)) c++;
+      }
+      return c;
+    }
+    m = p.match(/^Using the digits ([\d, ]+), each at most once, how many (\d)-digit (even numbers|odd numbers|numbers divisible by 5) can be formed\?$/);
+    if (m) {
+      const allowed = new Set(m[1].split(', '));
+      const k = +m[2];
+      let c = 0;
+      for (let n = 10 ** (k - 1); n < 10 ** k; n++) {
+        const ds = String(n).split('');
+        if (new Set(ds).size !== k || !ds.every((x) => allowed.has(x))) continue;
+        if (m[3] === 'even numbers' ? n % 2 === 0 : m[3] === 'odd numbers' ? n % 2 === 1 : n % 5 === 0) c++;
+      }
+      return c;
+    }
+    m = p.match(/^A drawer has (\d+) red, (\d+) blue and (\d+) white socks\. .+ to be sure of getting (?:(\d+) socks of the same colour|(at least one sock of each colour))\?$/);
+    if (m) {
+      // The largest draw that still fails, plus one.
+      const cs = [+m[1], +m[2], +m[3]];
+      let worst = 0;
+      for (let x = 0; x <= cs[0]; x++)
+        for (let y = 0; y <= cs[1]; y++)
+          for (let z = 0; z <= cs[2]; z++) {
+            const fails = m[5] ? x * y * z === 0 : Math.max(x, y, z) < +m[4];
+            if (fails) worst = Math.max(worst, x + y + z);
+          }
+      return worst + 1;
+    }
+    m = p.match(/^What is the smallest n such that among any n integers there are always two whose sum or difference is divisible by (\d+)\?$/);
+    if (m) {
+      // The biggest set of integers with no such pair uses distinct remainders, no two adding to 0 mod m.
+      const md = +m[1];
+      let best = 0;
+      for (let mask = 0; mask < 1 << md; mask++) {
+        const rs = [...Array(md).keys()].filter((i) => mask & (1 << i));
+        if (rs.length <= best) continue;
+        if (rs.every((a, i) => rs.every((b, j) => j <= i || (a + b) % md !== 0))) best = rs.length;
+      }
+      return best + 1;
+    }
+    return null;
+  },
 };
 
 const ids = concepts.filter((c) => c.id.startsWith('math.adv.')).map((c) => c.id);
