@@ -35,6 +35,8 @@ function fn(e: string, v = 'n'): (x: number) => number {
   return Function(v, `return (${js});`) as (x: number) => number;
 }
 
+void [val, close]; // used by later checkers
+
 const bigPow = (a: number, n: number) => BigInt(a) ** BigInt(n);
 const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
 const isPrime = (n: number) => {
