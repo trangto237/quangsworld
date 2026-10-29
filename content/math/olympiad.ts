@@ -9,6 +9,7 @@ import { makeBank } from '../helpers';
 
 const LOGIC = 'math.olympiad.logic';
 const ARITH = 'math.olympiad.arithmetic';
+const NT = 'math.olympiad.number-theory';
 
 export const olympiadConcepts: ConceptSeed[] = [
   {
@@ -33,6 +34,17 @@ export const olympiadConcepts: ConceptSeed[] = [
       'Telescoping: split each term, e.g. 1/(n(n + 1)) = 1/n − 1/(n + 1), and almost everything cancels; products like (1 + 1/2)(1 + 1/3)… cancel the same way. Gauss: 1 + 2 + … + n = n(n + 1)/2, and any arithmetic sequence sums to (first + last) × number of terms ÷ 2. Averages: work with totals (average × count), and for repeating decimals or digits, find the period and use the remainder.',
     examRefs: ['TIMO / FIMO style'],
   },
+  {
+    id: NT,
+    domain: 'Advanced',
+    skill: 'Olympiad',
+    name: 'Olympiad number theory',
+    missionName: 'Prime Vault',
+    description: 'Divisibility, remainders, last digits, primes, factors, digit sums, and LCM / GCD word problems.',
+    lesson:
+      "Last digits and remainders repeat in cycles: find the cycle length and use the remainder of the exponent (7, 9, 3, 1 for powers of 7). Divisibility tests: by 4 look at the last two digits, by 3 or 9 at the digit sum; and remainders multiply and add, so replace a number by its remainder. Factorise into primes: n = pᵃqᵇ… has (a + 1)(b + 1)… divisors; 'together again' means LCM, 'split into equal groups' means GCD.",
+    examRefs: ['TIMO / FIMO style'],
+  },
 ];
 
 export const olympiadLessonsVi: Record<string, string> = {
@@ -40,6 +52,8 @@ export const olympiadLessonsVi: Record<string, string> = {
     'Người nói thật – kẻ nói dối: giả sử một người nói thật, suy ra hệ quả và loại mọi trường hợp tự mâu thuẫn. Đồng hồ: kim phút quay 6° mỗi phút, kim giờ 0,5°, nên khoảng cách đổi 5,5° mỗi phút; lịch: sau 7 ngày lại là thứ cũ, nên đếm số ngày chia dư cho 7. Tính ngược: đi từ cuối lên, làm phép ngược từng bước theo thứ tự ngược lại (chia đôi ↔ nhân đôi, +2 ↔ −2).',
   [ARITH]:
     'Rút gọn kiểu "triệt tiêu": tách mỗi số hạng, ví dụ 1/(n(n + 1)) = 1/n − 1/(n + 1), gần như mọi thứ tự triệt tiêu; tích dạng (1 + 1/2)(1 + 1/3)… cũng triệt tiêu như vậy. Gauss: 1 + 2 + … + n = n(n + 1)/2, và tổng một dãy cách đều = (số đầu + số cuối) × số số hạng : 2. Trung bình cộng: làm việc với tổng (trung bình × số lượng); với số thập phân tuần hoàn hay chữ số lặp, tìm chu kì rồi dùng số dư.',
+  [NT]:
+    "Chữ số tận cùng và số dư lặp theo chu kì: tìm độ dài chu kì rồi dùng số dư của số mũ (lũy thừa của 7 tận cùng 7, 9, 3, 1). Dấu hiệu chia hết: cho 4 xét hai chữ số cuối, cho 3 hoặc 9 xét tổng các chữ số; số dư cộng và nhân được, nên có thể thay một số bằng số dư của nó. Phân tích ra thừa số nguyên tố: n = pᵃqᵇ… có (a + 1)(b + 1)… ước; 'lại gặp nhau cùng lúc' là BCNN, 'chia đều thành các nhóm' là ƯCLN.",
 };
 
 const { add, list } = makeBank('Atlas olympiad bank', 'oly-');
@@ -256,6 +270,118 @@ add(ARITH, 4, 'A car drives from A to B at 60 km/h and returns from B to A along
   promptVi: 'Một ô tô đi từ A đến B với vận tốc 60 km/h rồi quay về từ B đến A trên cùng con đường với vận tốc 40 km/h. Vận tốc trung bình cả đi lẫn về là bao nhiêu?',
   explanation: 'Take AB = 120 km: going takes 2 h, returning 3 h, so 240 km in 5 h = 48 km/h (not the plain average 50).',
   explanationVi: 'Lấy AB = 120 km: đi hết 2 giờ, về hết 3 giờ, nên 240 km trong 5 giờ = 48 km/h (không phải trung bình 50).',
+});
+
+// ── Number theory ────────────────────────────────────────────────────────
+add(NT, 3, 'What is the last digit of 7²⁰²⁶?', ['9', '7', '3', '1'], {
+  promptVi: 'Chữ số tận cùng của 7²⁰²⁶ là chữ số nào?',
+  explanation: 'Last digits of 7, 7², 7³, 7⁴, … repeat 7, 9, 3, 1. 2026 = 4 × 506 + 2, so the last digit is the 2nd in the cycle: 9.',
+  explanationVi: 'Chữ số tận cùng của 7, 7², 7³, 7⁴, … lặp lại 7, 9, 3, 1. 2026 = 4 × 506 + 2, nên chữ số tận cùng là số thứ 2 trong chu kì: 9.',
+});
+add(NT, 4, 'What is the last digit of 2²⁰²⁶ + 3²⁰²⁶?', ['3', '5', '7', '1'], {
+  promptVi: 'Chữ số tận cùng của 2²⁰²⁶ + 3²⁰²⁶ là chữ số nào?',
+  explanation: 'Both cycles have length 4 and 2026 leaves remainder 2 when divided by 4: 2²⁰²⁶ ends in 4 and 3²⁰²⁶ ends in 9. 4 + 9 = 13, so the last digit is 3.',
+  explanationVi: 'Cả hai chu kì dài 4 và 2026 chia 4 dư 2: 2²⁰²⁶ tận cùng 4, 3²⁰²⁶ tận cùng 9. 4 + 9 = 13, nên chữ số tận cùng là 3.',
+});
+add(NT, 4, 'What is the remainder when 2¹⁰⁰ is divided by 7?', ['2', '1', '4', '3'], {
+  promptVi: 'Số dư khi chia 2¹⁰⁰ cho 7 là bao nhiêu?',
+  explanation: '2³ = 8 ≡ 1 (mod 7). 100 = 3 × 33 + 1, so 2¹⁰⁰ = (2³)³³ × 2 ≡ 2 (mod 7).',
+  explanationVi: '2³ = 8 ≡ 1 (mod 7). 100 = 3 × 33 + 1, nên 2¹⁰⁰ = (2³)³³ × 2 ≡ 2 (mod 7).',
+});
+add(NT, 4, 'Find the smallest positive whole number that leaves remainder 1 when divided by 2, 3, 4, 5 or 6, and is divisible by 7.', ['301', '61', '121', '421'], {
+  promptVi: 'Tìm số nguyên dương nhỏ nhất chia cho 2, 3, 4, 5, 6 đều dư 1 và chia hết cho 7.',
+  explanation: 'The number is 1 more than a multiple of LCM(2, 3, 4, 5, 6) = 60: 61, 121, 181, 241, 301, … The first divisible by 7 is 301 = 7 × 43.',
+  explanationVi: 'Số đó bằng một bội của BCNN(2, 3, 4, 5, 6) = 60 cộng 1: 61, 121, 181, 241, 301, … Số đầu tiên chia hết cho 7 là 301 = 7 × 43.',
+});
+add(NT, 3, 'How many positive divisors does 360 have?', ['24', '12', '18', '36'], {
+  promptVi: 'Số 360 có bao nhiêu ước nguyên dương?',
+  explanation: '360 = 2³ × 3² × 5, so it has (3 + 1)(2 + 1)(1 + 1) = 24 divisors.',
+  explanationVi: '360 = 2³ × 3² × 5, nên có (3 + 1)(2 + 1)(1 + 1) = 24 ước.',
+});
+add(NT, 4, 'How many whole numbers from 1 to 1000 are divisible by 3 or by 5 (or both)?', ['467', '533', '400', '466'], {
+  promptVi: 'Từ 1 đến 1000 có bao nhiêu số chia hết cho 3 hoặc cho 5 (hoặc cả hai)?',
+  explanation: 'Inclusion–exclusion: 333 multiples of 3 + 200 multiples of 5 − 66 multiples of 15 = 467.',
+  explanationVi: 'Bao hàm – loại trừ: 333 bội của 3 + 200 bội của 5 − 66 bội của 15 = 467.',
+});
+add(NT, 4, 'The four-digit number a74b (digits a, 7, 4, b) is divisible by 36. How many such numbers are there?', ['3', '2', '1', '4'], {
+  promptVi: 'Số có bốn chữ số a74b (các chữ số a, 7, 4, b) chia hết cho 36. Có bao nhiêu số như vậy?',
+  explanation: 'Divisible by 4: 4b ∈ {40, 44, 48}, so b = 0, 4 or 8. Divisible by 9: a + 11 + b is a multiple of 9. That gives 7740, 3744 and 8748: 3 numbers.',
+  explanationVi: 'Chia hết cho 4: 4b ∈ {40, 44, 48}, nên b = 0, 4 hoặc 8. Chia hết cho 9: a + 11 + b chia hết cho 9. Được 7740, 3744 và 8748: 3 số.',
+});
+add(NT, 3, 'How many zeros are at the end of 100! = 1 × 2 × 3 × … × 100?', ['24', '20', '25', '11'], {
+  promptVi: '100! = 1 × 2 × 3 × … × 100 có bao nhiêu chữ số 0 tận cùng?',
+  explanation: 'Each zero needs a factor 5 (there are plenty of 2s): ⌊100/5⌋ + ⌊100/25⌋ = 20 + 4 = 24.',
+  explanationVi: 'Mỗi chữ số 0 cần một thừa số 5 (thừa số 2 thì dư thừa): ⌊100/5⌋ + ⌊100/25⌋ = 20 + 4 = 24.',
+});
+add(NT, 4, 'How many zeros are at the end of 2026! = 1 × 2 × 3 × … × 2026?', ['505', '405', '486', '502'], {
+  promptVi: '2026! = 1 × 2 × 3 × … × 2026 có bao nhiêu chữ số 0 tận cùng?',
+  explanation: 'Count factors of 5: ⌊2026/5⌋ + ⌊2026/25⌋ + ⌊2026/125⌋ + ⌊2026/625⌋ = 405 + 81 + 16 + 3 = 505.',
+  explanationVi: 'Đếm thừa số 5: ⌊2026/5⌋ + ⌊2026/25⌋ + ⌊2026/125⌋ + ⌊2026/625⌋ = 405 + 81 + 16 + 3 = 505.',
+});
+add(NT, 3, 'Three lighthouses flash every 12, 18 and 30 seconds. They all flash together at exactly 8:00:00. When do they next all flash together?', ['8:03:00', '8:01:30', '8:06:00', '8:01:00'], {
+  promptVi: 'Ba ngọn hải đăng chớp sáng cứ 12 giây, 18 giây và 30 giây một lần. Chúng cùng chớp lúc đúng 8:00:00. Lần tiếp theo cả ba cùng chớp là lúc mấy giờ?',
+  explanation: 'LCM(12, 18, 30) = 180 seconds = 3 minutes, so at 8:03:00.',
+  explanationVi: 'BCNN(12, 18, 30) = 180 giây = 3 phút, nên lúc 8:03:00.',
+});
+add(NT, 3, 'A florist has 84 red roses and 126 white roses and makes identical bouquets using all of them (each bouquet has the same number of red and the same number of white roses). What is the largest number of bouquets?', ['42', '21', '14', '210'], {
+  promptVi: 'Một cửa hàng hoa có 84 bông hồng đỏ và 126 bông hồng trắng, bó thành các bó giống hệt nhau và dùng hết số hoa (mỗi bó có số hồng đỏ như nhau, số hồng trắng như nhau). Có thể bó được nhiều nhất bao nhiêu bó?',
+  explanation: 'The number of bouquets divides both 84 and 126, so the most is GCD(84, 126) = 42 (2 red and 3 white each).',
+  explanationVi: 'Số bó phải là ước chung của 84 và 126, nên nhiều nhất là ƯCLN(84, 126) = 42 (mỗi bó 2 đỏ, 3 trắng).',
+});
+add(NT, 5, 'What is the sum of the digits of 10²⁵ − 25?', ['219', '225', '216', '228'], {
+  promptVi: 'Tổng các chữ số của 10²⁵ − 25 là bao nhiêu?',
+  explanation: '10²⁵ − 25 = 99…975 with 23 nines followed by 7 and 5. Sum: 23 × 9 + 7 + 5 = 219.',
+  explanationVi: '10²⁵ − 25 = 99…975 gồm 23 chữ số 9 rồi đến 7 và 5. Tổng: 23 × 9 + 7 + 5 = 219.',
+});
+add(NT, 3, 'How many prime numbers are there between 50 and 100?', ['10', '9', '11', '12'], {
+  promptVi: 'Có bao nhiêu số nguyên tố nằm giữa 50 và 100?',
+  explanation: '53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — ten primes.',
+  explanationVi: '53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — mười số nguyên tố.',
+});
+add(NT, 4, 'p and q are prime numbers with p + q = 103. What is p × q?', ['202', '2650', '206', '101'], {
+  promptVi: 'p và q là hai số nguyên tố có p + q = 103. Tính p × q.',
+  explanation: '103 is odd, so one prime is even, i.e. 2; the other is 101 (prime). p × q = 202.',
+  explanationVi: '103 lẻ nên một trong hai số là số nguyên tố chẵn, tức là 2; số kia là 101 (nguyên tố). p × q = 202.',
+});
+add(NT, 4, 'What is the remainder when 1! + 2! + 3! + … + 100! is divided by 12?', ['9', '0', '3', '6'], {
+  promptVi: 'Số dư khi chia 1! + 2! + 3! + … + 100! cho 12 là bao nhiêu?',
+  explanation: 'From 4! = 24 on, every factorial is a multiple of 12. So the remainder is that of 1 + 2 + 6 = 9.',
+  explanationVi: 'Từ 4! = 24 trở đi, mọi giai thừa đều chia hết cho 12. Nên số dư bằng số dư của 1 + 2 + 6 = 9.',
+});
+add(NT, 5, 'For how many positive whole numbers n is (2n + 21)/(n + 3) a whole number?', ['2', '4', '3', '1'], {
+  promptVi: 'Có bao nhiêu số nguyên dương n để (2n + 21)/(n + 3) là số nguyên?',
+  explanation: '(2n + 21)/(n + 3) = 2 + 15/(n + 3), so n + 3 divides 15. With n + 3 ≥ 4: n + 3 = 5 or 15, giving n = 2 or 12.',
+  explanationVi: '(2n + 21)/(n + 3) = 2 + 15/(n + 3), nên n + 3 là ước của 15. Vì n + 3 ≥ 4: n + 3 = 5 hoặc 15, được n = 2 hoặc 12.',
+});
+add(NT, 4, 'What is the smallest positive whole number whose digits add up to 30?', ['3999', '6888', '39999', '5799'], {
+  promptVi: 'Số nguyên dương nhỏ nhất có tổng các chữ số bằng 30 là số nào?',
+  explanation: 'Three digits give at most 27, so it has 4 digits. Make the last three digits 9s and the first digit as small as possible: 30 − 27 = 3, so 3999.',
+  explanationVi: 'Ba chữ số có tổng tối đa 27, nên cần 4 chữ số. Cho ba chữ số cuối là 9 và chữ số đầu nhỏ nhất: 30 − 27 = 3, được 3999.',
+});
+add(NT, 5, 'How many divisors of 3600 are perfect squares (count 1 as a perfect square)?', ['12', '45', '6', '8'], {
+  promptVi: 'Số 3600 có bao nhiêu ước là số chính phương (tính cả 1)?',
+  explanation: '3600 = 2⁴ × 3² × 5². A square divisor has even exponents: 2 ∈ {0, 2, 4}, 3 ∈ {0, 2}, 5 ∈ {0, 2}, so 3 × 2 × 2 = 12.',
+  explanationVi: '3600 = 2⁴ × 3² × 5². Ước chính phương có số mũ chẵn: của 2 ∈ {0, 2, 4}, của 3 ∈ {0, 2}, của 5 ∈ {0, 2}, nên có 3 × 2 × 2 = 12.',
+});
+add(NT, 3, 'A number leaves remainder 7 when divided by 9. What remainder does 5 times that number leave when divided by 9?', ['8', '7', '35', '5'], {
+  promptVi: 'Một số chia cho 9 dư 7. Hỏi 5 lần số đó chia cho 9 dư bao nhiêu?',
+  explanation: 'The remainder of 5n is that of 5 × 7 = 35, and 35 = 3 × 9 + 8, so 8.',
+  explanationVi: 'Số dư của 5n bằng số dư của 5 × 7 = 35, mà 35 = 3 × 9 + 8, nên dư 8.',
+});
+add(NT, 5, 'What are the last two digits of 7²⁰²⁶?', ['49', '43', '01', '07'], {
+  promptVi: 'Hai chữ số tận cùng của 7²⁰²⁶ là gì?',
+  explanation: '7⁴ = 2401 ends in 01, so powers of 7 repeat their last two digits every 4 steps. 2026 = 4 × 506 + 2, so 7²⁰²⁶ ends like 7² = 49.',
+  explanationVi: '7⁴ = 2401 tận cùng 01, nên hai chữ số tận cùng của lũy thừa 7 lặp lại sau mỗi 4 bước. 2026 = 4 × 506 + 2, nên 7²⁰²⁶ tận cùng giống 7² = 49.',
+});
+add(NT, 4, 'How many three-digit numbers have digits that add up to 5?', ['15', '21', '10', '12'], {
+  promptVi: 'Có bao nhiêu số có ba chữ số mà tổng các chữ số bằng 5?',
+  explanation: 'The first digit a is 1 to 5, and the other two digits add up to 5 − a, which can be done in 6 − a ways: 5 + 4 + 3 + 2 + 1 = 15.',
+  explanationVi: 'Chữ số đầu a từ 1 đến 5, hai chữ số còn lại có tổng 5 − a, có 6 − a cách: 5 + 4 + 3 + 2 + 1 = 15.',
+});
+add(NT, 5, 'What is the greatest common divisor of 2¹² − 1 and 2¹⁸ − 1?', ['63', '4095', '3', '7'], {
+  promptVi: 'Ước chung lớn nhất của 2¹² − 1 và 2¹⁸ − 1 là bao nhiêu?',
+  explanation: 'GCD(2ᵃ − 1, 2ᵇ − 1) = 2^GCD(a, b) − 1. GCD(12, 18) = 6, so the answer is 2⁶ − 1 = 63.',
+  explanationVi: 'ƯCLN(2ᵃ − 1, 2ᵇ − 1) = 2^ƯCLN(a, b) − 1. ƯCLN(12, 18) = 6, nên kết quả là 2⁶ − 1 = 63.',
 });
 
 export const olympiadQuestions = list;
