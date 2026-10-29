@@ -1337,6 +1337,9 @@ const counting: Generator = (d, r) => {
       const parts = [first, ...Array(L - 2).fill(D.length), last];
       how = `First digit: ${first} choices${zero ? ' (not 0)' : ''}; ${L - 2 === 1 ? 'middle digit' : 'middle digits'}: ${D.length} each${cond === 'none' ? '' : `; last digit: ${last} (${ends.join(', ')})`}. ${parts.join(' × ')} = ${ans}.`;
       howVi = `Chữ số đầu: ${first} cách${zero ? ' (khác 0)' : ''}; mỗi chữ số ở giữa: ${D.length} cách${cond === 'none' ? '' : `; chữ số cuối: ${last} cách (${ends.join(', ')})`}. ${parts.join(' × ')} = ${ans}.`;
+    } else if (zero && ends.length === 1 && ends[0] === 0) {
+      how = `The last digit must be 0. The other ${L - 1} places take different digits from the remaining ${D.length - 1}: ${Pn(D.length - 1, L - 1)} = ${ans}.`;
+      howVi = `Chữ số cuối phải là 0. ${L - 1} vị trí còn lại chọn các chữ số khác nhau trong ${D.length - 1} chữ số còn lại: ${Pn(D.length - 1, L - 1)} = ${ans}.`;
     } else if (zero && cond !== 'none' && ends.includes(0)) {
       const A = Pn(D.length - 1, L - 1), Bc = ans - A;
       how = `Split by the last digit. Last digit 0: the other ${L - 1} places take any of the remaining digits, ${A} numbers. Last digit ${ends.filter((x) => x).join(' or ')}: the first digit cannot be 0, giving ${Bc} numbers. Total ${A} + ${Bc} = ${ans}.`;
