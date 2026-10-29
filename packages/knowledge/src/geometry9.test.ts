@@ -123,6 +123,108 @@ const CHECKS: Record<string, Check[]> = {
       return ((bh + ch) * ah) / 2;
     }],
   ],
+  'math.geometry.circle-angles': [
+    [/central angle AOB = (\d+)°\. C is a point on the major arc AB/, ([x]) => inscribed(x, true)],
+    [/inscribed angle ACB = (\d+)° \(C on the major arc AB\)/, ([y]) => {
+      // Find the central angle whose inscribed angle is y by bisection.
+      let [lo, hi] = [1, 179];
+      for (let i = 0; i < 60; i++) {
+        const m = (lo + hi) / 2;
+        if (inscribed(m, true) < y) lo = m;
+        else hi = m;
+      }
+      return (lo + hi) / 2;
+    }],
+    [/AB is a diameter of circle \(O\) and C is a point on the circle\. Angle CAB = (\d+)°/, ([x]) => {
+      const A: P = [-1, 0], B: P = [1, 0];
+      const t = 2 * x; // central angle BOC
+      const C: P = [Math.cos(rad(t)), Math.sin(rad(t))];
+      return angleAt(B, A, C);
+    }],
+    [/The arc AB inside angle xAB measures (\d+)°/, ([y]) => {
+      // A at angle −90° on the unit circle, tangent x-axis direction; B along the arc of y° counter-clockwise.
+      const A: P = [0, -1];
+      const B: P = [Math.cos(rad(-90 + y)), Math.sin(rad(-90 + y))];
+      return angleAt(A, [1, -1], B);
+    }],
+    [/cyclic quadrilateral with angle A = (\d+)° and angle B = (\d+)°\. Find angle (C|D)/, ([a, b], m) => {
+      const Q = cyclicQuad(a, b);
+      return m[3] === 'C' ? angleAt(Q[2], Q[1], Q[3]) : angleAt(Q[3], Q[2], Q[0]);
+    }],
+    [/AB is extended beyond B to E, and angle CBE = (\d+)°/, ([e]) => {
+      const Q = cyclicQuad(100, 180 - e);
+      return angleAt(Q[3], Q[0], Q[2]);
+    }],
+    [/chord of circle \(O\) with angle OAB = (\d+)°\. C is a point on the (major|minor) arc AB/, ([x], m) => {
+      const A: P = [1, 0];
+      const t = 180 - 2 * x; // central angle AOB
+      const B: P = [Math.cos(rad(t)), Math.sin(rad(t))];
+      expect(Math.abs(angleAt(A, [0, 0], B) - x)).toBeLessThan(1e-6);
+      const C: P = m[2] === 'major' ? [Math.cos(rad(t + (360 - t) / 3)), Math.sin(rad(t + (360 - t) / 3))] : [Math.cos(rad(t / 3)), Math.sin(rad(t / 3))];
+      return angleAt(C, A, B);
+    }],
+    [/inscribed in circle \(O\) and angle BAC = (\d+)°\. Find angle OBC/, ([x]) => {
+      // B, C symmetric about the y-axis with central angle 2x; A at the top.
+      const O: P = [0, 0];
+      const B: P = [-Math.sin(rad(x)), -Math.cos(rad(x))], C: P = [Math.sin(rad(x)), -Math.cos(rad(x))];
+      const A: P = [0.3, Math.sqrt(1 - 0.09)];
+      expect(Math.abs(angleAt(A, B, C) - x)).toBeLessThan(1e-6);
+      return angleAt(B, O, C);
+    }],
+    [/tangents MA and MB are drawn \(A, B on the circle\), and angle AMB = (\d+)°\. C is a point on the (major|minor) arc AB/, ([x], m) => {
+      // M on the x-axis at distance 1/sin(x/2); A, B the points of contact.
+      const OM = 1 / Math.sin(rad(x / 2));
+      const t = deg(Math.acos(1 / OM)); // angle AOM
+      const A: P = [Math.cos(rad(t)), Math.sin(rad(t))], B: P = [Math.cos(rad(t)), -Math.sin(rad(t))];
+      expect(Math.abs(angleAt([OM, 0], A, B) - x)).toBeLessThan(1e-6);
+      const C: P = m[2] === 'major' ? [-1, 0] : [1, 0];
+      return angleAt(C, A, B);
+    }],
+    [/cyclic quadrilateral with angle BAC = (\d+)° and angle CAD = (\d+)°\. Find angle BCD/, ([p, q]) => {
+      // A at angle 270°; inscribed angle p over arc BC means arc BC = 2p.
+      const at = (t: number): P => [Math.cos(rad(t)), Math.sin(rad(t))];
+      const A = at(270), B = at(280), C = at(280 + 2 * p), D = at(280 + 2 * p + 2 * q);
+      expect(Math.abs(angleAt(A, B, C) - p) + Math.abs(angleAt(A, C, D) - q)).toBeLessThan(1e-6);
+      return angleAt(C, B, D);
+    }],
+  ],
+  'math.geometry.tangents': [
+    [/Point M is (\d+) cm from the centre O of a circle of radius (\d+) cm/, ([om, r]) => Math.sqrt(om * om - r * r)],
+    [/radius (\S+) cm, and line a is at distance (\S+) cm from O/, ([r, d]) => (Math.abs(d - r) < 1e-9 ? 1 : d < r ? 2 : 0)],
+    [/A chord AB of circle \(O; (\d+) cm\) is (\d+) cm from the centre/, ([r, d]) => 2 * Math.sqrt(r * r - d * d)],
+    [/Circle \(O; (\d+) cm\) has a chord AB = (\d+) cm/, ([r, ab]) => Math.sqrt(r * r - (ab / 2) ** 2)],
+    [/circle \(O; (\d+) cm\), with OM = (\d+) cm\. Find the length of chord AB/, ([r, om]) => {
+      const t = Math.acos(r / om); // angle AOM
+      return 2 * r * Math.sin(t);
+    }],
+    [/circle \(O; (\d+) cm\), and angle AMB = (\d+)°\. Find MA/, ([r, x]) => r / Math.tan(rad(x / 2))],
+    [/circle \(O; (\d+) cm\), with OM = (\d+) cm\. Find the area of quadrilateral OAMB/, ([r, om]) => {
+      const t = Math.acos(r / om);
+      const A: P = [r * Math.cos(t), r * Math.sin(t)], B: P = [A[0], -A[1]];
+      return Math.abs(shoelace([[0, 0], A, [om, 0], B]));
+    }],
+    [/circle \(O; (\d+) cm\), with OM = (\d+) cm\. OM meets AB at H\. Find OH/, ([r, om]) => r * Math.cos(Math.acos(r / om))],
+  ],
+  'math.geometry.arcs': [
+    [/length of an arc of (\d+)° on a circle of radius (\d+) cm/, ([n, r]) => 2 * Math.PI * r * (n / 360)],
+    [/area of a sector of (\d+)° in a circle of radius (\d+) cm/, ([n, r]) => Math.PI * r * r * (n / 360)],
+    [/concentric circles have radii (\d+) cm and (\d+) cm/, ([a, b]) => Math.PI * (a * a - b * b)],
+    [/An arc of (\d+)° has length (\S+) cm\. Find the radius/, ([n, l]) => l / (2 * Math.PI * (n / 360))],
+    [/Chord AB of circle \(O; (\d+) cm\) subtends a central angle of (\d+)°/, ([r, n]) => (Math.PI * r * r * n) / 360 - 0.5 * r * r * Math.sin(rad(n))],
+    [/minute hand of a clock is (\d+) cm long\. How far does its tip travel in (\d+) minutes/, ([l, t]) => 2 * Math.PI * l * (t / 60)],
+    [/Square ABCD has side (\d+) cm\. At each vertex a quarter circle of radius (\d+) cm/, ([a, q]) => a * a - 4 * (Math.PI * q * q) / 4],
+  ],
+  'math.geometry.solids': [
+    [/cylinder has base radius (\d+) cm and height (\d+) cm\. Find its volume/, ([r, h]) => Math.PI * r * r * h],
+    [/cone has base radius (\d+) cm and height (\d+) cm\. Find its volume/, ([r, h]) => (Math.PI * r * r * h) / 3],
+    [/closed cylinder has base radius (\d+) cm and height (\d+) cm/, ([r, h]) => 2 * Math.PI * r * h + 2 * Math.PI * r * r],
+    [/volume of a sphere of radius (\d+) cm/, ([r]) => (4 / 3) * Math.PI * r ** 3],
+    [/ball has diameter (\d+) cm/, ([d]) => Math.PI * d * d],
+    [/cone has base radius (\d+) cm and height (\d+) cm\. Find its (total|lateral) surface area/, ([r, h], m) => Math.PI * r * Math.hypot(r, h) + (m[3] === 'total' ? Math.PI * r * r : 0)],
+    [/sphere has surface area (\S+) cm²/, ([s]) => (4 / 3) * Math.PI * Math.sqrt(s / (4 * Math.PI)) ** 3],
+    [/inner radius (\d+) cm contains water\. A metal ball of radius (\d+) cm/, ([R, s]) => ((4 / 3) * Math.PI * s ** 3) / (Math.PI * R * R)],
+    [/cylinder of radius (\d+) m and height (\d+) m with a cone of the same radius and height (\d+) m/, ([r, h, k]) => Math.PI * r * r * h + (Math.PI * r * r * k) / 3],
+  ],
   'math.geometry.circles': [
     [/radius (\d+) cm\. Find its area/, ([r]) => Math.PI * r * r],
     [/diameter (\d+) cm\. Find its area/, ([d]) => (Math.PI * d * d) / 4],
@@ -165,6 +267,23 @@ function incentre(A: P, B: P, C: P): P {
   const [a, b, c] = [Math.hypot(...sub(B, C)), Math.hypot(...sub(A, C)), Math.hypot(...sub(A, B))];
   const s = a + b + c;
   return [(a * A[0] + b * B[0] + c * C[0]) / s, (a * A[1] + b * B[1] + c * C[1]) / s];
+}
+/** Inscribed angle at a point of the major (or minor) arc, for a central angle t: computed from coordinates. */
+function inscribed(t: number, major: boolean): number {
+  const A: P = [1, 0], B: P = [Math.cos(rad(t)), Math.sin(rad(t))];
+  const c = major ? t + (360 - t) / 2 : t / 2;
+  return angleAt([Math.cos(rad(c)), Math.sin(rad(c))], A, B);
+}
+/** Points A, B, C, D on the unit circle with angle DAB = a and angle ABC = b (via the arcs they cut off). */
+function cyclicQuad(a: number, b: number): P[] {
+  // DAB is half the arc BCD and ABC half the arc CDA: BC + CD = 2a, CD + DA = 2b, all four arcs positive.
+  const CD = (Math.max(0, 2 * a + 2 * b - 360) + Math.min(2 * a, 2 * b)) / 2;
+  const BC = 2 * a - CD, DA = 2 * b - CD, AB = 360 - BC - CD - DA;
+  const at = (t: number): P => [Math.cos(rad(t)), Math.sin(rad(t))];
+  const Q = [at(0), at(AB), at(AB + BC), at(AB + BC + CD)];
+  expect(Math.abs(angleAt(Q[0], Q[3], Q[1]) - a), 'cyclic quad A').toBeLessThan(1e-6);
+  expect(Math.abs(angleAt(Q[1], Q[0], Q[2]) - b), 'cyclic quad B').toBeLessThan(1e-6);
+  return Q;
 }
 function shoelace(pts: P[]): number {
   let s = 0;

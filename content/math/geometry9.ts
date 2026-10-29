@@ -858,6 +858,482 @@ const relations: Generator = (d, r) => {
   );
 };
 
+// ── Angles in a circle ───────────────────────────────────────────────────
+const circleAngles: Generator = (d, r) => {
+  if (d <= 1) {
+    if (r() < 0.5) {
+      const x = 2 * int(r, 20, 80);
+      return vi(
+        {
+          prompt: `In circle (O), the central angle AOB = ${x}°. C is a point on the major arc AB. Find angle ACB.`,
+          ...chooseDeg(x / 2, [x, 180 - x / 2, (180 - x) / 2, 2 * x]),
+          explanation: `An inscribed angle is half the central angle on the same arc: ACB = ${x}° ÷ 2 = ${x / 2}°.`,
+        },
+        `Trong đường tròn (O), góc ở tâm AOB = ${x}°. C là một điểm trên cung lớn AB. Tính góc ACB.`,
+        `Góc nội tiếp bằng nửa góc ở tâm cùng chắn một cung: ACB = ${x}° : 2 = ${x / 2}°.`,
+      );
+    }
+    const y = int(r, 20, 85);
+    return vi(
+      {
+        prompt: `In circle (O), the inscribed angle ACB = ${y}° (C on the major arc AB). Find the central angle AOB.`,
+        ...chooseDeg(2 * y, [y, 180 - y, 180 - 2 * y, 90 + y]),
+        explanation: `The central angle is twice the inscribed angle on the same arc: AOB = 2 × ${y}° = ${2 * y}°.`,
+      },
+      `Trong đường tròn (O), góc nội tiếp ACB = ${y}° (C thuộc cung lớn AB). Tính góc ở tâm AOB.`,
+      `Góc ở tâm bằng hai lần góc nội tiếp cùng chắn một cung: AOB = 2 × ${y}° = ${2 * y}°.`,
+    );
+  }
+  if (d === 2) {
+    if (r() < 0.5) {
+      const x = int(r, 20, 70);
+      return vi(
+        {
+          prompt: `AB is a diameter of circle (O) and C is a point on the circle. Angle CAB = ${x}°. Find angle ABC.`,
+          ...chooseDeg(90 - x, [180 - x, x, 180 - 2 * x, (180 - x) / 2]),
+          explanation: `An angle in a semicircle is a right angle: ACB = 90°. So ABC = 90° − ${x}° = ${90 - x}°.`,
+          figure: { kind: 'triangle', angles: [x, 90 - x, 90], ask: 1 },
+        },
+        `AB là đường kính của đường tròn (O), C là một điểm trên đường tròn. Góc CAB = ${x}°. Tính góc ABC.`,
+        `Góc nội tiếp chắn nửa đường tròn là góc vuông: ACB = 90°. Do đó ABC = 90° − ${x}° = ${90 - x}°.`,
+      );
+    }
+    const y = 2 * int(r, 15, 80);
+    return vi(
+      {
+        prompt: `Ax is the tangent to circle (O) at A, and AB is a chord. The arc AB inside angle xAB measures ${y}°. Find angle xAB.`,
+        ...chooseDeg(y / 2, [y, 180 - y, 90 - y / 2, 2 * y]),
+        explanation: `The angle between a tangent and a chord is half the arc it cuts off (like an inscribed angle): xAB = ${y}° ÷ 2 = ${y / 2}°.`,
+      },
+      `Ax là tiếp tuyến của đường tròn (O) tại A, AB là một dây. Cung AB nằm trong góc xAB có số đo ${y}°. Tính góc xAB.`,
+      `Góc tạo bởi tia tiếp tuyến và dây cung bằng nửa số đo cung bị chắn (giống góc nội tiếp): xAB = ${y}° : 2 = ${y / 2}°.`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      let x = 0, y = 0;
+      do {
+        x = int(r, 55, 125);
+        y = int(r, 55, 125);
+      } while (x === y);
+      const askC = r() < 0.5;
+      const ans = askC ? 180 - x : 180 - y;
+      return vi(
+        {
+          prompt: `ABCD is a cyclic quadrilateral with angle A = ${x}° and angle B = ${y}°. Find angle ${askC ? 'C' : 'D'}.`,
+          ...chooseDeg(ans, [askC ? x : y, askC ? 180 - y : 180 - x, 360 - x - y, 90 + (askC ? x : y) / 2]),
+          explanation: `Opposite angles of a cyclic quadrilateral add up to 180°: ${askC ? `C = 180° − A = 180° − ${x}°` : `D = 180° − B = 180° − ${y}°`} = ${ans}°.`,
+        },
+        `Tứ giác ABCD nội tiếp đường tròn có góc A = ${x}°, góc B = ${y}°. Tính góc ${askC ? 'C' : 'D'}.`,
+        `Tứ giác nội tiếp có tổng hai góc đối bằng 180°: ${askC ? `C = 180° − A = 180° − ${x}°` : `D = 180° − B = 180° − ${y}°`} = ${ans}°.`,
+      );
+    }
+    const e = int(r, 50, 130);
+    return vi(
+      {
+        prompt: `ABCD is a cyclic quadrilateral. AB is extended beyond B to E, and angle CBE = ${e}°. Find angle ADC.`,
+        ...chooseDeg(e, [180 - e, 90 - e / 2, 2 * e, 90 + e / 2].filter(Number.isInteger)),
+        explanation: `ABC = 180° − ${e}° = ${180 - e}°, and ADC = 180° − ABC = ${e}°: the exterior angle of a cyclic quadrilateral equals the interior opposite angle.`,
+      },
+      `Tứ giác ABCD nội tiếp đường tròn. Trên tia đối của tia BA lấy điểm E, góc CBE = ${e}°. Tính góc ADC.`,
+      `ABC = 180° − ${e}° = ${180 - e}°, và ADC = 180° − ABC = ${e}°: góc ngoài tại một đỉnh của tứ giác nội tiếp bằng góc trong ở đỉnh đối diện.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.5) {
+      const x = int(r, 20, 70);
+      const major = r() < 0.6;
+      const ans = major ? 90 - x : 90 + x;
+      return vi(
+        {
+          prompt: `AB is a chord of circle (O) with angle OAB = ${x}°. C is a point on the ${major ? 'major' : 'minor'} arc AB. Find angle ACB.`,
+          ...chooseDeg(ans, [180 - 2 * x, major ? 90 + x : 90 - x, 2 * x, x]),
+          explanation: `OA = OB, so triangle OAB is isosceles: AOB = 180° − 2 × ${x}° = ${180 - 2 * x}°. ${major ? `ACB = ${180 - 2 * x}° ÷ 2 = ${ans}°.` : `On the major arc the inscribed angle would be ${90 - x}°; C on the minor arc gives the supplement: ${ans}°.`}`,
+        },
+        `AB là một dây của đường tròn (O) với góc OAB = ${x}°. C là một điểm trên cung ${major ? 'lớn' : 'nhỏ'} AB. Tính góc ACB.`,
+        `OA = OB nên tam giác OAB cân: AOB = 180° − 2 × ${x}° = ${180 - 2 * x}°. ${major ? `ACB = ${180 - 2 * x}° : 2 = ${ans}°.` : `Điểm trên cung lớn nhìn AB dưới góc ${90 - x}°; C trên cung nhỏ thì ACB = 180° − ${90 - x}° = ${ans}° (tứ giác nội tiếp).`}`,
+      );
+    }
+    const x = int(r, 30, 80);
+    return vi(
+      {
+        prompt: `Acute triangle ABC is inscribed in circle (O) and angle BAC = ${x}°. Find angle OBC.`,
+        ...chooseDeg(90 - x, [2 * x, 180 - 2 * x, x, 90 - x / 2].filter(Number.isInteger)),
+        explanation: `BOC is the central angle on arc BC: BOC = 2 × ${x}° = ${2 * x}°. Triangle OBC is isosceles, so OBC = (180° − ${2 * x}°) ÷ 2 = ${90 - x}°.`,
+      },
+      `Tam giác nhọn ABC nội tiếp đường tròn (O), góc BAC = ${x}°. Tính góc OBC.`,
+      `BOC là góc ở tâm chắn cung BC: BOC = 2 × ${x}° = ${2 * x}°. Tam giác OBC cân tại O nên OBC = (180° − ${2 * x}°) : 2 = ${90 - x}°.`,
+    );
+  }
+  if (r() < 0.5) {
+    const x = 2 * int(r, 15, 70);
+    const major = r() < 0.6;
+    const ans = major ? 90 - x / 2 : 90 + x / 2;
+    return vi(
+      {
+        prompt: `From a point M outside circle (O), tangents MA and MB are drawn (A, B on the circle), and angle AMB = ${x}°. C is a point on the ${major ? 'major' : 'minor'} arc AB. Find angle ACB.`,
+        ...chooseDeg(ans, [180 - x, x / 2, major ? 90 + x / 2 : 90 - x / 2, x]),
+        explanation: `OA ⟂ MA and OB ⟂ MB, so in quadrilateral OAMB: AOB = 360° − 90° − 90° − ${x}° = ${180 - x}°. ${major ? `ACB = ${180 - x}° ÷ 2 = ${ans}°.` : `A point on the major arc sees AB at ${90 - x / 2}°, so C on the minor arc gives 180° − ${90 - x / 2}° = ${ans}°.`}`,
+      },
+      `Từ điểm M nằm ngoài đường tròn (O) kẻ hai tiếp tuyến MA, MB (A, B là tiếp điểm), góc AMB = ${x}°. C là một điểm trên cung ${major ? 'lớn' : 'nhỏ'} AB. Tính góc ACB.`,
+      `OA ⟂ MA, OB ⟂ MB nên trong tứ giác OAMB: AOB = 360° − 90° − 90° − ${x}° = ${180 - x}°. ${major ? `ACB = ${180 - x}° : 2 = ${ans}°.` : `Điểm trên cung lớn nhìn AB dưới góc ${90 - x / 2}°, nên C trên cung nhỏ cho ACB = 180° − ${90 - x / 2}° = ${ans}°.`}`,
+    );
+  }
+  const p = int(r, 20, 65), qq = int(r, 20, 65);
+  return vi(
+    {
+      prompt: `ABCD is a cyclic quadrilateral with angle BAC = ${p}° and angle CAD = ${qq}°. Find angle BCD.`,
+      ...chooseDeg(180 - p - qq, [p + qq, 180 - p, 180 - qq, 2 * (p + qq)]),
+      explanation: `BAD = BAC + CAD = ${p}° + ${qq}° = ${p + qq}°. Opposite angles of a cyclic quadrilateral are supplementary: BCD = 180° − ${p + qq}° = ${180 - p - qq}°.`,
+    },
+    `Tứ giác ABCD nội tiếp đường tròn có góc BAC = ${p}°, góc CAD = ${qq}°. Tính góc BCD.`,
+    `BAD = BAC + CAD = ${p}° + ${qq}° = ${p + qq}°. Tứ giác nội tiếp có hai góc đối bù nhau: BCD = 180° − ${p + qq}° = ${180 - p - qq}°.`,
+  );
+};
+
+// ── Tangents, chords and the position of a line ─────────────────────────
+const tangents: Generator = (d, r) => {
+  if (d <= 1) {
+    const OM = int(r, 4, 15), R = int(r, 2, OM - 1);
+    const ans = qroot(OM * OM - R * R);
+    return vi(
+      {
+        prompt: `Point M is ${OM} cm from the centre O of a circle of radius ${R} cm. MA is a tangent (A on the circle). Find MA (cm).`,
+        ...choose(ans, [qroot(OM * OM + R * R), qn(OM - R), qn(OM * OM - R * R), qroot(OM - R)]),
+        explanation: `The tangent is perpendicular to the radius: OA ⟂ MA, so MA² = OM² − OA² = ${OM * OM} − ${R * R} = ${OM * OM - R * R}, MA = ${ans.s}.`,
+        figure: rt(R, ans.v, OM, 'b'),
+      },
+      `Điểm M cách tâm O của đường tròn bán kính ${R} cm một khoảng ${OM} cm. MA là tiếp tuyến (A là tiếp điểm). Tính MA (cm).`,
+      `Tiếp tuyến vuông góc với bán kính tại tiếp điểm: OA ⟂ MA, nên MA² = OM² − OA² = ${OM * OM} − ${R * R} = ${OM * OM - R * R}, MA = ${ans.s}.`,
+    );
+  }
+  if (d === 2) {
+    let R: Q, dd: Q;
+    if (r() < 0.35) {
+      const c = int(r, 2, 6), s = pick(r, [2, 3, 5]);
+      R = q(rad(c, s), c * Math.sqrt(s));
+      dd = q(`√${c * c * s}`, Math.sqrt(c * c * s));
+    } else {
+      const k = int(r, 3, 9);
+      R = qn(k);
+      let n = 0;
+      do n = k * k + pick(r, [-8, -6, -5, -3, -2, -1, 1, 2, 3, 5, 6, 8]);
+      while (isSq(n));
+      dd = qroot(n);
+    }
+    const cmp = Math.abs(dd.v - R.v) < 1e-9 ? 1 : dd.v < R.v ? 2 : 0;
+    const word = ['do not meet', 'touch (the line is a tangent)', 'cut (the line is a secant)'][cmp];
+    const wordVi = ['không giao nhau', 'tiếp xúc (đường thẳng là tiếp tuyến)', 'cắt nhau (đường thẳng là cát tuyến)'][cmp];
+    return vi(
+      {
+        prompt: `Circle (O) has radius ${R.s} cm, and line a is at distance ${dd.s} cm from O. How many common points do the line and the circle have?`,
+        ...choose(qn(cmp), [qn(0), qn(1), qn(2)], true),
+        explanation: `Compare d with R by squaring: d² = ${Math.round(dd.v * dd.v)}, R² = ${Math.round(R.v * R.v)}. d ${['>', '=', '<'][cmp]} R, so they ${word}: ${cmp} common point${cmp === 1 ? '' : 's'}.`,
+      },
+      `Đường tròn (O) có bán kính ${R.s} cm, đường thẳng a cách O một khoảng ${dd.s} cm. Đường thẳng và đường tròn có bao nhiêu điểm chung?`,
+      `So sánh d với R bằng cách bình phương: d² = ${Math.round(dd.v * dd.v)}, R² = ${Math.round(R.v * R.v)}. d ${['>', '=', '<'][cmp]} R nên đường thẳng và đường tròn ${wordVi}: ${cmp} điểm chung.`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const R = int(r, 3, 15), dist = int(r, 1, R - 1);
+      const [c, s] = simp(R * R - dist * dist);
+      const ans = q(rad(2 * c, s), 2 * Math.sqrt(R * R - dist * dist));
+      return vi(
+        {
+          prompt: `A chord AB of circle (O; ${R} cm) is ${dist} cm from the centre. Find the length of AB (cm), in simplest radical form.`,
+          ...choose(ans, [qroot(R * R - dist * dist), qroot(4 * (R * R + dist * dist)), qn(2 * (R - dist)), qroot(R * R + dist * dist)]),
+          explanation: `The perpendicular from O to a chord bisects it at H: AH = √(R² − OH²) = √(${R * R} − ${dist * dist}) = ${qroot(R * R - dist * dist).s}, so AB = 2·AH = ${ans.s}.`,
+        },
+        `Dây AB của đường tròn (O; ${R} cm) cách tâm ${dist} cm. Tính độ dài AB (cm), viết dưới dạng căn thức tối giản.`,
+        `Đường kính vuông góc với dây thì đi qua trung điểm H của dây: AH = √(R² − OH²) = √(${R * R} − ${dist * dist}) = ${qroot(R * R - dist * dist).s}, nên AB = 2·AH = ${ans.s}.`,
+      );
+    }
+    const R = int(r, 4, 15), half = int(r, 1, R - 1);
+    const ans = qroot(R * R - half * half);
+    return vi(
+      {
+        prompt: `Circle (O; ${R} cm) has a chord AB = ${2 * half} cm. Find the distance from O to AB (cm), in simplest radical form.`,
+        ...choose(ans, [qroot(R * R - 4 * half * half), qroot(R * R + half * half), qn(R - half), qn(R * R - half * half)]),
+        explanation: `Let H be the midpoint of AB: OH ⟂ AB and AH = ${half}. OH = √(${R}² − ${half}²) = ${ans.s}. (Use half the chord, not the whole chord.)`,
+        figure: rt(ans.v, half, R, 'a'),
+      },
+      `Đường tròn (O; ${R} cm) có dây AB = ${2 * half} cm. Tính khoảng cách từ O đến AB (cm), viết dưới dạng căn thức tối giản.`,
+      `Gọi H là trung điểm AB: OH ⟂ AB và AH = ${half}. OH = √(${R}² − ${half}²) = ${ans.s}. (Dùng nửa dây, không dùng cả dây.)`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.5) {
+      const [R, MA, OM] = pick(r, triples(30));
+      const ans = qf(2 * R * MA, OM);
+      return vi(
+        {
+          prompt: `From M, tangents MA and MB are drawn to circle (O; ${R} cm), with OM = ${OM} cm. Find the length of chord AB (cm).`,
+          ...choose(ans, [qf(R * MA, OM), qn(MA), qn(2 * MA), qf(2 * R * R, OM)]),
+          explanation: `MA = √(${OM}² − ${R}²) = ${MA}. OM is the perpendicular bisector of AB; if H is their intersection, AH is the altitude of right triangle OAM: AH = OA·MA/OM = ${qf(R * MA, OM).s}. AB = 2·AH = ${ans.s}.`,
+        },
+        `Từ M kẻ hai tiếp tuyến MA, MB đến đường tròn (O; ${R} cm), OM = ${OM} cm. Tính độ dài dây AB (cm).`,
+        `MA = √(${OM}² − ${R}²) = ${MA}. OM là đường trung trực của AB; gọi H là giao điểm, AH là đường cao của tam giác vuông OAM: AH = OA·MA/OM = ${qf(R * MA, OM).s}. AB = 2·AH = ${ans.s}.`,
+      );
+    }
+    const R = int(r, 2, 9);
+    const t = pick(r, [60, 90, 120]);
+    const opts = { 60: qradf(R, 1, 3), 90: qn(R), 120: qradf(R, 3, 3) } as Record<number, Q>;
+    return vi(
+      {
+        prompt: `From M, tangents MA and MB are drawn to circle (O; ${R} cm), and angle AMB = ${t}°. Find MA (cm).`,
+        ...choose(opts[t], [qradf(R, 1, 3), qn(R), qradf(R, 3, 3), qn(2 * R), qradf(R, 2, 3)]),
+        explanation: `OM bisects angle AMB, so AMO = ${t / 2}°. In right triangle OAM: MA = OA·cot ${t / 2}° = ${R}·cot ${t / 2}° = ${opts[t].s}.`,
+      },
+      `Từ M kẻ hai tiếp tuyến MA, MB đến đường tròn (O; ${R} cm), góc AMB = ${t}°. Tính MA (cm).`,
+      `OM là tia phân giác của góc AMB nên AMO = ${t / 2}°. Trong tam giác vuông OAM: MA = OA·cot ${t / 2}° = ${R}·cot ${t / 2}° = ${opts[t].s}.`,
+    );
+  }
+  const [R, MA, OM] = pick(r, triples(40));
+  if (r() < 0.5)
+    return vi(
+      {
+        prompt: `From M, tangents MA and MB are drawn to circle (O; ${R} cm), with OM = ${OM} cm. Find the area of quadrilateral OAMB (cm²).`,
+        ...choose(qn(R * MA), [qf(R * MA, 2), qn(2 * R * MA), qn(OM * R), qf(OM * MA, 2)]),
+        explanation: `MA = √(${OM}² − ${R}²) = ${MA}. OAMB is made of two congruent right triangles OAM and OBM, each ½·${R}·${MA}: area = ${R}·${MA} = ${R * MA}.`,
+      },
+      `Từ M kẻ hai tiếp tuyến MA, MB đến đường tròn (O; ${R} cm), OM = ${OM} cm. Tính diện tích tứ giác OAMB (cm²).`,
+      `MA = √(${OM}² − ${R}²) = ${MA}. Tứ giác OAMB gồm hai tam giác vuông bằng nhau OAM và OBM, mỗi tam giác có diện tích ½·${R}·${MA}: diện tích = ${R}·${MA} = ${R * MA}.`,
+    );
+  const ans = qf(R * R, OM);
+  return vi(
+    {
+      prompt: `From M, tangents MA and MB are drawn to circle (O; ${R} cm), with OM = ${OM} cm. OM meets AB at H. Find OH (cm).`,
+      ...choose(ans, [qf(R * MA, OM), qf(MA * MA, OM), qn(OM - R), qf(OM, 2)]),
+      explanation: `OM ⟂ AB at H, and AH is the altitude of right triangle OAM. A leg squared = hypotenuse × its projection: OA² = OH·OM, so OH = ${R}²/${OM} = ${ans.s}.`,
+    },
+    `Từ M kẻ hai tiếp tuyến MA, MB đến đường tròn (O; ${R} cm), OM = ${OM} cm. OM cắt AB tại H. Tính OH (cm).`,
+    `OM ⟂ AB tại H, AH là đường cao của tam giác vuông OAM. Hệ thức lượng: OA² = OH·OM, nên OH = ${R}²/${OM} = ${ans.s}.`,
+  );
+};
+
+// ── Arc length, sectors, segments, rings ────────────────────────────────
+const ARC_DEG = [30, 36, 40, 45, 60, 72, 90, 120, 135, 150];
+const arcs: Generator = (d, r) => {
+  const R = int(r, 2, 12);
+  const figure: Figure = { kind: 'circle', r: R, unit: 'cm' };
+  if (d <= 1) {
+    const n = pick(r, ARC_DEG);
+    const ans = qpi(R * n, 180);
+    return vi(
+      {
+        prompt: `Find the length of an arc of ${n}° on a circle of radius ${R} cm, in terms of π (cm).`,
+        ...choose(ans, [qpi(R * n, 360), qpi(R * R * n, 360), qpi(R * R * n, 180), qpi(2 * R)]),
+        explanation: `l = πRn/180 = π·${R}·${n}/180 = ${ans.s}.`,
+        figure,
+      },
+      `Tính độ dài cung ${n}° của đường tròn bán kính ${R} cm theo π (cm).`,
+      `l = πRn/180 = π·${R}·${n}/180 = ${ans.s}.`,
+    );
+  }
+  if (d === 2) {
+    const n = pick(r, ARC_DEG);
+    const ans = qpi(R * R * n, 360);
+    return vi(
+      {
+        prompt: `Find the area of a sector of ${n}° in a circle of radius ${R} cm, in terms of π (cm²).`,
+        ...choose(ans, [qpi(R * n, 180), qpi(R * R * n, 180), qpi(R * n, 360), qpi(R * R)]),
+        explanation: `S = πR²n/360 = π·${R * R}·${n}/360 = ${ans.s}. (Also S = l·R/2 with l the arc length.)`,
+        figure,
+      },
+      `Tính diện tích hình quạt tròn ${n}° của hình tròn bán kính ${R} cm theo π (cm²).`,
+      `S = πR²n/360 = π·${R * R}·${n}/360 = ${ans.s}. (Hoặc S = l·R/2 với l là độ dài cung.)`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const r2 = int(r, 1, R - 1);
+      const ans = qpi(R * R - r2 * r2);
+      return vi(
+        {
+          prompt: `Two concentric circles have radii ${R} cm and ${r2} cm. Find the area of the ring between them, in terms of π (cm²).`,
+          ...choose(ans, [qpi((R - r2) ** 2), qpi(R * R + r2 * r2), qpi(2 * (R - r2)), qpi(R - r2)]),
+          explanation: `Ring = big disc − small disc = π(${R}² − ${r2}²) = ${ans.s}. (Not π(R − r)².)`,
+          figure,
+        },
+        `Hai đường tròn đồng tâm có bán kính ${R} cm và ${r2} cm. Tính diện tích hình vành khuyên giữa chúng theo π (cm²).`,
+        `Hình vành khuyên = hình tròn lớn − hình tròn nhỏ = π(${R}² − ${r2}²) = ${ans.s}. (Không phải π(R − r)².)`,
+      );
+    }
+    const n = pick(r, ARC_DEG);
+    const l = qpi(R * n, 180);
+    return vi(
+      {
+        prompt: `An arc of ${n}° has length ${l.s} cm. Find the radius of the circle (cm).`,
+        ...choose(qn(R), [qn(2 * R), qf(R, 2), qf(R * n, 180), qf(180 * R, n)]),
+        explanation: `From l = πRn/180: R = 180·l/(πn) = 180·${l.s}/(${n}π) = ${R}.`,
+      },
+      `Một cung ${n}° có độ dài ${l.s} cm. Tính bán kính đường tròn (cm).`,
+      `Từ l = πRn/180 suy ra R = 180·l/(πn) = 180·${l.s}/(${n}π) = ${R}.`,
+    );
+  }
+  if (d === 4) {
+    const Re = 2 * int(r, 1, 6);
+    const n = pick(r, [60, 90, 120]);
+    const sector = qpi(Re * Re * n, 360);
+    const tri = n === 90 ? qn((Re * Re) / 2) : qradf(Re * Re, 4, 3);
+    const ans = minus(sector, tri);
+    const triWhy = n === 90 ? `OAB is right-angled: ½·${Re}·${Re} = ${tri.s}` : n === 60 ? `OAB is equilateral: (√3/4)·${Re}² = ${tri.s}` : `½·${Re}·${Re}·sin 120° = ${tri.s}`;
+    const triWhyVi = n === 90 ? `OAB vuông cân: ½·${Re}·${Re} = ${tri.s}` : n === 60 ? `OAB đều: (√3/4)·${Re}² = ${tri.s}` : `½·${Re}·${Re}·sin 120° = ${tri.s}`;
+    return vi(
+      {
+        prompt: `Chord AB of circle (O; ${Re} cm) subtends a central angle of ${n}°. Find the area of the segment between chord AB and the minor arc AB (cm²).`,
+        ...choose(ans, [sector, plus(sector, tri), minus(qpi(Re * n, 180), tri), minus(qpi(Re * Re), tri)]),
+        explanation: `Segment = sector − triangle OAB. Sector = πR²n/360 = ${sector.s}; triangle: ${triWhy}. Area = ${ans.s}.`,
+        figure: { kind: 'circle', r: Re, unit: 'cm' },
+      },
+      `Dây AB của đường tròn (O; ${Re} cm) chắn cung nhỏ có số đo ${n}°. Tính diện tích hình viên phân giới hạn bởi dây AB và cung nhỏ AB (cm²).`,
+      `Hình viên phân = hình quạt − tam giác OAB. Hình quạt = πR²n/360 = ${sector.s}; tam giác: ${triWhyVi}. Diện tích = ${ans.s}.`,
+    );
+  }
+  if (r() < 0.5) {
+    const L = int(r, 4, 15), t = pick(r, [10, 15, 20, 25, 40, 45]);
+    const ans = qpi(L * t, 30);
+    return vi(
+      {
+        prompt: `The minute hand of a clock is ${L} cm long. How far does its tip travel in ${t} minutes, in terms of π (cm)?`,
+        ...choose(ans, [qpi(L * t, 60), qpi(L * L * t, 60), qpi(2 * L), qpi(L * t, 15)]),
+        explanation: `In ${t} minutes the hand turns ${t}/60 of a full turn = ${6 * t}°. Arc = πRn/180 = π·${L}·${6 * t}/180 = ${ans.s}.`,
+      },
+      `Kim phút của một chiếc đồng hồ dài ${L} cm. Trong ${t} phút, đầu kim phút đi được một quãng đường bao nhiêu (theo π, cm)?`,
+      `Trong ${t} phút kim phút quay ${t}/60 vòng = ${6 * t}°. Độ dài cung = πRn/180 = π·${L}·${6 * t}/180 = ${ans.s}.`,
+    );
+  }
+  const a = 2 * int(r, 2, 8);
+  const ans = minus(qn(a * a), qpi(a * a, 4));
+  return vi(
+    {
+      prompt: `Square ABCD has side ${a} cm. At each vertex a quarter circle of radius ${a / 2} cm is drawn inside the square. Find the area of the square not covered by the quarter circles, in terms of π (cm²).`,
+      ...choose(ans, [qpi(a * a, 4), minus(qn(a * a), qpi(a * a, 16)), minus(qn(a * a), qpi(a, 1)), minus(qn(a * a), qpi(a * a, 8))]),
+      explanation: `Four quarter circles of radius ${a / 2} make one full circle: π·${a / 2}² = ${qpi(a * a, 4).s}. Uncovered area = ${a * a} − ${qpi(a * a, 4).s}.`,
+      figure: { kind: 'rect', w: a, h: a, unit: 'cm' },
+    },
+    `Hình vuông ABCD có cạnh ${a} cm. Tại mỗi đỉnh vẽ một phần tư đường tròn bán kính ${a / 2} cm nằm trong hình vuông. Tính diện tích phần hình vuông không bị các phần tư hình tròn che phủ theo π (cm²).`,
+    `Bốn phần tư hình tròn bán kính ${a / 2} ghép lại thành một hình tròn: π·${a / 2}² = ${qpi(a * a, 4).s}. Diện tích còn lại = ${a * a} − ${qpi(a * a, 4).s}.`,
+  );
+};
+
+// ── Cylinders, cones, spheres ───────────────────────────────────────────
+const solids: Generator = (d, r) => {
+  const R = int(r, 2, 9), h = int(r, 3, 15);
+  if (d <= 1) {
+    const ans = qpi(R * R * h);
+    return vi(
+      {
+        prompt: `A cylinder has base radius ${R} cm and height ${h} cm. Find its volume in terms of π (cm³).`,
+        ...choose(ans, [qpi(2 * R * h), qpi(R * R * h, 3), qpi(4 * R * R * h), qpi(R * h)]),
+        explanation: `V = πr²h = π·${R}²·${h} = ${ans.s}.`,
+      },
+      `Một hình trụ có bán kính đáy ${R} cm và chiều cao ${h} cm. Tính thể tích theo π (cm³).`,
+      `V = πr²h = π·${R}²·${h} = ${ans.s}.`,
+    );
+  }
+  if (d === 2) {
+    if (r() < 0.5) {
+      const ans = qpi(R * R * h, 3);
+      return vi(
+        {
+          prompt: `A cone has base radius ${R} cm and height ${h} cm. Find its volume in terms of π (cm³).`,
+          ...choose(ans, [qpi(R * R * h), qpi(R * h, 3), qpi(2 * R * R * h, 3), qpi(4 * R * R * h, 3)]),
+          explanation: `V = ⅓πr²h = ⅓·π·${R}²·${h} = ${ans.s}. (A cone is one third of the cylinder with the same base and height.)`,
+        },
+        `Một hình nón có bán kính đáy ${R} cm và chiều cao ${h} cm. Tính thể tích theo π (cm³).`,
+        `V = ⅓πr²h = ⅓·π·${R}²·${h} = ${ans.s}. (Hình nón bằng một phần ba hình trụ cùng đáy, cùng chiều cao.)`,
+      );
+    }
+    const ans = qpi(2 * R * h + 2 * R * R);
+    return vi(
+      {
+        prompt: `A closed cylinder has base radius ${R} cm and height ${h} cm. Find its total surface area in terms of π (cm²).`,
+        ...choose(ans, [qpi(2 * R * h), qpi(2 * R * h + R * R), qpi(R * h + R * R), qpi(R * R * h)]),
+        explanation: `Total = lateral + two bases = 2πrh + 2πr² = ${qpi(2 * R * h).s} + ${qpi(2 * R * R).s} = ${ans.s}.`,
+      },
+      `Một hình trụ có bán kính đáy ${R} cm và chiều cao ${h} cm. Tính diện tích toàn phần theo π (cm²).`,
+      `Diện tích toàn phần = diện tích xung quanh + hai đáy = 2πrh + 2πr² = ${qpi(2 * R * h).s} + ${qpi(2 * R * R).s} = ${ans.s}.`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const ans = qpi(4 * R ** 3, 3);
+      return vi(
+        {
+          prompt: `Find the volume of a sphere of radius ${R} cm, in terms of π (cm³).`,
+          ...choose(ans, [qpi(4 * R * R), qpi(4 * R ** 3), qpi(R ** 3, 3), qpi(4 * R * R, 3)]),
+          explanation: `V = (4/3)πR³ = (4/3)·π·${R ** 3} = ${ans.s}. (4πR² is the surface area.)`,
+        },
+        `Tính thể tích hình cầu bán kính ${R} cm theo π (cm³).`,
+        `V = (4/3)πR³ = (4/3)·π·${R ** 3} = ${ans.s}. (4πR² là diện tích mặt cầu.)`,
+      );
+    }
+    const ans = qpi(4 * R * R);
+    return vi(
+      {
+        prompt: `A ball has diameter ${2 * R} cm. Find its surface area in terms of π (cm²).`,
+        ...choose(ans, [qpi(16 * R * R), qpi(R * R), qpi(4 * R ** 3, 3), qpi(2 * R * R)]),
+        explanation: `R = ${2 * R} ÷ 2 = ${R}. S = 4πR² = 4·π·${R * R} = ${ans.s} (= πd²).`,
+      },
+      `Một quả bóng có đường kính ${2 * R} cm. Tính diện tích mặt cầu theo π (cm²).`,
+      `R = ${2 * R} : 2 = ${R}. S = 4πR² = 4·π·${R * R} = ${ans.s} (= πd²).`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.5) {
+      const [rr, hh, l] = pick(r, triples(30));
+      const total = r() < 0.5;
+      const ans = qpi(rr * l + (total ? rr * rr : 0));
+      return vi(
+        {
+          prompt: `A cone has base radius ${rr} cm and height ${hh} cm. Find its ${total ? 'total' : 'lateral'} surface area in terms of π (cm²).`,
+          ...choose(ans, [qpi(rr * hh + (total ? rr * rr : 0)), qpi(rr * l + (total ? 0 : rr * rr)), qpi(2 * rr * l), qpi(rr * rr * hh, 3)]),
+          explanation: `First the slant height: l = √(${rr}² + ${hh}²) = ${l}. Lateral area = πrl = ${qpi(rr * l).s}${total ? `; add the base πr² = ${qpi(rr * rr).s}: ${ans.s}` : ''}.`,
+        },
+        `Một hình nón có bán kính đáy ${rr} cm và chiều cao ${hh} cm. Tính diện tích ${total ? 'toàn phần' : 'xung quanh'} theo π (cm²).`,
+        `Trước hết tính đường sinh: l = √(${rr}² + ${hh}²) = ${l}. Diện tích xung quanh = πrl = ${qpi(rr * l).s}${total ? `; cộng thêm đáy πr² = ${qpi(rr * rr).s}: ${ans.s}` : ''}.`,
+      );
+    }
+    const ans = qpi(4 * R ** 3, 3);
+    return vi(
+      {
+        prompt: `A sphere has surface area ${qpi(4 * R * R).s} cm². Find its volume in terms of π (cm³).`,
+        ...choose(ans, [qpi(4 * R * R * R), qpi(16 * R ** 3, 3), qpi(4 * R * R, 3), qpi(R ** 3)]),
+        explanation: `4πR² = ${qpi(4 * R * R).s} gives R² = ${R * R}, R = ${R}. V = (4/3)πR³ = ${ans.s}.`,
+      },
+      `Một mặt cầu có diện tích ${qpi(4 * R * R).s} cm². Tính thể tích hình cầu theo π (cm³).`,
+      `4πR² = ${qpi(4 * R * R).s} nên R² = ${R * R}, R = ${R}. V = (4/3)πR³ = ${ans.s}.`,
+    );
+  }
+  if (r() < 0.5) {
+    const cr = pick(r, [3, 4, 5, 6, 8, 10]);
+    const s = int(r, 1, cr - 1);
+    const ans = qf(4 * s ** 3, 3 * cr * cr);
+    return vi(
+      {
+        prompt: `A cylindrical glass with inner radius ${cr} cm contains water. A metal ball of radius ${s} cm is dropped in and sinks completely (no water spills). By how much does the water level rise (cm)?`,
+        ...choose(ans, [qf(4 * s ** 3, cr * cr), qf(4 * s ** 3, 3 * cr), qf(s ** 3, cr * cr), qf(4 * s * s, cr * cr)]),
+        explanation: `The water rises by the ball's volume: π·${cr}²·x = (4/3)π·${s}³, so x = 4·${s ** 3}/(3·${cr * cr}) = ${ans.s}.`,
+      },
+      `Một cốc nước hình trụ có bán kính đáy trong ${cr} cm. Thả chìm hoàn toàn một viên bi sắt hình cầu bán kính ${s} cm vào cốc (nước không tràn ra). Mực nước dâng lên bao nhiêu xentimét?`,
+      `Thể tích nước dâng lên bằng thể tích viên bi: π·${cr}²·x = (4/3)π·${s}³, nên x = 4·${s ** 3}/(3·${cr * cr}) = ${ans.s}.`,
+    );
+  }
+  const k = int(r, 2, 9);
+  const ans = qpi(3 * R * R * h + R * R * k, 3);
+  return vi(
+    {
+      prompt: `A grain silo is a cylinder of radius ${R} m and height ${h} m with a cone of the same radius and height ${k} m on top. Find its volume in terms of π (m³).`,
+      ...choose(ans, [qpi(R * R * (h + k)), qpi(R * R * h), qpi(R * R * (h + k), 3), qpi(3 * R * R * h + 2 * R * k, 3)]),
+      explanation: `Cylinder πr²h = ${qpi(R * R * h).s}; cone ⅓πr²·${k} = ${qpi(R * R * k, 3).s}. Total = ${ans.s}.`,
+    },
+    `Một kho chứa thóc gồm một hình trụ bán kính ${R} m, cao ${h} m và phía trên là một hình nón cùng bán kính, cao ${k} m. Tính thể tích kho theo π (m³).`,
+    `Hình trụ: πr²h = ${qpi(R * R * h).s}; hình nón: ⅓πr²·${k} = ${qpi(R * R * k, 3).s}. Tổng = ${ans.s}.`,
+  );
+};
+
 export const geometry9Concepts: ConceptSeed[] = [
   {
     id: 'math.geometry.trig',
@@ -883,8 +1359,81 @@ export const geometry9Concepts: ConceptSeed[] = [
       'Triangle ABC right-angled at A, altitude AH, BC = a, AC = b, AB = c, projections CH = b′, BH = c′, AH = h. Then b² = a·b′ and c² = a·c′ (a leg squared = hypotenuse × its projection), h² = b′·c′, a·h = b·c (twice the area), and 1/h² = 1/b² + 1/c². Pick the relation that links what you know to what you want; with BH + CH and BH·CH known, BH and CH are the roots of a quadratic.',
     examRefs: ['Toán 9 · Một số hệ thức về cạnh và đường cao trong tam giác vuông'],
   },
+  {
+    id: 'math.geometry.circle-angles',
+    domain: 'Geometry',
+    skill: 'Circles',
+    name: 'Angles in a circle',
+    missionName: 'Crown of Arcs',
+    description: 'Central and inscribed angles, the angle in a semicircle, the tangent–chord angle and cyclic quadrilaterals.',
+    prerequisites: ['math.geometry.angles', 'math.geometry.circles'],
+    lesson:
+      'A central angle equals its arc. An inscribed angle is half the central angle (half the arc) on the same arc, so inscribed angles on the same arc are equal, and an angle in a semicircle is 90°. The angle between a tangent and a chord is also half the arc it cuts off. A quadrilateral is cyclic (tứ giác nội tiếp) when its opposite angles add up to 180°; its exterior angle equals the interior opposite angle. Watch which arc the point is on: on the minor arc the inscribed angle is 180° minus the one on the major arc.',
+    examRefs: ['Toán 9 · Góc ở tâm, góc nội tiếp', 'Toán 9 · Tứ giác nội tiếp', 'Vào 10 Hà Nội · Bài IV (hình học)'],
+  },
+  {
+    id: 'math.geometry.tangents',
+    domain: 'Geometry',
+    skill: 'Circles',
+    name: 'Tangents & chords',
+    missionName: 'Touchline Tower',
+    description: 'Tangent ⟂ radius, two tangents from a point, the position of a line and a circle (d vs R), a chord and its distance from the centre.',
+    prerequisites: ['math.geometry.pythagoras', 'math.geometry.circles'],
+    lesson:
+      'A tangent is perpendicular to the radius at the point of contact, so MA² = OM² − R². Two tangents from M are equal (MA = MB), OM bisects angle AMB and is the perpendicular bisector of AB; in right triangle OAM the right-triangle relations give OA² = OH·OM. A line at distance d from O: d < R cuts the circle (2 points), d = R touches it (1 point), d > R misses it. The perpendicular from O to a chord bisects it: (AB/2)² + d² = R².',
+    examRefs: ['Toán 9 · Vị trí tương đối của đường thẳng và đường tròn', 'Toán 9 · Tiếp tuyến của đường tròn', 'Vào 10 Hà Nội · Bài IV (hình học)'],
+  },
+  {
+    id: 'math.geometry.arcs',
+    domain: 'Geometry',
+    skill: 'Measurement',
+    name: 'Arcs, sectors & rings',
+    missionName: 'Clockwork Garden',
+    description: 'Arc length πRn/180, sector area πR²n/360, segments, the ring between two circles, in π.',
+    prerequisites: ['math.geometry.circles'],
+    lesson:
+      'Arc of n°: l = πRn/180. Sector of n°: S = πR²n/360 = l·R/2. Segment (viên phân) = sector − triangle OAB. Ring (hình vành khuyên) = π(R² − r²), not π(R − r)². Leave answers in π unless the question asks you to round.',
+    examRefs: ['Toán 9 · Độ dài đường tròn, cung tròn', 'Toán 9 · Diện tích hình tròn, hình quạt tròn, hình vành khuyên'],
+  },
+  {
+    id: 'math.geometry.solids',
+    domain: 'Geometry',
+    skill: 'Measurement',
+    name: 'Cylinders, cones & spheres',
+    missionName: 'Silo Workshop',
+    description: 'Volumes and surface areas of cylinders, cones and spheres in π, and practical problems.',
+    prerequisites: ['math.geometry.circles'],
+    lesson:
+      'Cylinder: V = πr²h, lateral area 2πrh, total 2πrh + 2πr². Cone: V = ⅓πr²h, lateral area πrl with slant l = √(r² + h²). Sphere: V = (4/3)πR³, area 4πR². A submerged object raises the water by its volume ÷ the base area.',
+    examRefs: ['Toán 9 · Hình trụ, hình nón, hình cầu', 'Vào 10 Hà Nội · Bài IV (thực tế)'],
+  },
 ];
-export const geometry9Patches: Record<string, Partial<ConceptSeed>> = {};
+export const geometry9Patches: Record<string, Partial<ConceptSeed>> = {
+  'math.geometry.angles': {
+    description: 'Interior and exterior angles of polygons, isosceles triangles, exterior angles and angle bisectors: angle chasing.',
+    lesson:
+      'Triangle: 180°, and an exterior angle = the sum of the two remote interior angles. Isosceles triangle: equal base angles. Polygon: interior sum (n − 2)·180°, exterior angles always add up to 360°, n(n − 3)/2 diagonals. Bisectors of B and C meet at angle 90° + A/2. Name every angle you find on the figure and keep chasing.',
+    examRefs: ['Toán 8 · Tam giác cân, đa giác', 'Vào 10 Hà Nội · Bài IV (hình học)'],
+  },
+  'math.geometry.area': {
+    description: 'Areas of composite shapes and polygons: cut-outs, paths, rhombi, regular hexagons, triangles inside rectangles.',
+    lesson:
+      'Triangle = ½·base·height (any side with its own height), rhombus = ½·d₁·d₂, trapezium = ½(a + b)h, equilateral triangle = (√3/4)a², regular hexagon = 6 equilateral triangles. For composite shapes add pieces, or take a big shape and subtract what is missing. Cutting a corner rectangle from a rectangle does not change the perimeter.',
+    examRefs: ['Toán 8 · Diện tích đa giác'],
+  },
+  'math.geometry.pythagoras': {
+    description: 'Pythagoras with a step: answers in simplest radical form, isosceles triangles, rhombi, trapezia, altitudes, ladders.',
+    lesson:
+      'c² = a² + b² where c is the hypotenuse; a leg is √(c² − a²). Simplify roots: √45 = 3√5. Draw the right triangle hidden in the shape: the height of an isosceles triangle or trapezium, half-diagonals of a rhombus, the altitude splitting a triangle.',
+    examRefs: ['Toán 8 · Định lí Pythagore'],
+  },
+  'math.geometry.circles': {
+    description: 'Circumference and area in π, semicircles, scaling, circles inscribed in and circumscribed about squares.',
+    lesson:
+      'C = 2πR = πd, S = πR². Keep π in the answer unless told to round. If the area is multiplied by k, the radius is multiplied by √k. A circle inscribed in a square has diameter = side; a square inscribed in a circle has diagonal = diameter.',
+    examRefs: ['Toán 9 · Độ dài đường tròn, diện tích hình tròn'],
+  },
+};
 export const geometry9Generators: Record<string, Generator> = {
   'math.geometry.pythagoras': pythagoras,
   'math.geometry.area': area,
@@ -892,10 +1441,30 @@ export const geometry9Generators: Record<string, Generator> = {
   'math.geometry.circles': circles,
   'math.geometry.trig': trig,
   'math.geometry.right-relations': relations,
+  'math.geometry.circle-angles': circleAngles,
+  'math.geometry.tangents': tangents,
+  'math.geometry.arcs': arcs,
+  'math.geometry.solids': solids,
 };
 export const geometry9LessonsVi: Record<string, string> = {
   'math.geometry.trig':
     'Trong tam giác vuông, với góc nhọn α: sin α = đối/huyền, cos α = kề/huyền, tan α = đối/kề, cot α = kề/đối. Giá trị đặc biệt: sin 30° = cos 60° = 1/2, sin 45° = cos 45° = √2/2, sin 60° = cos 30° = √3/2, tan 30° = √3/3, tan 45° = 1, tan 60° = √3. Luôn có sin²α + cos²α = 1, tan α = sin α/cos α, tan α·cot α = 1; hai góc phụ nhau thì sin góc này bằng cos góc kia, tan góc này bằng cot góc kia. Giải tam giác vuông: cạnh góc vuông = cạnh huyền × sin góc đối (hoặc × cos góc kề) = cạnh góc vuông kia × tan góc đối. Chỉ làm tròn ở bước cuối theo yêu cầu đề bài.',
+  'math.geometry.circle-angles':
+    'Góc ở tâm có số đo bằng số đo cung bị chắn. Góc nội tiếp bằng nửa góc ở tâm (nửa số đo cung) cùng chắn một cung, nên các góc nội tiếp cùng chắn một cung thì bằng nhau, và góc nội tiếp chắn nửa đường tròn là góc vuông. Góc tạo bởi tia tiếp tuyến và dây cung cũng bằng nửa số đo cung bị chắn. Tứ giác nội tiếp có tổng hai góc đối bằng 180°; góc ngoài tại một đỉnh bằng góc trong ở đỉnh đối diện. Chú ý điểm nằm trên cung nào: trên cung nhỏ thì góc nội tiếp bằng 180° trừ góc trên cung lớn.',
+  'math.geometry.tangents':
+    'Tiếp tuyến vuông góc với bán kính tại tiếp điểm, nên MA² = OM² − R². Hai tiếp tuyến cắt nhau tại M thì MA = MB, MO là tia phân giác của góc AMB và là đường trung trực của AB; trong tam giác vuông OAM có OA² = OH·OM. Đường thẳng cách tâm O một khoảng d: d < R thì cắt đường tròn (2 điểm chung), d = R thì tiếp xúc (1 điểm), d > R thì không giao nhau. Đường kính vuông góc với dây thì đi qua trung điểm của dây: (AB/2)² + d² = R².',
+  'math.geometry.arcs':
+    'Cung n°: l = πRn/180. Hình quạt n°: S = πR²n/360 = l·R/2. Hình viên phân = hình quạt − tam giác OAB. Hình vành khuyên = π(R² − r²), không phải π(R − r)². Để kết quả theo π, trừ khi đề bài yêu cầu làm tròn.',
+  'math.geometry.solids':
+    'Hình trụ: V = πr²h, diện tích xung quanh 2πrh, toàn phần 2πrh + 2πr². Hình nón: V = ⅓πr²h, diện tích xung quanh πrl với đường sinh l = √(r² + h²). Hình cầu: V = (4/3)πR³, diện tích mặt cầu 4πR². Vật chìm trong nước làm mực nước dâng lên một lượng bằng thể tích vật chia diện tích đáy.',
+  'math.geometry.angles':
+    'Tổng ba góc tam giác 180°; góc ngoài bằng tổng hai góc trong không kề với nó. Tam giác cân có hai góc ở đáy bằng nhau. Đa giác n cạnh: tổng góc trong (n − 2)·180°, tổng góc ngoài luôn bằng 360°, có n(n − 3)/2 đường chéo. Hai tia phân giác của góc B và C cắt nhau tạo góc 90° + A/2. Ghi mọi góc tìm được lên hình rồi tiếp tục suy luận.',
+  'math.geometry.area':
+    'Tam giác = ½·đáy·chiều cao (mỗi cạnh đi với đường cao của nó), hình thoi = ½·d₁·d₂, hình thang = ½(a + b)h, tam giác đều = (√3/4)a², lục giác đều = 6 tam giác đều. Hình ghép: cộng các phần, hoặc lấy hình lớn trừ phần bị khuyết. Cắt một hình chữ nhật ở góc của hình chữ nhật thì chu vi không đổi.',
+  'math.geometry.pythagoras':
+    'c² = a² + b² với c là cạnh huyền; cạnh góc vuông = √(c² − a²). Rút gọn căn: √45 = 3√5. Tìm tam giác vuông ẩn trong hình: đường cao của tam giác cân hay hình thang cân, nửa đường chéo hình thoi, đường cao chia đôi một tam giác.',
+  'math.geometry.circles':
+    'C = 2πR = πd, S = πR². Để kết quả theo π nếu đề không yêu cầu làm tròn. Diện tích gấp k lần thì bán kính gấp √k lần. Đường tròn nội tiếp hình vuông có đường kính bằng cạnh; hình vuông nội tiếp đường tròn có đường chéo bằng đường kính.',
   'math.geometry.right-relations':
     'Tam giác ABC vuông tại A, đường cao AH, BC = a, AC = b, AB = c, hình chiếu CH = b′, BH = c′, AH = h. Khi đó b² = a·b′, c² = a·c′ (bình phương cạnh góc vuông bằng cạnh huyền nhân hình chiếu), h² = b′·c′, a·h = b·c (hai lần diện tích), 1/h² = 1/b² + 1/c². Chọn hệ thức nối cái đã biết với cái cần tìm; nếu biết BH + CH và BH·CH thì BH, CH là nghiệm của một phương trình bậc hai.',
 };
