@@ -1152,7 +1152,7 @@ const arcs: Generator = (d, r) => {
       return vi(
         {
           prompt: `Two concentric circles have radii ${R} cm and ${r2} cm. Find the area of the ring between them, in terms of π (cm²).`,
-          ...choose(ans, [qpi((R - r2) ** 2), qpi(R * R + r2 * r2), qpi(2 * (R - r2)), qpi(R - r2)]),
+          ...choose(ans, [qpi((R - r2) ** 2), qpi(R * R + r2 * r2), qpi(2 * (R - r2)), qpi(R - r2), qpi(R * R), qpi(2 * (R * R - r2 * r2))]),
           explanation: `Ring = big disc − small disc = π(${R}² − ${r2}²) = ${ans.s}. (Not π(R − r)².)`,
           figure,
         },
@@ -1250,7 +1250,7 @@ const solids: Generator = (d, r) => {
     return vi(
       {
         prompt: `A closed cylinder has base radius ${R} cm and height ${h} cm. Find its total surface area in terms of π (cm²).`,
-        ...choose(ans, [qpi(2 * R * h), qpi(2 * R * h + R * R), qpi(R * h + R * R), qpi(R * R * h)]),
+        ...choose(ans, [qpi(2 * R * h), qpi(2 * R * h + R * R), qpi(R * h + R * R), qpi(R * R * h), qpi(2 * R * h + 4 * R * R)]),
         explanation: `Total = lateral + two bases = 2πrh + 2πr² = ${qpi(2 * R * h).s} + ${qpi(2 * R * R).s} = ${ans.s}.`,
       },
       `Một hình trụ có bán kính đáy ${R} cm và chiều cao ${h} cm. Tính diện tích toàn phần theo π (cm²).`,
@@ -1314,7 +1314,7 @@ const solids: Generator = (d, r) => {
     return vi(
       {
         prompt: `A cylindrical glass with inner radius ${cr} cm contains water. A metal ball of radius ${s} cm is dropped in and sinks completely (no water spills). By how much does the water level rise (cm)?`,
-        ...choose(ans, [qf(4 * s ** 3, cr * cr), qf(4 * s ** 3, 3 * cr), qf(s ** 3, cr * cr), qf(4 * s * s, cr * cr)]),
+        ...choose(ans, [qf(4 * s ** 3, cr * cr), qf(4 * s ** 3, 3 * cr), qf(s ** 3, cr * cr), qf(4 * s * s, cr * cr), qf(s ** 3, 3 * cr * cr), qf(32 * s ** 3, 3 * cr * cr)]),
         explanation: `The water rises by the ball's volume: π·${cr}²·x = (4/3)π·${s}³, so x = 4·${s ** 3}/(3·${cr * cr}) = ${ans.s}.`,
       },
       `Một cốc nước hình trụ có bán kính đáy trong ${cr} cm. Thả chìm hoàn toàn một viên bi sắt hình cầu bán kính ${s} cm vào cốc (nước không tràn ra). Mực nước dâng lên bao nhiêu xentimét?`,
