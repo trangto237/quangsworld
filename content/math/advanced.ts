@@ -8,7 +8,7 @@
  */
 import type { ConceptSeed } from '../helpers';
 import type { Generated, Generator } from './generators';
-import { fracN, gcd, int, num, numeric, nz, pick, signed, terms } from './util';
+import { fracN, gcd, int, num, numeric, nz, pick, poly, signed, terms } from './util';
 
 type G = Generated;
 const vi = (g: G, promptVi: string, explanationVi?: string): G => ({ ...g, promptVi, explanationVi });
@@ -230,7 +230,157 @@ const numberTheory: Generator = (d, r) => {
   );
 };
 
-void [qf, qs]; // used by the concepts below as they are added
+void [qs]; // used by the concepts below as they are added
+
+// ── Identities: values from conditions, symmetric expressions ─────────
+const identities: Generator = (d, r) => {
+  const ab = () => {
+    let S = 0, P = 0;
+    do {
+      S = nz(r, -9, 9);
+      P = nz(r, -12, 12);
+    } while (S * S < 4 * P);
+    return [S, P];
+  };
+  const given = (S: number, P: number) => [`Real numbers a, b satisfy a + b = ${num(S)} and ab = ${num(P)}.`, `Cho các số thực a, b thỏa mãn a + b = ${num(S)} và ab = ${num(P)}.`];
+  const p = (n: number) => (n < 0 ? `(${num(n)})` : String(n));
+  if (d <= 1) {
+    const [S, P] = ab();
+    const [en, viG] = given(S, P);
+    if (r() < 0.6)
+      return q(r, `${en} Find a² + b².`, `${viG} Tính a² + b².`, S * S - 2 * P, [S * S, S * S - P, S * S + 2 * P, S - 2 * P],
+        `a² + b² = (a + b)² − 2ab = ${p(S)}² − 2·${p(P)} = ${S * S - 2 * P}.`, `a² + b² = (a + b)² − 2ab = ${p(S)}² − 2·${p(P)} = ${S * S - 2 * P}.`);
+    return q(r, `${en} Find (a − b)².`, `${viG} Tính (a − b)².`, S * S - 4 * P, [S * S - 2 * P, S * S + 4 * P, S * S, (S - P) ** 2],
+      `(a − b)² = (a + b)² − 4ab = ${p(S)}² − 4·${p(P)} = ${S * S - 4 * P}.`, `(a − b)² = (a + b)² − 4ab = ${p(S)}² − 4·${p(P)} = ${S * S - 4 * P}.`);
+  }
+  if (d === 2) {
+    const kind = pick(r, ['cube', 'cubeDiff', 'eval'] as const);
+    if (kind === 'cube') {
+      const [S, P] = ab();
+      const [en, viG] = given(S, P);
+      const ans = S ** 3 - 3 * P * S;
+      return q(r, `${en} Find a³ + b³.`, `${viG} Tính a³ + b³.`, ans, [S ** 3 - 3 * P, S ** 3, S ** 3 + 3 * P * S, S ** 3 - P * S],
+        `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`, `a³ + b³ = (a + b)³ − 3ab(a + b) = ${p(S)}³ − 3·${p(P)}·${p(S)} = ${num(ans)}.`);
+    }
+    if (kind === 'cubeDiff') {
+      let D = 0, P = 0;
+      do {
+        D = int(r, 1, 7);
+        P = nz(r, -6, 12);
+      } while (D * D + 4 * P < 0);
+      const ans = D ** 3 + 3 * P * D;
+      return q(
+        r,
+        `Real numbers a, b satisfy a − b = ${D} and ab = ${num(P)}. Find a³ − b³.`,
+        `Cho các số thực a, b thỏa mãn a − b = ${D} và ab = ${num(P)}. Tính a³ − b³.`,
+        ans,
+        [D ** 3 - 3 * P * D, D ** 3 + 3 * P, D ** 3, D ** 3 + P * D],
+        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
+        `a³ − b³ = (a − b)³ + 3ab(a − b) = ${D}³ + 3·${p(P)}·${D} = ${num(ans)}.`,
+      );
+    }
+    const k = pick(r, [10, 20, 30, 50, 100]), c = nz(r, -9, 9), x = k + 1, ans = k ** 3 + 1 + c;
+    const e = `x³ − 3x² + 3x ${signed(c)}`;
+    return q(
+      r,
+      `Evaluate ${e} at x = ${x}.`,
+      `Tính giá trị của biểu thức ${e} tại x = ${x}.`,
+      ans,
+      [k ** 3 + c, k ** 3 - 1 + c, x ** 3 + c, k ** 3 + c - 2],
+      `x³ − 3x² + 3x − 1 = (x − 1)³, so the expression is (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
+      `x³ − 3x² + 3x − 1 = (x − 1)³, nên biểu thức bằng (x − 1)³ + 1 ${signed(c)} = ${k}³ ${signed(1 + c)} = ${ans}.`,
+    );
+  }
+  if (d === 3) {
+    const t = pick(r, [3, 4, 5, 6, -3, -4, -5]);
+    const kind = pick(r, ['cube', 'minus', 'quad'] as const);
+    if (kind === 'cube') {
+      const ans = t ** 3 - 3 * t;
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x³ + 1/x³.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x³ + 1/x³.`, ans, [t ** 3, t ** 3 - 3, t ** 3 + 3 * t, t ** 3 - t],
+        `Cube both sides: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, so x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`,
+        `Lập phương hai vế: x³ + 1/x³ + 3(x + 1/x) = ${p(t)}³, nên x³ + 1/x³ = ${p(t)}³ − 3·${p(t)} = ${num(ans)}.`);
+    }
+    if (kind === 'minus') {
+      const u = pick(r, [1, 2, 3, 4, 5, -2, -3]);
+      return q(r, `A real number x satisfies x − 1/x = ${num(u)}. Find x² + 1/x².`, `Số thực x thỏa mãn x − 1/x = ${num(u)}. Tính x² + 1/x².`, u * u + 2, [u * u - 2, u * u, u * u + 1, 2 * u + 2],
+        `Square both sides: x² − 2 + 1/x² = ${u * u}, so x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (The middle term of (x − 1/x)² is −2·x·(1/x) = −2.)`,
+        `Bình phương hai vế: x² − 2 + 1/x² = ${u * u}, nên x² + 1/x² = ${u * u} + 2 = ${u * u + 2}. (Hạng tử giữa của (x − 1/x)² là −2·x·(1/x) = −2.)`);
+    }
+    const e = `${poly([1, -t, 1])} = 0`;
+    return q(r, `A real number x satisfies ${e}. Find x² + 1/x².`, `Số thực x thỏa mãn ${e}. Tính x² + 1/x².`, t * t - 2, [t * t + 2, t * t, t * t - 1, 2 - t],
+      `x ≠ 0, so divide by x: x + 1/x = ${num(t)}. Then x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`,
+      `x ≠ 0 nên chia hai vế cho x: x + 1/x = ${num(t)}. Khi đó x² + 1/x² = (x + 1/x)² − 2 = ${t * t} − 2 = ${t * t - 2}.`);
+  }
+  if (d === 4) {
+    const kind = pick(r, ['four', 'five', 'zero', 'ab4'] as const);
+    const t = pick(r, [3, 4, 5, -3, -4]), t2 = t * t - 2, t3 = t ** 3 - 3 * t;
+    if (kind === 'four')
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁴ + 1/x⁴.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁴ + 1/x⁴.`, t2 * t2 - 2, [t ** 4 - 2, t2 * t2, t ** 4 - 4, t2 * t2 + 2],
+        `x² + 1/x² = ${t * t} − 2 = ${t2}, then square again: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`,
+        `x² + 1/x² = ${t * t} − 2 = ${t2}, bình phương tiếp: x⁴ + 1/x⁴ = ${t2}² − 2 = ${t2 * t2 - 2}.`);
+    if (kind === 'five') {
+      const ans = t2 * t3 - t;
+      return q(r, `A real number x satisfies x + 1/x = ${num(t)}. Find x⁵ + 1/x⁵.`, `Số thực x thỏa mãn x + 1/x = ${num(t)}. Tính x⁵ + 1/x⁵.`, ans, [t2 * t3, t2 * t3 + t, t ** 5 - 5 * t, t ** 5],
+        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Multiply: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, so x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`,
+        `x² + 1/x² = ${t2}, x³ + 1/x³ = ${num(t3)}. Nhân lại: (x² + 1/x²)(x³ + 1/x³) = x⁵ + 1/x⁵ + x + 1/x, nên x⁵ + 1/x⁵ = ${t2}·${p(t3)} − ${p(t)} = ${num(ans)}.`);
+    }
+    if (kind === 'zero') {
+      const k = nz(r, -20, 20);
+      return q(r, `Real numbers a, b, c satisfy a + b + c = 0 and abc = ${num(k)}. Find a³ + b³ + c³.`, `Cho các số thực a, b, c thỏa mãn a + b + c = 0 và abc = ${num(k)}. Tính a³ + b³ + c³.`, 3 * k, [0, k, -3 * k, 9 * k],
+        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, so a³ + b³ + c³ = 3abc = ${num(3 * k)}.`,
+        `a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca) = 0, nên a³ + b³ + c³ = 3abc = ${num(3 * k)}.`);
+    }
+    const [S, P] = ab();
+    const [en, viG] = given(S, P);
+    const s2 = S * S - 2 * P, ans = s2 * s2 - 2 * P * P;
+    return q(r, `${en} Find a⁴ + b⁴.`, `${viG} Tính a⁴ + b⁴.`, ans, [s2 * s2, s2 * s2 - 2 * P, S ** 4 - 2 * P * P, s2 * s2 + 2 * P * P],
+      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, and a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`,
+      `a² + b² = ${p(S)}² − 2·${p(P)} = ${s2}, và a⁴ + b⁴ = (a² + b²)² − 2(ab)² = ${s2}² − 2·${p(P)}² = ${num(ans)}.`);
+  }
+  // d5: three variables
+  let a = 0, b = 0, c = 0;
+  do {
+    a = nz(r, -6, 7);
+    b = nz(r, -6, 7);
+    c = nz(r, -6, 7);
+  } while (a + b + c === 0 || a * b + b * c + c * a === 0);
+  const S = a + b + c, Q = a * b + b * c + c * a, R = a * b * c;
+  const kind = pick(r, ['cube', 'pairs', 'recip'] as const);
+  if (kind === 'pairs') {
+    const T = a * a + b * b + c * c;
+    return q(
+      r,
+      `Real numbers a, b, c satisfy a + b + c = ${num(S)} and a² + b² + c² = ${T}. Find ab + bc + ca.`,
+      `Cho các số thực a, b, c thỏa mãn a + b + c = ${num(S)} và a² + b² + c² = ${T}. Tính ab + bc + ca.`,
+      Q,
+      [S * S - T, T - S * S, (T - S * S) / 2, (S * S + T) / 2],
+      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), so ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
+      `(a + b + c)² = a² + b² + c² + 2(ab + bc + ca), nên ab + bc + ca = (${p(S)}² − ${T})/2 = ${num(Q)}.`,
+    );
+  }
+  const given3 = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} and abc = ${num(R)}`;
+  const given3Vi = `a + b + c = ${num(S)}, ab + bc + ca = ${num(Q)} và abc = ${num(R)}`;
+  if (kind === 'recip')
+    return qf(
+      r,
+      `Real numbers a, b, c satisfy ${given3}. Find 1/a + 1/b + 1/c.`,
+      `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính 1/a + 1/b + 1/c.`,
+      [Q, R],
+      [[R, Q], [S, R], [-Q, R], [1, S]],
+      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
+      `1/a + 1/b + 1/c = (bc + ca + ab)/(abc) = ${num(Q)}/${p(R)}${`${num(Q)}/${num(R)}` === fracN(Q, R) ? '' : ` = ${fracN(Q, R)}`}.`,
+    );
+  const ans = S ** 3 - 3 * S * Q + 3 * R;
+  return q(
+    r,
+    `Real numbers a, b, c satisfy ${given3}. Find a³ + b³ + c³.`,
+    `Cho các số thực a, b, c thỏa mãn ${given3Vi}. Tính a³ + b³ + c³.`,
+    ans,
+    [S ** 3 - 3 * S * Q, 3 * R, S ** 3 - 3 * S * Q - 3 * R, S ** 3 - S * Q + 3 * R],
+    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Then a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), so a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
+    `a² + b² + c² = S² − 2Q = ${S * S - 2 * Q}. Mà a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca), nên a³ + b³ + c³ = ${p(S)}·(${S * S - 2 * Q} − ${p(Q)}) + 3·${p(R)} = ${num(ans)}.`,
+  );
+};
 
 // ── Diophantine equations: factoring tricks, perfect squares, counting solutions ──
 const tau = (n: number) => divisors(Math.abs(n)).length;
@@ -400,11 +550,24 @@ export const advancedConcepts: ConceptSeed[] = [
       'Turn the equation into a product equal to a number: xy + px + qy = c becomes (x + q)(y + p) = c + pq, then each factor is a divisor. Count divisors carefully — positive only, or negative too? Are some excluded (a factor equal to 1, or x = 0)? For perfect squares, write n² + k = m² and factor (m − n)(m + n) = k; the two factors have the same parity. 1/x + 1/y = 1/n becomes (x − n)(y − n) = n².',
     examRefs: [`${EXAM[0]} · Phương trình nghiệm nguyên`, `${EXAM[1]} · Phương trình nghiệm nguyên`],
   },
+  {
+    id: 'math.adv.identities',
+    domain: 'Advanced',
+    skill: 'Algebra',
+    name: 'Identities & symmetric expressions',
+    missionName: 'Mirror Formulas',
+    description: 'Values from conditions: a + b and ab → a³ + b³; x + 1/x → x³ + 1/x³; a + b + c = 0 → a³ + b³ + c³ = 3abc.',
+    prerequisites: ['math.algebra.expressions', 'math.algebra.vieta'],
+    lesson:
+      'Never solve for a and b — rewrite the target in the given sums and products. a² + b² = (a + b)² − 2ab, (a − b)² = (a + b)² − 4ab, a³ + b³ = (a + b)³ − 3ab(a + b). With x + 1/x = t: x² + 1/x² = t² − 2, x³ + 1/x³ = t³ − 3t, and multiply lower powers to reach higher ones. For three numbers: a² + b² + c² = (a + b + c)² − 2(ab + bc + ca) and a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca). Spot hidden cubes: x³ − 3x² + 3x − 1 = (x − 1)³.',
+    examRefs: [`${EXAM[0]} · Biến đổi đại số`, `${EXAM[1]} · Hằng đẳng thức`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
   'math.adv.number-theory': numberTheory,
   'math.adv.diophantine': diophantine,
+  'math.adv.identities': identities,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -412,4 +575,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Làm việc với số dư: nếu a ≡ r (mod m) thì aⁿ ≡ rⁿ (mod m). Lũy thừa lặp lại theo chu kì — tìm lũy thừa đầu tiên chia dư 1, rồi viết n = qk + s. Chữ số tận cùng của lũy thừa lặp lại sau 4 bước. n³ − n = (n − 1)n(n + 1) là tích ba số nguyên liên tiếp nên luôn chia hết cho 6. Nếu N = pᵃ·qᵇ·rᶜ thì N có (a + 1)(b + 1)(c + 1) ước. ƯCLN(a, b)·BCNN(a, b) = a·b. Số nguyên tố lớn hơn 3 không chia hết cho 3 — hãy xét số dư khi chia cho 3.',
   'math.adv.diophantine':
     'Biến đổi phương trình thành dạng tích bằng một số: xy + px + qy = c trở thành (x + q)(y + p) = c + pq, rồi mỗi thừa số là một ước. Đếm ước cẩn thận — chỉ ước dương hay cả ước âm? Có trường hợp nào bị loại (thừa số bằng 1, hay x = 0)? Với số chính phương, đặt n² + k = m² rồi phân tích (m − n)(m + n) = k; hai thừa số cùng tính chẵn lẻ. 1/x + 1/y = 1/n trở thành (x − n)(y − n) = n².',
+  'math.adv.identities':
+    'Đừng giải tìm a, b — hãy biểu diễn biểu thức cần tính qua tổng và tích đã cho. a² + b² = (a + b)² − 2ab, (a − b)² = (a + b)² − 4ab, a³ + b³ = (a + b)³ − 3ab(a + b). Với x + 1/x = t: x² + 1/x² = t² − 2, x³ + 1/x³ = t³ − 3t, rồi nhân các lũy thừa thấp để được lũy thừa cao hơn. Với ba số: a² + b² + c² = (a + b + c)² − 2(ab + bc + ca) và a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca). Nhận ra lập phương ẩn: x³ − 3x² + 3x − 1 = (x − 1)³.',
 };
