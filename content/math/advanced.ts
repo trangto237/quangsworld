@@ -232,6 +232,135 @@ const numberTheory: Generator = (d, r) => {
 
 void [qs]; // used by the concepts below as they are added
 
+// ── Inequalities: min/max by completing the square, AM–GM, Cauchy–Schwarz ──
+const inequalities: Generator = (d, r) => {
+  const MIN = 'Find the minimum value of', MIN_VI = 'Tìm giá trị nhỏ nhất của';
+  const sq = (v: string, k: number) => (k === 0 ? `${v}²` : `(${v} ${signed(k)})²`);
+  if (d <= 1) {
+    const p = nz(r, -6, 6), c = int(r, -10, 20);
+    if (r() < 0.25) {
+      const e = poly([-1, 2 * p, c]), ans = c + p * p;
+      return q(r, `Find the maximum value of A = ${e}.`, `Tìm giá trị lớn nhất của A = ${e}.`, ans, [c, c - p * p, p, p * p],
+        `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, with equality at x = ${num(p)}.`, `A = ${num(ans)} − ${sq('x', -p)} ≤ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`);
+    }
+    const e = poly([1, -2 * p, c]), ans = c - p * p;
+    const how = `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, with equality when x = ${num(p)}.`;
+    const howVi = `A = ${sq('x', -p)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng xảy ra khi x = ${num(p)}.`;
+    if (r() < 0.35)
+      return q(r, `For which value of x does A = ${e} take its smallest value?`, `A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, p, [-p, 2 * p, ans, -2 * p], how, howVi);
+    return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c + p * p, -p * p, p], how, howVi);
+  }
+  if (d === 2) {
+    const kind = pick(r, ['xy', 'mixed', 'a'] as const);
+    if (kind === 'xy') {
+      const a = nz(r, -4, 4), b = nz(r, -4, 4), c = int(r, 0, 30), ans = c - a * a - b * b;
+      const e = terms([[1, 'x²'], [1, 'y²'], [2 * a, 'x'], [2 * b, 'y'], [c, '']]);
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - a * a, c + a * a + b * b, c - 4 * a * a - 4 * b * b],
+        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-a)}, y = ${num(-b)}.`,
+        `A = ${sq('x', a)} + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-a)}, y = ${num(-b)}.`);
+    }
+    if (kind === 'mixed') {
+      const b = nz(r, -5, 5), c = int(r, 0, 30), ans = c - b * b;
+      const e = terms([[1, 'x²'], [-2, 'xy'], [2, 'y²'], [2 * b, 'y'], [c, '']]);
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c, c - 2 * b * b, c + b * b, c - 4 * b * b],
+        `Split 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = y = ${num(-b)}.`,
+        `Tách 2y² = y² + y²: A = (x − y)² + ${sq('y', b)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = y = ${num(-b)}.`);
+    }
+    const a = int(r, 2, 4), k = nz(r, -4, 4), c = int(r, -5, 25), ans = c - a * k * k;
+    const e = poly([a, 2 * a * k, c]);
+    return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [c - k * k, c + a * k * k, c, c - a * a * k * k],
+      `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, with equality at x = ${num(-k)}.`,
+      `A = ${a}(x² ${signed(2 * k)}x) ${signed(c)} = ${a}${sq('x', k)} ${signed(ans)} ≥ ${num(ans)}, dấu bằng khi x = ${num(-k)}.`);
+  }
+  if (d === 3) {
+    if (r() < 0.65) {
+      const s0 = int(r, 1, 3);
+      let p = int(r, 1, 5), qq = int(r, 1, 6);
+      if (p === qq) qq++;
+      const a = s0 * p * p, b = s0 * qq * qq, ans = 2 * s0 * p * qq;
+      const ax = `${a === 1 ? '' : a}x`, e = `${ax} + ${b}/x`;
+      const how = `AM–GM: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, with equality when ${ax} = ${b}/x, i.e. x = ${fracN(qq, p)}.`;
+      const howVi = `Bất đẳng thức Cô-si: ${a === 1 ? '' : a}x + ${b}/x ≥ 2√(${ax}·${b}/x) = 2√${a * b} = ${ans}, dấu bằng khi ${ax} = ${b}/x, tức là x = ${fracN(qq, p)}.`;
+      if (r() < 0.3)
+        return qf(r, `For x > 0, at which x does A = ${e} take its smallest value?`, `Với x > 0, A = ${e} đạt giá trị nhỏ nhất khi x bằng bao nhiêu?`, [qq, p], [[p, qq], [b, a], [qq * qq, p * p], [1, 1]], how, howVi);
+      return q(r, `${MIN} A = ${e} for x > 0.`, `${MIN_VI} A = ${e} với x > 0.`, ans, [a + b, ans / 2, 2 * (a + b), Math.round(Math.sqrt(a * b))], how, howVi);
+    }
+    const k = int(r, 2, 7), h = int(r, 1, 6), ans = 2 * k + h;
+    const e = `x + ${k * k}/(x − ${h})`;
+    return q(r, `${MIN} A = ${e} for x > ${h}.`, `${MIN_VI} A = ${e} với x > ${h}.`, ans, [2 * k, 2 * k - h, k + h, k * k + h],
+      `Write A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. By AM–GM the first two terms are ≥ 2√${k * k} = ${2 * k}, so A ≥ ${ans}, with equality at x − ${h} = ${k}, i.e. x = ${h + k}.`,
+      `Viết A = (x − ${h}) + ${k * k}/(x − ${h}) + ${h}. Theo Cô-si, tổng hai số hạng đầu ≥ 2√${k * k} = ${2 * k}, nên A ≥ ${ans}, dấu bằng khi x − ${h} = ${k}, tức là x = ${h + k}.`);
+  }
+  if (d === 4) {
+    if (r() < 0.55) {
+      let a = 0, m = 0, n = 0;
+      do {
+        a = int(r, -4, 3);
+        m = int(r, 1, 3);
+        n = int(r, 1, 3);
+      } while ((m * (m + n)) % 2 !== 0 || (2 * a + 2 * m + n) ** 2 < 2 * (a * (a + 2 * m + n) + (a + m) * (a + m + n)));
+      const [b, c, dd] = [a + m, a + m + n, a + 2 * m + n];
+      const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
+      const k = (m * (m + n)) / 2, ans = -k * k;
+      const e = [a, b, c, dd].map(lin).join('');
+      const t = `x² ${signed(a + dd)}x`;
+      return q(r, `${MIN} A = ${e}.`, `${MIN_VI} A = ${e}.`, ans, [a * b * c * dd, -k, 0, -4 * k * k],
+        `Pair the outside and inside factors: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} and ${lin(b)}${lin(c)} = t ${signed(b * c)}, with t = ${t}. Then A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, reached when t = ${num(-(a * dd + b * c) / 2)}.`,
+        `Ghép thừa số ngoài với ngoài, trong với trong: ${lin(a)}${lin(dd)} = t ${signed(a * dd)} và ${lin(b)}${lin(c)} = t ${signed(b * c)}, với t = ${t}. Khi đó A = (t ${signed(a * dd)})(t ${signed(b * c)}) = (t ${signed((a * dd + b * c) / 2)})² − ${k * k} ≥ ${num(ans)}, đạt được khi t = ${num(-(a * dd + b * c) / 2)}.`);
+    }
+    const S = 2 * int(r, 1, 6), kind = pick(r, ['sq', 'cube', 'prod'] as const);
+    const head = `Real numbers x, y satisfy x + y = ${S}.`, headVi = `Các số thực x, y thỏa mãn x + y = ${S}.`;
+    if (kind === 'prod')
+      return q(r, `${head} Find the maximum value of xy.`, `${headVi} Tìm giá trị lớn nhất của xy.`, (S * S) / 4, [S * S, (S * S) / 2, S, S - 1],
+        `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, equality at x = y = ${S / 2}.`, `xy = x(${S} − x) = ${(S * S) / 4} − (x − ${S / 2})² ≤ ${(S * S) / 4}, dấu bằng khi x = y = ${S / 2}.`);
+    if (kind === 'sq')
+      return q(r, `${head} Find the minimum value of x² + y².`, `${headVi} Tìm giá trị nhỏ nhất của x² + y².`, (S * S) / 2, [S * S, (S * S) / 4, 0, S],
+        `2(x² + y²) ≥ (x + y)² = ${S * S}, so x² + y² ≥ ${(S * S) / 2}, equality at x = y = ${S / 2}.`, `2(x² + y²) ≥ (x + y)² = ${S * S}, nên x² + y² ≥ ${(S * S) / 2}, dấu bằng khi x = y = ${S / 2}.`);
+    return q(r, `${head} Find the minimum value of x³ + y³.`, `${headVi} Tìm giá trị nhỏ nhất của x³ + y³.`, S ** 3 / 4, [S ** 3 / 8, 0, S ** 3, S ** 3 / 2],
+      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, and xy ≤ (x + y)²/4 = ${(S * S) / 4}. So x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, equality at x = y = ${S / 2}.`,
+      `x³ + y³ = (x + y)³ − 3xy(x + y) = ${S ** 3} − ${3 * S}xy, mà xy ≤ (x + y)²/4 = ${(S * S) / 4}. Vậy x³ + y³ ≥ ${S ** 3} − ${3 * S}·${(S * S) / 4} = ${S ** 3 / 4}, dấu bằng khi x = y = ${S / 2}.`);
+  }
+  const kind = pick(r, ['titu', 'line', 'prod'] as const);
+  if (kind === 'titu') {
+    let p = int(r, 1, 5), qq = int(r, 1, 5);
+    if (p === qq) qq = (qq % 5) + 1;
+    const S = int(r, 1, 6);
+    return qf(
+      r,
+      `Positive numbers x, y satisfy x + y = ${S}. Find the minimum value of A = ${p * p}/x + ${qq * qq}/y.`,
+      `Các số dương x, y thỏa mãn x + y = ${S}. Tìm giá trị nhỏ nhất của A = ${p * p}/x + ${qq * qq}/y.`,
+      [(p + qq) ** 2, S],
+      [[p * p + qq * qq, S], [4 * p * qq, S], [2 * (p * p + qq * qq), S], [(p + qq) ** 2, 2 * S]],
+      `Cauchy–Schwarz (Engel form): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, with equality when x/${p} = y/${qq}, i.e. x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
+      `Bất đẳng thức Bunhiacốpxki (dạng phân thức): ${p}²/x + ${qq}²/y ≥ (${p} + ${qq})²/(x + y) = ${fracN((p + qq) ** 2, S)}, dấu bằng khi x/${p} = y/${qq}, tức là x = ${fracN(p * S, p + qq)}, y = ${fracN(qq * S, p + qq)}.`,
+    );
+  }
+  const a = int(r, 1, 5), c = int(r, 2, 15);
+  let b = int(r, 1, 5);
+  if (b === a) b = (b % 5) + 1;
+  const [ax, by] = [`${a === 1 ? '' : a}x`, `${b === 1 ? '' : b}y`];
+  const line = `${ax} + ${by} = ${c}`;
+  if (kind === 'line')
+    return qf(
+      r,
+      `Real numbers x, y satisfy ${line}. Find the minimum value of x² + y².`,
+      `Các số thực x, y thỏa mãn ${line}. Tìm giá trị nhỏ nhất của x² + y².`,
+      [c * c, a * a + b * b],
+      [[c * c, (a + b) ** 2], [c, a * a + b * b], [c * c, 2 * (a * a + b * b)], [c * c, a * a]],
+      `Cauchy–Schwarz: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), so x² + y² ≥ ${fracN(c * c, a * a + b * b)}, with equality when x/${a} = y/${b}.`,
+      `Bất đẳng thức Bunhiacốpxki: ${c}² = (${ax} + ${by})² ≤ (${a}² + ${b}²)(x² + y²), nên x² + y² ≥ ${fracN(c * c, a * a + b * b)}, dấu bằng khi x/${a} = y/${b}.`,
+    );
+  return qf(
+    r,
+    `Positive numbers x, y satisfy ${line}. Find the maximum value of xy.`,
+    `Các số dương x, y thỏa mãn ${line}. Tìm giá trị lớn nhất của xy.`,
+    [c * c, 4 * a * b],
+    [[c * c, 4 * (a + b)], [c * c, 2 * a * b], [c * c, a * b], [c, 4 * a * b]],
+    `AM–GM on ${ax} and ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), so xy ≤ ${fracN(c * c, 4 * a * b)}, with equality when ${ax} = ${by} = ${fracN(c, 2)}.`,
+    `Cô-si cho ${ax} và ${by}: ${c} = ${ax} + ${by} ≥ 2√(${a * b}xy), nên xy ≤ ${fracN(c * c, 4 * a * b)}, dấu bằng khi ${ax} = ${by} = ${fracN(c, 2)}.`,
+  );
+};
+
 // ── Identities: values from conditions, symmetric expressions ─────────
 const identities: Generator = (d, r) => {
   const ab = () => {
@@ -562,12 +691,25 @@ export const advancedConcepts: ConceptSeed[] = [
       'Never solve for a and b — rewrite the target in the given sums and products. a² + b² = (a + b)² − 2ab, (a − b)² = (a + b)² − 4ab, a³ + b³ = (a + b)³ − 3ab(a + b). With x + 1/x = t: x² + 1/x² = t² − 2, x³ + 1/x³ = t³ − 3t, and multiply lower powers to reach higher ones. For three numbers: a² + b² + c² = (a + b + c)² − 2(ab + bc + ca) and a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca). Spot hidden cubes: x³ − 3x² + 3x − 1 = (x − 1)³.',
     examRefs: [`${EXAM[0]} · Biến đổi đại số`, `${EXAM[1]} · Hằng đẳng thức`],
   },
+  {
+    id: 'math.adv.inequalities',
+    domain: 'Advanced',
+    skill: 'Inequalities',
+    name: 'Minimum & maximum',
+    missionName: 'Peak & Valley',
+    description: 'Smallest and largest values by completing the square, AM–GM (Cô-si) and Cauchy–Schwarz (Bunhiacốpxki) — and where they are reached.',
+    prerequisites: ['math.adv.identities', 'math.algebra.inequalities'],
+    lesson:
+      'Completing the square: A = (x − p)² + m ≥ m, reached at x = p; for two variables, make several squares. AM–GM (Cô-si): for a, b ≥ 0, a + b ≥ 2√(ab), equal when a = b — so ax + b/x ≥ 2√(ab) for x > 0. Shift to make it work: x + k/(x − h) = (x − h) + k/(x − h) + h. Cauchy–Schwarz (Bunhiacốpxki): (ax + by)² ≤ (a² + b²)(x² + y²) and p²/x + q²/y ≥ (p + q)²/(x + y). Always check that equality can really happen.',
+    examRefs: [`${EXAM[0]} · Bất đẳng thức, cực trị`, `${EXAM[1]} · Bất đẳng thức`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
   'math.adv.number-theory': numberTheory,
   'math.adv.diophantine': diophantine,
   'math.adv.identities': identities,
+  'math.adv.inequalities': inequalities,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -577,4 +719,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Biến đổi phương trình thành dạng tích bằng một số: xy + px + qy = c trở thành (x + q)(y + p) = c + pq, rồi mỗi thừa số là một ước. Đếm ước cẩn thận — chỉ ước dương hay cả ước âm? Có trường hợp nào bị loại (thừa số bằng 1, hay x = 0)? Với số chính phương, đặt n² + k = m² rồi phân tích (m − n)(m + n) = k; hai thừa số cùng tính chẵn lẻ. 1/x + 1/y = 1/n trở thành (x − n)(y − n) = n².',
   'math.adv.identities':
     'Đừng giải tìm a, b — hãy biểu diễn biểu thức cần tính qua tổng và tích đã cho. a² + b² = (a + b)² − 2ab, (a − b)² = (a + b)² − 4ab, a³ + b³ = (a + b)³ − 3ab(a + b). Với x + 1/x = t: x² + 1/x² = t² − 2, x³ + 1/x³ = t³ − 3t, rồi nhân các lũy thừa thấp để được lũy thừa cao hơn. Với ba số: a² + b² + c² = (a + b + c)² − 2(ab + bc + ca) và a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca). Nhận ra lập phương ẩn: x³ − 3x² + 3x − 1 = (x − 1)³.',
+  'math.adv.inequalities':
+    'Thêm bớt để tạo bình phương: A = (x − p)² + m ≥ m, dấu bằng khi x = p; với hai biến thì tạo nhiều bình phương. Bất đẳng thức Cô-si: với a, b ≥ 0, a + b ≥ 2√(ab), dấu bằng khi a = b — nên ax + b/x ≥ 2√(ab) với x > 0. Biến đổi cho phù hợp: x + k/(x − h) = (x − h) + k/(x − h) + h. Bất đẳng thức Bunhiacốpxki: (ax + by)² ≤ (a² + b²)(x² + y²) và p²/x + q²/y ≥ (p + q)²/(x + y). Luôn kiểm tra dấu bằng có xảy ra được không.',
 };

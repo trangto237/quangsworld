@@ -28,6 +28,7 @@ function fn(e: string, v = 'n'): (x: number) => number {
   const js = e
     .replace(/−/g, '-')
     .replace(/·/g, '*')
+    .replace(/([a-z])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, v, m) => `(${v}**${unsup(m)})`)
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `**${unsup(m)}`)
     .replace(/\b([a-z])\s*\(/g, '$1*(')
     .replace(/√\(/g, 'Math.sqrt(')
@@ -40,6 +41,7 @@ function fn2(e: string): (x: number, y: number) => number {
   const js = e
     .replace(/−/g, '-')
     .replace(/xy/g, 'x*y')
+    .replace(/([a-z])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, v, m) => `(${v}**${unsup(m)})`)
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `**${unsup(m)}`)
     .replace(/(\d)\s*(?=[xy(])/g, '$1*');
   return Function('x', 'y', `return (${js});`) as (x: number, y: number) => number;
@@ -49,6 +51,7 @@ function fnv(e: string, vars: string[]): (...v: number[]) => number {
   const js = e
     .replace(/−/g, '-')
     .replace(/·/g, '*')
+    .replace(/([a-z])([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, v, m) => `(${v}**${unsup(m)})`)
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `**${unsup(m)}`)
     .replace(/([a-z])(?=[a-z(])/g, '$1*')
     .replace(/(\d|\))\s*(?=[a-z(])/g, '$1*');
@@ -75,6 +78,37 @@ function realRoots(f: (x: number) => number, lo = -60, hi = 60, step = 1e-3): nu
     [x0, f0] = [x1, f1];
   }
   return out;
+}
+/** Smallest value of f on (lo, hi) and where it is: a fine grid, then golden-section refinement. */
+function argmin(f: (x: number) => number, lo: number, hi: number, n = 60000): { x: number; v: number } {
+  const h = (hi - lo) / n;
+  let bx = lo + h / 2, bv = Infinity;
+  for (let i = 0; i < n; i++) {
+    const x = lo + (i + 0.5) * h, v = f(x);
+    if (v < bv) [bx, bv] = [x, v];
+  }
+  let [a, b] = [Math.max(lo, bx - h), Math.min(hi, bx + h)];
+  const g = (Math.sqrt(5) - 1) / 2;
+  for (let i = 0; i < 200; i++) {
+    const c = b - g * (b - a), d = a + g * (b - a);
+    if (f(c) < f(d)) b = d;
+    else a = c;
+  }
+  const x = (a + b) / 2;
+  return { x, v: Math.min(f(x), bv) };
+}
+/** Minimum of a convex f(x, y) by nested ternary search. */
+function min2(f: (x: number, y: number) => number): number {
+  const tern = (g: (t: number) => number) => {
+    let [a, b] = [-100, 100];
+    for (let i = 0; i < 120; i++) {
+      const c = a + (b - a) / 3, d = b - (b - a) / 3;
+      if (g(c) < g(d)) b = d;
+      else a = c;
+    }
+    return g((a + b) / 2);
+  };
+  return tern((x) => tern((y) => f(x, y)));
 }
 const isSq = (n: number) => n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
 
@@ -209,6 +243,32 @@ const checkers: Record<string, (p: string) => string | number | null> = {
       for (let a = -12; a <= 12; a++) for (let b = -12; b <= 12; b++) for (let c = -12; c <= 12; c++) if (found === null && ok(a, b, c) && a * b * c !== 0) found = f(a, b, c);
       expect(found).not.toBeNull();
       return found;
+    }
+    return null;
+  },
+
+  'math.adv.inequalities': (p) => {
+    let m = p.match(/^Find the (minimum|maximum) value of A = (.+?)(?: for x > (\d+))?\.$/);
+    if (m) {
+      const sg = m[1] === 'minimum' ? 1 : -1;
+      if (m[2].includes('y')) {
+        const f = fn2(m[2]);
+        return sg * min2((x, y) => sg * f(x, y));
+      }
+      const f = fn(m[2], 'x'), [lo, hi] = m[3] ? [+m[3], +m[3] + 100] : [-100, 100];
+      return sg * argmin((x) => sg * f(x), lo, hi).v;
+    }
+    m = p.match(/^(For x > 0, at which x|For which value of x) does A = (.+) take its smallest value\?$/);
+    if (m) {
+      const f = fn(m[2], 'x');
+      return m[1].startsWith('For x > 0') ? argmin(f, 0, 100).x : argmin(f, -100, 100).x;
+    }
+    m = p.match(/^(Real|Positive) numbers x, y satisfy (\d*)x \+ (\d*)y = (\d+)\. Find the (minimum|maximum) value of (?:A = )?(.+)\.$/);
+    if (m) {
+      const [a, b, c] = [+(m[2] || 1), +(m[3] || 1), +m[4]];
+      const f = fn2(m[6]), sg = m[5] === 'minimum' ? 1 : -1;
+      const g = (x: number) => sg * f(x, (c - a * x) / b);
+      return sg * (m[1] === 'Positive' ? argmin(g, 0, c / a) : argmin(g, -100, 100)).v;
     }
     return null;
   },
