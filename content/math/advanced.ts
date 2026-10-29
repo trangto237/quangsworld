@@ -8,7 +8,7 @@
  */
 import type { ConceptSeed } from '../helpers';
 import type { Generated, Generator } from './generators';
-import { fracN, gcd, int, num, numeric, nz, pick, poly, signed, terms } from './util';
+import { fracN, gcd, int, num, numeric, nz, pick, poly, roots, signed, terms } from './util';
 
 type G = Generated;
 const vi = (g: G, promptVi: string, explanationVi?: string): G => ({ ...g, promptVi, explanationVi });
@@ -230,7 +230,119 @@ const numberTheory: Generator = (d, r) => {
   );
 };
 
-void [qs]; // used by the concepts below as they are added
+
+// ── Equations: radicals (reject extraneous roots), substitution, symmetric systems ──
+const xs = (...v: number[]) => roots(v.map((x) => [x, 1] as [number, number]));
+const lin = (u: number) => (u === 0 ? 'x' : `(x ${signed(u)})`);
+const rt = (inside: string) => (inside === 'x' ? '√x' : `√(${inside})`);
+
+const equations: Generator = (d, r) => {
+  if (d <= 1) {
+    const b = nz(r, -3, 6), x0 = b + int(r, 2, 6), a = (x0 - b) ** 2 - x0, x1 = 2 * b + 1 - x0;
+    const e = `${rt(poly([1, a]))} = ${poly([1, -b])}`;
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      xs(x0),
+      [xs(x0, x1), xs(x1), xs(x0, -x0), xs(x0 + 1)],
+      `Condition: x ≥ ${num(b)} (the right side equals a square root, so it can't be negative). Squaring: ${poly([1, a])} = ${lin(-b)}², i.e. ${poly([1, -(2 * b + 1), b * b - a])} = 0, so x = ${num(x0)} or x = ${num(x1)}. But ${num(x1)} < ${num(b)}: reject it (it solves the squared equation only).`,
+      `Điều kiện: x ≥ ${num(b)} (vế phải bằng một căn bậc hai nên không âm). Bình phương: ${poly([1, a])} = ${lin(-b)}², tức là ${poly([1, -(2 * b + 1), b * b - a])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}. Nhưng ${num(x1)} < ${num(b)} nên loại (nó chỉ là nghiệm của phương trình sau khi bình phương).`,
+    );
+  }
+  if (d === 2) {
+    const u = int(r, 1, 5);
+    let t2 = 0;
+    if (r() < 0.5) t2 = -(int(r, 1, 6) ** 2);
+    if (t2 === -u * u) t2 -= 2 * u + 1;
+    else {
+      let w = int(r, 1, 6);
+      if (w === u) w = u + 1;
+      t2 = w * w;
+    }
+    const t1 = u * u, e = `${terms([[1, 'x⁴'], [-(t1 + t2), 'x²'], [t1 * t2, '']])} = 0`;
+    const w = Math.round(Math.sqrt(Math.abs(t2))); // t2 = −w² when it is rejected
+    const ans = t2 > 0 ? xs(-w, -u, u, w) : xs(-u, u);
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      ans,
+      [t2 > 0 ? xs(u, w) : xs(-w, -u, u, w), xs(t1, t2), t2 > 0 ? xs(-u, u) : xs(u), xs(u, -w), xs(-u - 1, u + 1)],
+      `Put t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, so t = ${t1} or t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 is rejected; t = ${t1} gives x = ±${u}.` : `x² = ${t1} gives x = ±${u}, x² = ${t2} gives x = ±${w}.`}`,
+      `Đặt t = x² ≥ 0: ${poly([1, -(t1 + t2), t1 * t2], 't')} = 0, nên t = ${t1} hoặc t = ${num(t2)}. ${t2 < 0 ? `t = ${num(t2)} < 0 bị loại; t = ${t1} cho x = ±${u}.` : `x² = ${t1} cho x = ±${u}, x² = ${t2} cho x = ±${w}.`}`,
+    );
+  }
+  if (d === 3) {
+    let z1 = 0, z2 = 0;
+    const cnt = (S: number, P: number) => (S * S > 4 * P ? 2 : 0);
+    const trap = r() < 0.6; // usually one of the two cases has no real solution
+    do {
+      z1 = int(r, -5, 8);
+      z2 = int(r, -5, 8);
+    } while (z1 >= z2 || z1 + z2 === -1 || z1 * z1 === 4 * z2 || z2 * z2 === 4 * z1 || cnt(z1, z2) + cnt(z2, z1) === 0 || (trap && cnt(z1, z2) + cnt(z2, z1) !== 2));
+    const A = z1 + z2, B = z1 * z2, ans = cnt(z1, z2) + cnt(z2, z1);
+    const sys = `x + y + xy = ${num(A)} and x²y + xy² = ${num(B)}`;
+    const sysVi = `x + y + xy = ${num(A)} và x²y + xy² = ${num(B)}`;
+    const cs = (S: number, P: number, vi_: boolean) =>
+      `S = ${num(S)}, P = ${num(P)}: S² − 4P = ${num(S * S - 4 * P)} ${S * S > 4 * P ? (vi_ ? '> 0, cho 2 cặp' : '> 0, giving 2 pairs') : vi_ ? '< 0, loại' : '< 0, no real pair'}`;
+    return q(
+      r,
+      `How many pairs of real numbers (x, y) satisfy ${sys}?`,
+      `Hệ phương trình ${sysVi} có bao nhiêu nghiệm thực (x; y)?`,
+      ans,
+      [4, ans === 4 ? 2 : 1, 0, 3].filter((v) => v !== ans),
+      `Let S = x + y, P = xy: S + P = ${num(A)} and SP = ${num(B)}, so S and P are the roots of ${poly([1, -A, B], 'z')} = 0: ${num(z1)} and ${num(z2)}. x, y are real only if S² ≥ 4P. ${cs(z1, z2, false)}; ${cs(z2, z1, false)}. Total: ${ans}.`,
+      `Đặt S = x + y, P = xy: S + P = ${num(A)} và SP = ${num(B)}, nên S, P là nghiệm của ${poly([1, -A, B], 'z')} = 0: ${num(z1)} và ${num(z2)}. x, y là số thực khi và chỉ khi S² ≥ 4P. ${cs(z1, z2, true)}; ${cs(z2, z1, true)}. Tổng cộng: ${ans} nghiệm.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.55) {
+      const u0 = int(r, 1, 5), a = int(r, -3, 3), t1 = u0 * u0 + 3 * u0, k = t1 * (t1 + 2);
+      const x0 = u0 - a, x1 = -3 - u0 - a;
+      const e = `${[a, a + 1, a + 2, a + 3].map(lin).join('')} = ${k}`;
+      const tt = `x² ${signed(2 * a + 3)}x ${signed(a * a + 3 * a)}`.replace(' + 0', '');
+      return qs(
+        `Solve: ${e}`,
+        `Giải phương trình: ${e}`,
+        xs(x1, x0),
+        [xs(x0), xs(x0, -x0), xs(x1, x0, -1 - a, -2 - a), xs(x1 + 1, x0 - 1)],
+        `Multiply the outer pair and the inner pair: ${lin(a)}${lin(a + 3)} = t and ${lin(a + 1)}${lin(a + 2)} = t + 2, with t = ${tt}. Then t(t + 2) = ${k}, so t = ${t1} or t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} gives no real x (Δ < 0); t = ${t1} gives x = ${num(x0)} or x = ${num(x1)}.`,
+        `Nhân cặp ngoài và cặp trong: ${lin(a)}${lin(a + 3)} = t và ${lin(a + 1)}${lin(a + 2)} = t + 2, với t = ${tt}. Khi đó t(t + 2) = ${k}, nên t = ${t1} hoặc t = ${num(-t1 - 2)}. t = ${num(-t1 - 2)} không cho x thực (Δ < 0); t = ${t1} cho x = ${num(x0)} hoặc x = ${num(x1)}.`,
+      );
+    }
+    let u = int(r, 1, 4), v = int(r, 2, 6);
+    if (v <= u) v = u + 1;
+    const x0 = int(r, -4, 10), a = u * u - x0, b = v * v - x0, c = u + v;
+    const e = `${rt(poly([1, a]))} + ${rt(poly([1, b]))} = ${c}`;
+    return qs(
+      `Solve: ${e}`,
+      `Giải phương trình: ${e}`,
+      xs(x0),
+      [xs(x0 + 1), xs(x0, x0 + c), xs(c * c - a - b), xs(-x0)],
+      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, so ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Adding to the given equation: 2${rt(poly([1, b]))} = ${c + v - u}, so ${rt(poly([1, b]))} = ${v} and x = ${v * v} ${signed(-b)} = ${num(x0)}. (The left side increases with x, so this is the only solution.)`,
+      `(x ${signed(b)}) − (x ${signed(a)}) = ${b - a}, nên ${rt(poly([1, b]))} − ${rt(poly([1, a]))} = ${b - a}/${c} = ${v - u}. Cộng với phương trình đã cho: 2${rt(poly([1, b]))} = ${c + v - u}, nên ${rt(poly([1, b]))} = ${v} và x = ${v * v} ${signed(-b)} = ${num(x0)}. (Vế trái đồng biến theo x nên đây là nghiệm duy nhất.)`,
+    );
+  }
+  const t1 = int(r, 2, 6), t2 = -int(r, 1, t1 - 1), m = t1 + t2;
+  let x0 = 0, x1 = 0;
+  do {
+    x0 = int(r, -6, 5);
+    x1 = int(r, -5, 7);
+  } while (x0 >= x1 || x0 + x1 === 0);
+  const p = -(x0 + x1), qq = x0 * x1 + t1 * t1, c = qq + t1 * t2;
+  const inner = poly([1, p, qq]);
+  const e = `${poly([1, p, c])} = ${m === 1 ? '' : m}${rt(inner)}`;
+  // The rejected root t = t2 < 0: x² + px + q = t2² — the "solutions" a careless solver would add.
+  const D2 = p * p - 4 * (qq - t2 * t2);
+  const extra = D2 >= 0 && isSquare(D2) && (D2 > 0) ? [(-p - Math.sqrt(D2)) / 2, (-p + Math.sqrt(D2)) / 2].filter(Number.isInteger) : [];
+  return qs(
+    `Solve: ${e}`,
+    `Giải phương trình: ${e}`,
+    xs(x0, x1),
+    [extra.length ? xs(x0, x1, ...extra) : xs(x0, x1, -x0), xs(x0), xs(x1), xs(-x0, -x1)],
+    `Put t = ${rt(inner)} ≥ 0. Then ${poly([1, p, c])} = t² ${signed(c - qq)}, so t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} or t = ${num(t2)} (rejected, t ≥ 0). t = ${t1}: ${inner} = ${t1 * t1}, i.e. ${poly([1, p, x0 * x1])} = 0, so x = ${num(x0)} or x = ${num(x1)}.`,
+    `Đặt t = ${rt(inner)} ≥ 0. Khi đó ${poly([1, p, c])} = t² ${signed(c - qq)}, nên t² − ${m === 1 ? '' : m}t ${signed(c - qq)} = 0: t = ${t1} hoặc t = ${num(t2)} (loại vì t ≥ 0). Với t = ${t1}: ${inner} = ${t1 * t1}, tức là ${poly([1, p, x0 * x1])} = 0, nên x = ${num(x0)} hoặc x = ${num(x1)}.`,
+  );
+};
 
 // ── Inequalities: min/max by completing the square, AM–GM, Cauchy–Schwarz ──
 const inequalities: Generator = (d, r) => {
@@ -703,6 +815,18 @@ export const advancedConcepts: ConceptSeed[] = [
       'Completing the square: A = (x − p)² + m ≥ m, reached at x = p; for two variables, make several squares. AM–GM (Cô-si): for a, b ≥ 0, a + b ≥ 2√(ab), equal when a = b — so ax + b/x ≥ 2√(ab) for x > 0. Shift to make it work: x + k/(x − h) = (x − h) + k/(x − h) + h. Cauchy–Schwarz (Bunhiacốpxki): (ax + by)² ≤ (a² + b²)(x² + y²) and p²/x + q²/y ≥ (p + q)²/(x + y). Always check that equality can really happen.',
     examRefs: [`${EXAM[0]} · Bất đẳng thức, cực trị`, `${EXAM[1]} · Bất đẳng thức`],
   },
+  {
+    id: 'math.adv.equations',
+    domain: 'Advanced',
+    skill: 'Equations',
+    name: 'Non-standard equations & systems',
+    missionName: 'Hidden Roots',
+    description: 'Equations with square roots (reject extraneous roots), biquadratic and product substitutions, symmetric systems.',
+    prerequisites: ['math.algebra.reducible', 'math.algebra.radicals', 'math.adv.identities'],
+    lesson:
+      'With √A = B: first require B ≥ 0, then square — and check every root, because squaring adds fake ones. Look for a substitution: t = x² (t ≥ 0) for x⁴ + bx² + c = 0; pair (x + a)(x + d) and (x + b)(x + c) when a + d = b + c; t = √(…) ≥ 0 when the same expression appears inside and outside a root. In a symmetric system put S = x + y, P = xy; real x, y exist only when S² ≥ 4P.',
+    examRefs: [`${EXAM[0]} · Phương trình vô tỉ, hệ phương trình`, `${EXAM[1]} · Phương trình, hệ phương trình`],
+  },
 ];
 
 export const advancedGenerators: Record<string, Generator> = {
@@ -710,6 +834,7 @@ export const advancedGenerators: Record<string, Generator> = {
   'math.adv.diophantine': diophantine,
   'math.adv.identities': identities,
   'math.adv.inequalities': inequalities,
+  'math.adv.equations': equations,
 };
 
 export const advancedLessonsVi: Record<string, string> = {
@@ -721,4 +846,6 @@ export const advancedLessonsVi: Record<string, string> = {
     'Đừng giải tìm a, b — hãy biểu diễn biểu thức cần tính qua tổng và tích đã cho. a² + b² = (a + b)² − 2ab, (a − b)² = (a + b)² − 4ab, a³ + b³ = (a + b)³ − 3ab(a + b). Với x + 1/x = t: x² + 1/x² = t² − 2, x³ + 1/x³ = t³ − 3t, rồi nhân các lũy thừa thấp để được lũy thừa cao hơn. Với ba số: a² + b² + c² = (a + b + c)² − 2(ab + bc + ca) và a³ + b³ + c³ − 3abc = (a + b + c)(a² + b² + c² − ab − bc − ca). Nhận ra lập phương ẩn: x³ − 3x² + 3x − 1 = (x − 1)³.',
   'math.adv.inequalities':
     'Thêm bớt để tạo bình phương: A = (x − p)² + m ≥ m, dấu bằng khi x = p; với hai biến thì tạo nhiều bình phương. Bất đẳng thức Cô-si: với a, b ≥ 0, a + b ≥ 2√(ab), dấu bằng khi a = b — nên ax + b/x ≥ 2√(ab) với x > 0. Biến đổi cho phù hợp: x + k/(x − h) = (x − h) + k/(x − h) + h. Bất đẳng thức Bunhiacốpxki: (ax + by)² ≤ (a² + b²)(x² + y²) và p²/x + q²/y ≥ (p + q)²/(x + y). Luôn kiểm tra dấu bằng có xảy ra được không.',
+  'math.adv.equations':
+    'Với √A = B: đặt điều kiện B ≥ 0 rồi mới bình phương — và thử lại mọi nghiệm, vì bình phương có thể sinh nghiệm ngoại lai. Tìm cách đặt ẩn phụ: t = x² (t ≥ 0) cho x⁴ + bx² + c = 0; ghép (x + a)(x + d) và (x + b)(x + c) khi a + d = b + c; t = √(…) ≥ 0 khi cùng một biểu thức xuất hiện cả trong và ngoài căn. Với hệ đối xứng, đặt S = x + y, P = xy; x, y là số thực khi và chỉ khi S² ≥ 4P.',
 };

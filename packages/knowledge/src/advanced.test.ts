@@ -32,6 +32,7 @@ function fn(e: string, v = 'n'): (x: number) => number {
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `**${unsup(m)}`)
     .replace(/\b([a-z])\s*\(/g, '$1*(')
     .replace(/√\(/g, 'Math.sqrt(')
+    .replace(/√([a-z])/g, 'Math.sqrt($1)')
     .replace(/(\d|\))\s*(?=[a-z(]|Math)/g, '$1*');
   return Function(v, `return (${js});`) as (x: number) => number;
 }
@@ -72,7 +73,8 @@ function realRoots(f: (x: number) => number, lo = -60, hi = 60, step = 1e-3): nu
           if (fa * fm <= 0) b = m;
           else [a, fa] = [m, fm];
         }
-        out.push((a + b) / 2);
+        const x = (a + b) / 2;
+        if (Math.abs(f(x)) < 1e-7) out.push(x); // a sign change across a pole is not a root
       }
     }
     [x0, f0] = [x1, f1];
@@ -272,6 +274,30 @@ const checkers: Record<string, (p: string) => string | number | null> = {
     }
     return null;
   },
+
+  'math.adv.equations': (p) => {
+    let m = p.match(/^Solve: (.+) = (.+)$/);
+    if (m) {
+      const [L, R] = [fn(m[1], 'x'), fn(m[2], 'x')];
+      const f = (x: number) => L(x) - R(x);
+      const found = realRoots(f, -40, 40, 2e-3);
+      const distinct = found.filter((x, i) => i === 0 || x - found[i - 1] > 1e-3).map((x) => Math.round(x * 1e6) / 1e6);
+      expect(distinct.every(Number.isInteger), `${p}: ${distinct}`).toBe(true);
+      return distinct.length ? distinct.map((x) => `x = ${x < 0 ? `−${-x}` : x}`).join('; ') : 'no root';
+    }
+    m = p.match(/^How many pairs of real numbers \(x, y\) satisfy x \+ y \+ xy = (\S+) and x²y \+ xy² = (\S+)\?$/);
+    if (m) {
+      const [A, B] = [val(m[1]), val(m[2])];
+      expect(A).not.toBe(-1);
+      // From the first equation y = (A − x)/(1 + x); count the real roots of the second.
+      const g = (x: number) => {
+        const y = (A - x) / (1 + x);
+        return x * y * (x + y) - B;
+      };
+      return realRoots(g, -60, 60, 1e-3).length;
+    }
+    return null;
+  },
 };
 
 const ids = concepts.filter((c) => c.id.startsWith('math.adv.')).map((c) => c.id);
@@ -299,6 +325,7 @@ describe('advanced maths (chuyên / HSG)', () => {
           expect(g.distractors, where).not.toContain(g.answer);
           const all = `${g.prompt} ${g.promptVi} ${g.answer} ${g.distractors.join(' ')} ${g.explanation} ${g.explanationVi}`;
           expect(all, where).not.toMatch(/NaN|undefined|Infinity|null|\+ -|- -|−−|\+ −|− −/);
+          expect(all, `${where}: a hyphen used as a minus sign`).not.toMatch(/(^|[\s(=·,;])-\d/);
         }
   });
 
