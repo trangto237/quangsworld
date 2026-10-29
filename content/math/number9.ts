@@ -809,6 +809,559 @@ const realLife: Generator = (d, r) => {
   );
 };
 
+// ── Statistics: frequency tables, relative frequency, grouped data, mean / median / mode ─────
+const DISCRETE = [
+  { en: 'Test score', vi: 'Điểm kiểm tra', who: 'students', whoVi: 'học sinh', lo: 5, k: 6 },
+  { en: 'Age (years)', vi: 'Tuổi', who: 'club members', whoVi: 'thành viên câu lạc bộ', lo: 12, k: 5 },
+  { en: 'Books read this month', vi: 'Số sách đọc trong tháng', who: 'students', whoVi: 'học sinh', lo: 0, k: 6 },
+  { en: 'Shoe size', vi: 'Cỡ giày', who: 'students', whoVi: 'học sinh', lo: 36, k: 6 },
+];
+const GROUPED = [
+  { en: 'Height (cm)', vi: 'Chiều cao (cm)', a: 140, w: 10, k: 4, who: 'students', whoVi: 'học sinh', least: (b: number) => `are at least ${b} cm tall`, leastVi: (b: number) => `cao từ ${b} cm trở lên` },
+  { en: 'Time spent on homework (minutes)', vi: 'Thời gian làm bài tập (phút)', a: 0, w: 20, k: 5, who: 'students', whoVi: 'học sinh', least: (b: number) => `spend at least ${b} minutes`, leastVi: (b: number) => `dành từ ${b} phút trở lên` },
+  { en: 'Mass (kg)', vi: 'Cân nặng (kg)', a: 40, w: 4, k: 5, who: 'students', whoVi: 'học sinh', least: (b: number) => `weigh at least ${b} kg`, leastVi: (b: number) => `nặng từ ${b} kg trở lên` },
+];
+/** k frequencies, each at least 1, adding up to n. */
+function freqs(r: () => number, k: number, n: number): number[] {
+  const f = Array(k).fill(1);
+  for (let i = k; i < n; i++) f[int(r, 0, k - 1)]++;
+  return f;
+}
+/** Keep a mistake only if it has at most two decimal places. */
+const clean2 = (x: number) => (Number.isInteger(+(x * 100).toFixed(6)) ? x : NaN);
+const sum = (a: number[]) => a.reduce((s, x) => s + x, 0);
+const range = (lo: number, k: number) => Array.from({ length: k }, (_, i) => lo + i);
+function medianOf(vals: number[], f: number[]): number {
+  const all = vals.flatMap((v, i) => Array(f[i]).fill(v) as number[]);
+  const n = all.length;
+  return n % 2 ? all[(n - 1) / 2] : (all[n / 2 - 1] + all[n / 2]) / 2;
+}
+const groupStr = (a: number, w: number, k: number) => range(0, k).map((i) => `[${a + i * w}; ${a + (i + 1) * w})`);
+
+const stats: Generator = (d, r) => {
+  if (d <= 3) {
+    const L = pick(r, DISCRETE);
+    const vals = range(L.lo, L.k);
+    const kind = d === 1 ? 'rel' : d === 2 ? pick(r, ['mean', 'relmean'] as const) : pick(r, ['median', 'mode'] as const);
+    const n = d === 1 ? pick(r, [20, 25, 40, 50]) : d === 2 ? pick(r, [20, 25, 50]) : int(r, 15, 36);
+    const f = freqs(r, L.k, n);
+    if (kind === 'mode') {
+      const max = Math.max(...f);
+      const tops = f.map((x, i) => (x === max ? i : -1)).filter((i) => i >= 0);
+      if (tops.length > 1) f[pick(r, tops)]++;
+    }
+    const N = sum(f);
+    const S = sum(vals.map((v, i) => v * f[i]));
+    const intro = `A survey of ${N} ${L.who} gives this frequency table. ${L.en}: ${vals.join(', ')}; frequency: ${f.join(', ')}.`;
+    const introVi = `Kết quả khảo sát ${N} ${L.whoVi} được cho trong bảng tần số sau. ${L.vi}: ${vals.join(', ')}; tần số: ${f.join(', ')}.`;
+    if (kind === 'rel') {
+      const j = int(r, 0, L.k - 1), v = vals[j];
+      return vi(
+        {
+          prompt: `${intro} What is the relative frequency of the value ${v}?`,
+          ...opts((f[j] * 100) / N, [f[j], ((N - f[j]) * 100) / N, cleanPct(100 / L.k)], r, pct, 2.5, 0),
+          explanation: `Relative frequency = frequency ÷ total × 100%: ${f[j]} ÷ ${N} × 100% = ${pct((f[j] * 100) / N)}.`,
+        },
+        `${introVi} Tần số tương đối của giá trị ${v} là bao nhiêu?`,
+        `Tần số tương đối = tần số : tổng số × 100%: ${f[j]} : ${N} × 100% = ${dc(pct((f[j] * 100) / N))}.`,
+      );
+    }
+    if (kind === 'relmean') {
+      const p = freqs(r, L.k, 20).map((x) => x * 5);
+      const M = sum(vals.map((v, i) => v * p[i])) / 100;
+      const t = `${L.en}: ${vals.join(', ')}; relative frequency (%): ${p.join(', ')}.`;
+      const tVi = `${L.vi}: ${vals.join(', ')}; tần số tương đối (%): ${p.join(', ')}.`;
+      return vi(
+        {
+          prompt: `A survey of some ${L.who} gives this relative frequency table. ${t} Find the mean.`,
+          ...opts(M, [clean2(sum(vals) / L.k), vals[p.indexOf(Math.max(...p))], M * 10], r, nf, 0.1),
+          explanation: `Mean = Σ(value × relative frequency): ${vals.map((v, i) => `${v}·${nf(p[i] / 100)}`).join(' + ')} = ${nf(M)}.`,
+        },
+        `Kết quả khảo sát một số ${L.whoVi} được cho trong bảng tần số tương đối sau. ${tVi} Tính số trung bình.`,
+        `Số trung bình = tổng (giá trị × tần số tương đối): ${vals.map((v, i) => `${v}·${dc(nf(p[i] / 100))}`).join(' + ')} = ${dc(nf(M))}.`,
+      );
+    }
+    if (kind === 'mean') {
+      const M = S / N;
+      return vi(
+        {
+          prompt: `${intro} Find the mean.`,
+          ...opts(M, [clean2(sum(vals) / L.k), clean2(S / L.k), medianOf(vals, f)], r, nf, 0.1),
+          explanation: `Mean = Σ(value × frequency) ÷ total: (${vals.map((v, i) => `${v}·${f[i]}`).join(' + ')}) ÷ ${N} = ${S} ÷ ${N} = ${nf(M)}. Each value counts as many times as its frequency.`,
+        },
+        `${introVi} Tính số trung bình.`,
+        `Số trung bình = tổng (giá trị × tần số) : tổng số: (${vals.map((v, i) => `${v}·${f[i]}`).join(' + ')}) : ${N} = ${S} : ${N} = ${dc(nf(M))}. Mỗi giá trị được tính số lần bằng tần số của nó.`,
+      );
+    }
+    const med = medianOf(vals, f);
+    const max = Math.max(...f), mode = vals[f.indexOf(max)];
+    if (kind === 'mode')
+      return vi(
+        {
+          prompt: `${intro} Find the mode.`,
+          ...opts(mode, [max, med, vals[L.k - 1]], r, nf, 1),
+          explanation: `The mode is the value with the highest frequency: ${mode} appears ${max} times. (${max} is the frequency, not the mode.)`,
+        },
+        `${introVi} Tìm mốt.`,
+        `Mốt là giá trị có tần số lớn nhất: ${mode} xuất hiện ${max} lần. (${max} là tần số, không phải mốt.)`,
+      );
+    const mid = L.k % 2 ? vals[(L.k - 1) / 2] : (vals[L.k / 2 - 1] + vals[L.k / 2]) / 2;
+    const pos = N % 2 ? `the ${(N + 1) / 2}th value` : `the mean of the ${N / 2}th and ${N / 2 + 1}th values`;
+    const posVi = N % 2 ? `giá trị thứ ${(N + 1) / 2}` : `trung bình cộng của giá trị thứ ${N / 2} và thứ ${N / 2 + 1}`;
+    const cum = f.map((_, i) => sum(f.slice(0, i + 1))).join(', ');
+    return vi(
+      {
+        prompt: `${intro} Find the median.`,
+        ...opts(med, [mid, mode, Number.isInteger((S * 100) / N) ? S / N : NaN], r, nf, 0.5),
+        explanation: `List all ${N} values in order; the median is ${pos}. Running totals of the frequencies: ${cum}, so the median is ${nf(med)}.`,
+      },
+      `${introVi} Tìm trung vị.`,
+      `Sắp xếp ${N} giá trị theo thứ tự; trung vị là ${posVi}. Cộng dồn tần số: ${cum}, nên trung vị là ${dc(nf(med))}.`,
+    );
+  }
+  const L = pick(r, GROUPED);
+  const groups = groupStr(L.a, L.w, L.k);
+  if (d === 5 && r() < 0.5) {
+    // A missing frequency from the mean.
+    const D = DISCRETE[0];
+    const vals = range(D.lo, D.k);
+    for (let tries = 0; tries < 300; tries++) {
+      const f = vals.map(() => int(r, 1, 9));
+      const j = int(r, 0, D.k - 1), x = int(r, 2, 12);
+      f[j] = x;
+      const N = sum(f), S = sum(vals.map((v, i) => v * f[i]));
+      if ((S * 10) % N !== 0 || vals[j] * N === S) continue;
+      const M = S / N;
+      const shown = f.map((y, i) => (i === j ? 'x' : String(y))).join(', ');
+      const S0 = S - vals[j] * x, N0 = N - x;
+      return vi(
+        {
+          prompt: `The table shows the scores of a class. Test score: ${vals.join(', ')}; frequency: ${shown}. The mean score is ${nf(M)}. Find x.`,
+          ...opts(x, [(M * N0 - S0) / vals[j], (S0 - M * N0) / (M - vals[j]) + 1, N0].filter((y) => Number.isInteger(+y.toFixed(6))), r, nf, 1, 1),
+          explanation: `Mean = Σ(value × frequency) ÷ total: (${S0} + ${vals[j]}x) ÷ (${N0} + x) = ${nf(M)}. So ${S0} + ${vals[j]}x = ${nf(M)}(${N0} + x), giving ${nf(Math.abs(vals[j] - M))}x = ${nf(Math.abs(M * N0 - S0))} and x = ${x}.`,
+        },
+        `Bảng sau cho biết điểm kiểm tra của một lớp. Điểm kiểm tra: ${vals.join(', ')}; tần số: ${shown}. Điểm trung bình là ${dc(nf(M))}. Tìm x.`,
+        `Số trung bình = tổng (giá trị × tần số) : tổng số: (${S0} + ${vals[j]}x) : (${N0} + x) = ${dc(nf(M))}. Do đó ${S0} + ${vals[j]}x = ${dc(nf(M))}(${N0} + x), suy ra ${dc(nf(Math.abs(vals[j] - M)))}x = ${dc(nf(Math.abs(M * N0 - S0)))} và x = ${x}.`,
+      );
+    }
+  }
+  const n = d === 5 ? pick(r, [20, 25, 50]) : pick(r, [20, 25, 40, 50]);
+  const f = freqs(r, L.k, n);
+  const intro = `A survey of ${n} ${L.who} gives this grouped frequency table. ${L.en}: ${groups.join(', ')}; frequency: ${f.join(', ')}.`;
+  const introVi = `Kết quả khảo sát ${n} ${L.whoVi} được cho trong bảng tần số ghép nhóm sau. ${L.vi}: ${groups.join(', ')}; tần số: ${f.join(', ')}.`;
+  if (d === 5) {
+    const mids = range(0, L.k).map((i) => L.a + i * L.w + L.w / 2);
+    const M = sum(mids.map((m, i) => m * f[i])) / n;
+    return vi(
+      {
+        prompt: `${intro} Estimate the mean using the midpoints of the groups.`,
+        ...opts(M, [M - L.w / 2, M + L.w / 2, sum(mids) / L.k], r, nf, 0.2),
+        explanation: `Use the midpoint of each group as its value: ${mids.join(', ')}. Mean ≈ (${mids.map((m, i) => `${m}·${f[i]}`).join(' + ')}) ÷ ${n} = ${nf(M)}.`,
+      },
+      `${introVi} Ước lượng số trung bình bằng giá trị đại diện (điểm giữa) của mỗi nhóm.`,
+      `Lấy điểm giữa của mỗi nhóm làm giá trị đại diện: ${mids.join(', ')}. Số trung bình ≈ (${mids.map((m, i) => `${m}·${f[i]}`).join(' + ')}) : ${n} = ${dc(nf(M))}.`,
+    );
+  }
+  if (r() < 0.5) {
+    const j = int(r, 0, L.k - 1);
+    return vi(
+      {
+        prompt: `${intro} What is the relative frequency of the group ${groups[j]}?`,
+        ...opts((f[j] * 100) / n, [f[j], (sum(f.slice(0, j + 1)) * 100) / n, cleanPct(100 / L.k)], r, pct, 2.5, 0),
+        explanation: `Relative frequency of a group = its frequency ÷ total × 100%: ${f[j]} ÷ ${n} × 100% = ${pct((f[j] * 100) / n)}.`,
+      },
+      `${introVi} Tần số tương đối của nhóm ${groups[j]} là bao nhiêu?`,
+      `Tần số tương đối của một nhóm = tần số của nhóm : tổng số × 100%: ${f[j]} : ${n} × 100% = ${dc(pct((f[j] * 100) / n))}.`,
+    );
+  }
+  const t = int(r, 1, L.k - 1), b = L.a + t * L.w;
+  const ans = (sum(f.slice(t)) * 100) / n;
+  return vi(
+    {
+      prompt: `${intro} What percentage of them ${L.least(b)}?`,
+      ...opts(ans, [(sum(f.slice(t + 1)) * 100) / n, (sum(f.slice(t - 1)) * 100) / n, sum(f.slice(t))], r, pct, 2.5, 0),
+      explanation: `The group [a; b) contains a but not b, so "at least ${b}" means the groups from ${groups[t]} on: ${f.slice(t).join(' + ')} = ${sum(f.slice(t))} out of ${n}, i.e. ${pct(ans)}.`,
+    },
+    `${introVi} Có bao nhiêu phần trăm số ${L.whoVi} ${L.leastVi(b)}?`,
+    `Nhóm [a; b) chứa a nhưng không chứa b, nên "từ ${b} trở lên" gồm các nhóm từ ${groups[t]} trở đi: ${f.slice(t).join(' + ')} = ${sum(f.slice(t))} trên ${n}, tức là ${dc(pct(ans))}.`,
+  );
+};
+
+// ── Probability: sample spaces and favourable outcomes ─────
+function pOpts(fav: number, total: number, mistakes: Q[], r: () => number): Opts {
+  return qOpts(q(fav, total), mistakes, r, (k) => {
+    const up = fav + Math.ceil(k / 2), down = fav - Math.ceil(k / 2);
+    if (k % 2 && up <= total) return q(up, total);
+    if (down > 0) return q(down, total);
+    return q(fav, total + k);
+  });
+}
+const count = <T>(list: T[], f: (x: T) => boolean) => list.filter(f).length;
+const isPrime = (n: number) => n > 1 && range(2, Math.max(0, Math.floor(Math.sqrt(n)) - 1)).every((p) => n % p !== 0);
+
+const probability: Generator = (d, r) => {
+  if (d === 1) {
+    const nums = range(10, 90);
+    const k = pick(r, [3, 4, 6, 7, 8, 9, 11, 12, 15]), s = int(r, 5, 13);
+    const e = pick(r, [
+      { en: `is divisible by ${k}`, vi: `chia hết cho ${k}`, t: (x: number) => x % k === 0 },
+      { en: 'is a perfect square', vi: 'là số chính phương', t: (x: number) => Number.isInteger(Math.sqrt(x)) },
+      { en: `has digit sum ${s}`, vi: `có tổng các chữ số bằng ${s}`, t: (x: number) => Math.floor(x / 10) + (x % 10) === s },
+      { en: 'is a prime number', vi: 'là số nguyên tố', t: isPrime },
+      { en: 'has its tens digit greater than its units digit', vi: 'có chữ số hàng chục lớn hơn chữ số hàng đơn vị', t: (x: number) => Math.floor(x / 10) > x % 10 },
+    ]);
+    const fav = count(nums, e.t), fav99 = count(range(1, 99), e.t);
+    return vi(
+      {
+        prompt: `A two-digit number is chosen at random. What is the probability that it ${e.en}?`,
+        ...pOpts(fav, 90, [q(fav, 100), q(fav, 99), q(fav99, 90), q(fav99, 99)], r),
+        explanation: `The sample space is {10, 11, …, 99}: 99 − 10 + 1 = 90 equally likely numbers (not 99 or 100). There are ${fav} favourable numbers, so P = ${fav}/90 = ${fs(q(fav, 90))}.`,
+      },
+      `Chọn ngẫu nhiên một số tự nhiên có hai chữ số. Tính xác suất để số được chọn ${e.vi}.`,
+      `Không gian mẫu là {10; 11; …; 99} gồm 99 − 10 + 1 = 90 số có khả năng như nhau (không phải 99 hay 100). Có ${fav} kết quả thuận lợi, nên P = ${fav}/90 = ${fs(q(fav, 90))}.`,
+    );
+  }
+  if (d === 2) {
+    const n = pick(r, [2, 3]);
+    const seqs = range(0, 2 ** n).map((m) => range(0, n).map((i) => ((m >> (n - 1 - i)) & 1 ? 'T' : 'H')).join(''));
+    const heads = (s: string) => count([...s], (c) => c === 'H');
+    const evs = [
+      { en: n === 2 ? 'getting one head and one tail' : 'getting exactly one head', vi: n === 2 ? 'một mặt sấp và một mặt ngửa' : 'có đúng một mặt sấp', t: (h: number) => h === 1 },
+      { en: 'getting at least one head', vi: 'có ít nhất một mặt sấp', t: (h: number) => h >= 1 },
+      { en: `${n === 2 ? 'both coins' : 'all three coins'} showing the same face`, vi: 'tất cả các đồng xu xuất hiện cùng một mặt', t: (h: number) => h === 0 || h === n },
+    ];
+    if (n === 3) evs.push({ en: 'getting exactly two heads', vi: 'có đúng hai mặt sấp', t: (h: number) => h === 2 }, { en: 'getting at least two heads', vi: 'có ít nhất hai mặt sấp', t: (h: number) => h >= 2 });
+    const e = pick(r, evs);
+    const fav = count(seqs, (s) => e.t(heads(s)));
+    const favU = count(range(0, n + 1), e.t);
+    const list = seqs.join(', ');
+    return vi(
+      {
+        prompt: `${n === 2 ? 'Two' : 'Three'} fair coins are tossed. What is the probability of ${e.en}?`,
+        ...pOpts(fav, 2 ** n, [q(favU, n + 1), q(1, 2 ** n), q(fav, 2 * n)], r),
+        explanation: `List the sample space in order (H = head, T = tail): ${list}: ${2 ** n} equally likely outcomes. HT and TH are different outcomes. ${fav} are favourable, so P = ${fav}/${2 ** n} = ${fs(q(fav, 2 ** n))}.`,
+      },
+      `Gieo ${n === 2 ? 'hai' : 'ba'} đồng xu cân đối. Tính xác suất để ${e.vi}.`,
+      `Liệt kê không gian mẫu (S = sấp, N = ngửa): ${list.replace(/H/g, 'S').replace(/T/g, 'N')}: ${2 ** n} kết quả có khả năng như nhau. SN và NS là hai kết quả khác nhau. Có ${fav} kết quả thuận lợi, nên P = ${fav}/${2 ** n} = ${fs(q(fav, 2 ** n))}.`,
+    );
+  }
+  if (d === 3) {
+    const pairs = range(1, 6).flatMap((a) => range(1, 6).map((b) => [a, b] as const));
+    const s = int(r, 3, 11), ge = int(r, 8, 11), k = int(r, 1, 3);
+    const e = pick(r, [
+      { en: `the sum of the two numbers is ${s}`, vi: `tổng số chấm trên hai con xúc xắc bằng ${s}`, t: (a: number, b: number) => a + b === s, extra: q(1, 11) },
+      { en: `the sum of the two numbers is at least ${ge}`, vi: `tổng số chấm trên hai con xúc xắc lớn hơn hoặc bằng ${ge}`, t: (a: number, b: number) => a + b >= ge, extra: q(13 - ge, 11) },
+      { en: 'the product of the two numbers is even', vi: 'tích số chấm trên hai con xúc xắc là số chẵn', t: (a: number, b: number) => (a * b) % 2 === 0, extra: q(1, 2) },
+      { en: `the two numbers differ by ${k}`, vi: `số chấm trên hai con xúc xắc hơn kém nhau ${k}`, t: (a: number, b: number) => Math.abs(a - b) === k, extra: q(6 - k, 36) },
+      { en: 'at least one die shows a 6', vi: 'có ít nhất một con xúc xắc xuất hiện mặt 6 chấm', t: (a: number, b: number) => a === 6 || b === 6, extra: q(1, 3) },
+      { en: 'both dice show the same number', vi: 'hai con xúc xắc xuất hiện cùng số chấm', t: (a: number, b: number) => a === b, extra: q(1, 36) },
+    ]);
+    const fav = count(pairs, ([a, b]) => e.t(a, b));
+    const favU = count(pairs, ([a, b]) => a <= b && e.t(a, b));
+    const shown = pairs.filter(([a, b]) => e.t(a, b));
+    const list = shown.length <= 8 ? `: ${shown.map(([a, b]) => `(${a}, ${b})`).join(', ')}` : '';
+    return vi(
+      {
+        prompt: `Two fair dice are rolled. What is the probability that ${e.en}?`,
+        ...pOpts(fav, 36, [q(favU, 21), e.extra, q(fav, 12)], r),
+        explanation: `The sample space is all ordered pairs (first die, second die): 6 × 6 = 36 equally likely outcomes; (1, 2) and (2, 1) are different. Favourable outcomes: ${fav}${list}. P = ${fav}/36 = ${fs(q(fav, 36))}.`,
+      },
+      `Gieo đồng thời hai con xúc xắc cân đối. Tính xác suất để ${e.vi}.`,
+      `Không gian mẫu gồm các cặp có thứ tự (con thứ nhất, con thứ hai): 6 × 6 = 36 kết quả có khả năng như nhau; (1; 2) và (2; 1) là hai kết quả khác nhau. Số kết quả thuận lợi: ${fav}${list.replace(/, (?=\d)/g, '; ')}. P = ${fav}/36 = ${fs(q(fav, 36))}.`,
+    );
+  }
+  if (d === 4) {
+    const R = int(r, 2, 6), B = int(r, 2, 6), N = R + B, back = r() < 0.4;
+    const isRed = (i: number) => i < R;
+    const evs = [
+      { en: 'both balls are red', vi: 'cả hai quả đều màu đỏ', t: (i: number, j: number) => isRed(i) && isRed(j) },
+      { en: 'the two balls have different colours', vi: 'hai quả khác màu', t: (i: number, j: number) => isRed(i) !== isRed(j) },
+      { en: 'at least one ball is red', vi: 'có ít nhất một quả màu đỏ', t: (i: number, j: number) => isRed(i) || isRed(j) },
+      { en: 'the two balls have the same colour', vi: 'hai quả cùng màu', t: (i: number, j: number) => isRed(i) === isRed(j) },
+    ];
+    const e = pick(r, evs);
+    const ordered = (rep: boolean) => range(0, N).flatMap((i) => range(0, N).filter((j) => rep || j !== i).map((j) => [i, j] as const));
+    const favOf = (rep: boolean) => count(ordered(rep), ([i, j]) => e.t(i, j));
+    const fav = favOf(back), total = back ? N * N : N * (N - 1);
+    const other = q(favOf(!back), back ? N * (N - 1) : N * N);
+    const how = back
+      ? `With the first ball put back, the sample space has ${N} × ${N} = ${N * N} equally likely ordered outcomes; ${fav} are favourable.`
+      : `Drawing two at once, the sample space is all pairs of balls: ${N}·${N - 1}/2 = ${(N * (N - 1)) / 2} equally likely pairs; ${fav / 2} are favourable.`;
+    const howVi = back
+      ? `Có trả lại quả thứ nhất, không gian mẫu gồm ${N} × ${N} = ${N * N} kết quả (có thứ tự) có khả năng như nhau; có ${fav} kết quả thuận lợi.`
+      : `Lấy đồng thời hai quả, không gian mẫu gồm mọi cặp hai quả bóng: ${N}·${N - 1}/2 = ${(N * (N - 1)) / 2} cặp có khả năng như nhau; có ${fav / 2} cặp thuận lợi.`;
+    return vi(
+      {
+        prompt: `A bag has ${R} red and ${B} blue balls. ${back ? 'Two balls are drawn one after the other, and the first ball is put back before the second draw.' : 'Two balls are drawn at the same time.'} What is the probability that ${e.en}?`,
+        ...pOpts(fav, total, [other, q(back ? fav : fav / 2, N * (N - 1)), q(R, N)], r),
+        explanation: `${how} P = ${fs(q(fav, total))}.${back ? '' : ' Without replacement the second draw has one ball fewer.'}`,
+      },
+      `Một túi có ${R} quả bóng đỏ và ${B} quả bóng xanh. ${back ? 'Lấy ngẫu nhiên lần lượt hai quả, lấy xong quả thứ nhất thì trả lại vào túi rồi mới lấy quả thứ hai.' : 'Lấy ngẫu nhiên đồng thời hai quả bóng.'} Tính xác suất để ${e.vi}.`,
+      `${howVi} P = ${fs(q(fav, total))}.${back ? '' : ' Không trả lại thì lần lấy thứ hai còn ít hơn một quả.'}`,
+    );
+  }
+  if (r() < 0.55) {
+    const b = int(r, 2, 6), g = int(r, 2, 6), N = b + g;
+    const isGirl = (i: number) => i >= b;
+    const e = pick(r, [
+      { en: 'one boy and one girl are chosen', vi: 'chọn được một bạn nam và một bạn nữ', t: (i: number, j: number) => isGirl(i) !== isGirl(j), extra: q(b * g, N * N) },
+      { en: 'both are girls', vi: 'cả hai bạn được chọn đều là nữ', t: (i: number, j: number) => isGirl(i) && isGirl(j), extra: q(g * g, N * N) },
+      { en: 'at least one girl is chosen', vi: 'có ít nhất một bạn nữ được chọn', t: (i: number, j: number) => isGirl(i) || isGirl(j), extra: q(g, N) },
+      { en: 'An (one of the boys) is chosen', vi: 'bạn An (một trong các bạn nam) được chọn', t: (i: number, j: number) => i === 0 || j === 0, extra: q(1, N) },
+    ]);
+    const pairs = range(0, N).flatMap((i) => range(i + 1, N - i - 1).map((j) => [i, j] as const));
+    const fav = count(pairs, ([i, j]) => e.t(i, j)), total = pairs.length;
+    return vi(
+      {
+        prompt: `A group has ${b} boys and ${g} girls. Two students are chosen at random to represent the group. What is the probability that ${e.en}?`,
+        ...pOpts(fav, total, [q(fav, N * (N - 1)), e.extra, q(fav, N * N)], r),
+        explanation: `The order of choosing does not matter: there are ${N}·${N - 1}/2 = ${total} equally likely pairs of students. ${fav} pairs are favourable, so P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+      },
+      `Một nhóm có ${b} bạn nam và ${g} bạn nữ. Chọn ngẫu nhiên hai bạn đi đại diện cho nhóm. Tính xác suất để ${e.vi}.`,
+      `Thứ tự chọn không quan trọng: có ${N}·${N - 1}/2 = ${total} cặp hai bạn có khả năng như nhau. Có ${fav} cặp thuận lợi, nên P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+    );
+  }
+  const N = int(r, 6, 12);
+  const e = pick(r, [
+    { en: 'the sum of the two numbers is even', vi: 'tổng hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a + b) % 2 === 0 },
+    { en: 'the product of the two numbers is even', vi: 'tích hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a * b) % 2 === 0 },
+    { en: 'the sum of the two numbers is divisible by 3', vi: 'tổng hai số ghi trên hai thẻ chia hết cho 3', t: (a: number, b: number) => (a + b) % 3 === 0 },
+  ]);
+  const pairs = range(1, N).flatMap((a) => range(a + 1, N - a).map((b) => [a, b] as const));
+  const withRep = range(1, N).flatMap((a) => range(1, N).map((b) => [a, b] as const));
+  const fav = count(pairs, ([a, b]) => e.t(a, b)), total = pairs.length;
+  return vi(
+    {
+      prompt: `A box has ${N} cards numbered 1 to ${N}. Two cards are drawn at the same time. What is the probability that ${e.en}?`,
+      ...pOpts(fav, total, [q(count(withRep, ([a, b]) => e.t(a, b)), N * N), q(fav, N * (N - 1)), q(1, 2)], r),
+      explanation: `Two cards drawn together form a pair: ${N}·${N - 1}/2 = ${total} equally likely pairs (no card twice). Count the favourable pairs: ${fav}. P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+    },
+    `Một hộp có ${N} tấm thẻ được đánh số từ 1 đến ${N}. Rút ngẫu nhiên đồng thời hai thẻ. Tính xác suất để ${e.vi}.`,
+    `Rút đồng thời hai thẻ ta được một cặp thẻ: có ${N}·${N - 1}/2 = ${total} cặp có khả năng như nhau (không rút trùng một thẻ). Đếm các cặp thuận lợi: ${fav}. P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+  );
+};
+
+// ── Counting: multiplication principle, arrangements, choosing, numbers from digits ─────
+const Cn = (n: number, k: number): number => (k < 0 || k > n ? 0 : k === 0 ? 1 : (Cn(n - 1, k - 1) * n) / k);
+const Pn = (n: number, k: number): number => (k <= 0 ? 1 : n * Pn(n - 1, k - 1));
+
+const counting: Generator = (d, r) => {
+  if (d === 1) {
+    const kind = pick(r, ['menu', 'roads', 'code'] as const);
+    if (kind === 'menu') {
+      const a = int(r, 3, 8), b = int(r, 2, 6), c = int(r, 2, 5);
+      return vi(
+        {
+          prompt: `A canteen offers ${a} main dishes, ${b} side dishes and ${c} drinks. A lunch set is one main dish, one side dish and one drink. How many different lunch sets are there?`,
+          ...opts(a * b * c, [a + b + c, a * b + c, a * b], r, nf, 1, 1),
+          explanation: `Multiplication principle: the three choices are made one after another, so ${a} × ${b} × ${c} = ${a * b * c}. Adding (${a + b + c}) would count choosing only one item.`,
+        },
+        `Một căng tin có ${a} món chính, ${b} món phụ và ${c} loại đồ uống. Một suất ăn trưa gồm một món chính, một món phụ và một đồ uống. Có bao nhiêu suất ăn trưa khác nhau?`,
+        `Quy tắc nhân: ba lựa chọn được thực hiện liên tiếp, nên có ${a} × ${b} × ${c} = ${a * b * c} suất. Cộng lại (${a + b + c}) là đếm khi chỉ chọn một món.`,
+      );
+    }
+    if (kind === 'roads') {
+      const m = int(r, 2, 6), n = int(r, 2, 6), direct = int(r, 1, 3);
+      return vi(
+        {
+          prompt: `There are ${m} roads from A to B, ${n} roads from B to C, and ${direct} road${direct > 1 ? 's' : ''} going straight from A to C. How many ways are there to travel from A to C?`,
+          ...opts(m * n + direct, [m * n, m + n + direct, m * n * direct], r, nf, 1, 1),
+          explanation: `Through B: ${m} × ${n} = ${m * n} ways (multiplication principle). Straight: ${direct}. These are separate cases, so add: ${m * n} + ${direct} = ${m * n + direct}.`,
+        },
+        `Từ A đến B có ${m} con đường, từ B đến C có ${n} con đường, và có ${direct} con đường đi thẳng từ A đến C. Có bao nhiêu cách đi từ A đến C?`,
+        `Đi qua B: ${m} × ${n} = ${m * n} cách (quy tắc nhân). Đi thẳng: ${direct} cách. Hai trường hợp tách biệt nên cộng lại: ${m * n} + ${direct} = ${m * n + direct}.`,
+      );
+    }
+    const L = int(r, 3, 4), m = int(r, 3, 6);
+    return vi(
+      {
+        prompt: `A lock code has ${L} digits, each chosen from 1 to ${m}, and digits may repeat. How many different codes are there?`,
+        ...opts(m ** L, [m * L, Pn(m, L), L ** m], r, nf, 1, 1),
+        explanation: `Each of the ${L} positions has ${m} choices, independently: ${range(0, L).map(() => m).join(' × ')} = ${m}${sup(L)} = ${m ** L}.`,
+      },
+      `Một mã khoá gồm ${L} chữ số, mỗi chữ số được chọn từ 1 đến ${m} và các chữ số có thể lặp lại. Có bao nhiêu mã khoá khác nhau?`,
+      `Mỗi vị trí trong ${L} vị trí đều có ${m} cách chọn: ${range(0, L).map(() => m).join(' × ')} = ${m}${sup(L)} = ${m ** L}.`,
+    );
+  }
+  if (d === 2) {
+    const kind = pick(r, ['line', 'roles', 'trip'] as const);
+    if (kind === 'line') {
+      const n = int(r, 4, 7);
+      return vi(
+        {
+          prompt: `In how many ways can ${n} students stand in a row for a photo?`,
+          ...opts(Pn(n, n), [n * n, n * (n - 1), Pn(n, n) / 2], r, nf, 1, 1),
+          explanation: `The first place has ${n} choices, the next ${n - 1}, and so on: ${range(0, n).map((i) => n - i).join(' × ')} = ${n}! = ${Pn(n, n)}.`,
+        },
+        `Có bao nhiêu cách xếp ${n} bạn học sinh đứng thành một hàng ngang để chụp ảnh?`,
+        `Vị trí đầu có ${n} cách chọn, vị trí tiếp theo ${n - 1} cách, cứ thế: ${range(0, n).map((i) => n - i).join(' × ')} = ${n}! = ${Pn(n, n)}.`,
+      );
+    }
+    if (kind === 'roles') {
+      const n = int(r, 20, 40);
+      return vi(
+        {
+          prompt: `A class of ${n} students chooses a class monitor and a deputy monitor (two different students). In how many ways can this be done?`,
+          ...opts(n * (n - 1), [Cn(n, 2), n * n, 2 * n], r, nf, 1, 1),
+          explanation: `The two posts are different, so order matters: ${n} choices for the monitor, then ${n - 1} for the deputy: ${n} × ${n - 1} = ${n * (n - 1)}. (${Cn(n, 2)} would count unordered pairs.)`,
+        },
+        `Một lớp có ${n} học sinh cần chọn một lớp trưởng và một lớp phó (hai bạn khác nhau). Có bao nhiêu cách chọn?`,
+        `Hai chức vụ khác nhau nên thứ tự quan trọng: ${n} cách chọn lớp trưởng, rồi ${n - 1} cách chọn lớp phó: ${n} × ${n - 1} = ${n * (n - 1)}. (${Cn(n, 2)} là số cặp không tính thứ tự.)`,
+      );
+    }
+    const m = int(r, 2, 5), n = int(r, 2, 5);
+    const ans = m * n * (n - 1) * (m - 1);
+    return vi(
+      {
+        prompt: `There are ${m} roads from A to B and ${n} roads from B to C. Nam goes from A to C through B and comes back to A through B, never using the same road twice. How many ways can he make the round trip?`,
+        ...opts(ans, [(m * n) ** 2, m * n, 2 * m * n], r, nf, 1, 1),
+        explanation: `Going: ${m} × ${n} ways. Coming back he cannot reuse a road: ${n - 1} roads from C to B and ${m - 1} from B to A. Total ${m} × ${n} × ${n - 1} × ${m - 1} = ${ans}.`,
+      },
+      `Từ A đến B có ${m} con đường, từ B đến C có ${n} con đường. Nam đi từ A đến C qua B rồi quay về A cũng qua B, không đi lại con đường nào đã đi. Có bao nhiêu cách đi cả đi lẫn về?`,
+      `Lúc đi: ${m} × ${n} cách. Lúc về không được đi lại đường cũ: còn ${n - 1} đường từ C về B và ${m - 1} đường từ B về A. Tổng cộng ${m} × ${n} × ${n - 1} × ${m - 1} = ${ans}.`,
+    );
+  }
+  if (d === 3) {
+    const kind = pick(r, ['once', 'twice', 'segments', 'together'] as const);
+    if (kind === 'together') {
+      const n = int(r, 4, 7);
+      const ans = 2 * Pn(n - 1, n - 1);
+      return vi(
+        {
+          prompt: `${n} students, including Mai and Lan, stand in a row. In how many ways can they stand if Mai and Lan must be next to each other?`,
+          ...opts(ans, [Pn(n - 1, n - 1), Pn(n, n) - 2, 2 * Pn(n, n)], r, nf, 1, 1),
+          explanation: `Glue Mai and Lan into one block: now ${n - 1} items to arrange, ${n - 1}! = ${Pn(n - 1, n - 1)} ways. Inside the block they can be Mai–Lan or Lan–Mai: × 2 = ${ans}.`,
+        },
+        `${n} bạn học sinh, trong đó có Mai và Lan, đứng thành một hàng. Có bao nhiêu cách xếp sao cho Mai và Lan đứng cạnh nhau?`,
+        `Coi Mai và Lan là một "khối": còn ${n - 1} phần tử để xếp, có ${n - 1}! = ${Pn(n - 1, n - 1)} cách. Trong khối, hai bạn có thể đổi chỗ (Mai–Lan hoặc Lan–Mai): × 2 = ${ans}.`,
+      );
+    }
+    const n = int(r, 6, 20);
+    if (kind === 'twice')
+      return vi(
+        {
+          prompt: `In a football league of ${n} teams, every two teams play each other twice (home and away). How many matches are played?`,
+          ...opts(n * (n - 1), [Cn(n, 2), n * n, 2 * n], r, nf, 1, 1),
+          explanation: `Each team plays a home match against each of the other ${n - 1} teams: ${n} × ${n - 1} = ${n * (n - 1)}. (Once each would be ${n}·${n - 1}/2 = ${Cn(n, 2)}.)`,
+        },
+        `Một giải bóng đá có ${n} đội, hai đội bất kì gặp nhau hai lượt (sân nhà và sân khách). Có tất cả bao nhiêu trận đấu?`,
+        `Mỗi đội đá một trận sân nhà với mỗi đội trong ${n - 1} đội còn lại: ${n} × ${n - 1} = ${n * (n - 1)}. (Nếu chỉ gặp nhau một lượt thì là ${n}·${n - 1}/2 = ${Cn(n, 2)}.)`,
+      );
+    const seg = kind === 'segments';
+    return vi(
+      {
+        prompt: seg
+          ? `There are ${n} points in a plane, no three on a line. How many segments can be drawn with two of these points as endpoints?`
+          : `At a meeting, each of ${n} people shakes hands once with every other person. How many handshakes are there?`,
+        ...opts(Cn(n, 2), [n * (n - 1), n * n, n], r, nf, 1, 1),
+        explanation: `Choose 2 of ${n}, order not mattering: each one pairs with ${n - 1} others, and every pair is counted twice, so ${n}·${n - 1}/2 = ${Cn(n, 2)}.`,
+      },
+      seg
+        ? `Cho ${n} điểm trong mặt phẳng, không có ba điểm nào thẳng hàng. Vẽ được bao nhiêu đoạn thẳng có hai đầu mút là hai trong các điểm đó?`
+        : `Trong một buổi gặp mặt có ${n} người, mỗi người bắt tay đúng một lần với từng người khác. Có tất cả bao nhiêu cái bắt tay?`,
+      `Chọn 2 trong ${n}, không tính thứ tự: mỗi ${seg ? 'điểm' : 'người'} ghép với ${n - 1} ${seg ? 'điểm' : 'người'} khác, mỗi cặp được đếm hai lần, nên có ${n}·${n - 1}/2 = ${Cn(n, 2)}.`,
+    );
+  }
+  if (d === 4) {
+    const kind = pick(r, ['team', 'triangles', 'mixed', 'posts'] as const);
+    if (kind === 'mixed') {
+      const b = int(r, 4, 9), g = int(r, 3, 8);
+      const ans = Cn(b, 2) * g;
+      return vi(
+        {
+          prompt: `A class team of 3 must have 2 boys and 1 girl, chosen from ${b} boys and ${g} girls. How many different teams are possible?`,
+          ...opts(ans, [b * (b - 1) * g, Cn(b + g, 3), Cn(b, 2) + g], r, nf, 1, 1),
+          explanation: `Choose the 2 boys: ${b}·${b - 1}/2 = ${Cn(b, 2)} ways (order does not matter). Choose the girl: ${g} ways. Multiply: ${Cn(b, 2)} × ${g} = ${ans}.`,
+        },
+        `Một đội 3 người gồm 2 bạn nam và 1 bạn nữ được chọn từ ${b} bạn nam và ${g} bạn nữ. Có bao nhiêu cách chọn đội?`,
+        `Chọn 2 bạn nam: ${b}·${b - 1}/2 = ${Cn(b, 2)} cách (không tính thứ tự). Chọn 1 bạn nữ: ${g} cách. Nhân lại: ${Cn(b, 2)} × ${g} = ${ans}.`,
+      );
+    }
+    const n = int(r, 6, 14);
+    if (kind === 'posts')
+      return vi(
+        {
+          prompt: `From ${n} members, a club chooses a president, a vice-president and a secretary (three different people). In how many ways can this be done?`,
+          ...opts(Pn(n, 3), [Cn(n, 3), n ** 3, 3 * n], r, nf, 1, 1),
+          explanation: `The posts are different, so order matters: ${n} × ${n - 1} × ${n - 2} = ${Pn(n, 3)}.`,
+        },
+        `Từ ${n} thành viên, một câu lạc bộ chọn một chủ nhiệm, một phó chủ nhiệm và một thư kí (ba người khác nhau). Có bao nhiêu cách chọn?`,
+        `Các chức vụ khác nhau nên thứ tự quan trọng: ${n} × ${n - 1} × ${n - 2} = ${Pn(n, 3)}.`,
+      );
+    const tri = kind === 'triangles';
+    return vi(
+      {
+        prompt: tri
+          ? `There are ${n} points in a plane, no three on a line. How many triangles have three of these points as vertices?`
+          : `A group of 3 students is chosen from ${n} students to clean the classroom. How many different groups are possible?`,
+        ...opts(Cn(n, 3), [Pn(n, 3), Cn(n, 2), 3 * n], r, nf, 1, 1),
+        explanation: `Ordered choices: ${n} × ${n - 1} × ${n - 2} = ${Pn(n, 3)}. Each group of 3 is counted 3! = 6 times, so divide: ${Pn(n, 3)} ÷ 6 = ${Cn(n, 3)}.`,
+      },
+      tri
+        ? `Cho ${n} điểm trong mặt phẳng, không có ba điểm nào thẳng hàng. Có bao nhiêu tam giác có ba đỉnh là ba trong các điểm đó?`
+        : `Chọn một nhóm 3 bạn từ ${n} bạn học sinh để trực nhật lớp. Có bao nhiêu cách chọn nhóm?`,
+      `Chọn có thứ tự: ${n} × ${n - 1} × ${n - 2} = ${Pn(n, 3)}. Mỗi nhóm 3 người bị đếm 3! = 6 lần, nên chia: ${Pn(n, 3)} : 6 = ${Cn(n, 3)}.`,
+    );
+  }
+  // d5: numbers formed from given digits
+  for (;;) {
+    const size = int(r, 5, 7);
+    const pool = shuffle(r, range(1, 9)).slice(0, r() < 0.6 ? size - 1 : size);
+    const D = (pool.length < size ? [0, ...pool] : pool).sort((a, b) => a - b);
+    const L = size >= 7 ? 3 : pick(r, [3, 4]);
+    const distinct = r() < 0.75;
+    const cond = pick(r, ['even', 'odd', 'div5', 'none'] as const);
+    const ok = (x: number) => (cond === 'even' ? x % 2 === 0 : cond === 'odd' ? x % 2 === 1 : cond === 'div5' ? x % 5 === 0 : true);
+    const tally = (lead: boolean, useCond: boolean, dist: boolean) => {
+      let c = 0;
+      const rec = (t: number[]) => {
+        if (t.length === L) {
+          if ((lead || t[0] !== 0) && (!useCond || ok(t[L - 1]))) c++;
+          return;
+        }
+        for (const x of D) if (!dist || !t.includes(x)) rec([...t, x]);
+      };
+      rec([]);
+      return c;
+    };
+    const ans = tally(false, true, distinct);
+    if (ans === 0 || (cond !== 'none' && D.filter(ok).length === D.length)) continue;
+    const ends = D.filter(ok);
+    const adj = cond === 'even' || cond === 'odd' ? `${cond} ` : '';
+    const condVi = { even: ' và là số chẵn', odd: ' và là số lẻ', div5: ' và chia hết cho 5', none: '' }[cond];
+    const digits = D.join(', ');
+    let how: string, howVi: string;
+    const zero = D[0] === 0;
+    if (!distinct) {
+      const first = D.length - (zero ? 1 : 0), last = cond === 'none' ? D.length : ends.length;
+      const parts = [first, ...Array(L - 2).fill(D.length), last];
+      how = `First digit: ${first} choices${zero ? ' (not 0)' : ''}; ${L - 2 === 1 ? 'middle digit' : 'middle digits'}: ${D.length} each${cond === 'none' ? '' : `; last digit: ${last} (${ends.join(', ')})`}. ${parts.join(' × ')} = ${ans}.`;
+      howVi = `Chữ số đầu: ${first} cách${zero ? ' (khác 0)' : ''}; mỗi chữ số ở giữa: ${D.length} cách${cond === 'none' ? '' : `; chữ số cuối: ${last} cách (${ends.join(', ')})`}. ${parts.join(' × ')} = ${ans}.`;
+    } else if (zero && cond !== 'none' && ends.includes(0)) {
+      const A = Pn(D.length - 1, L - 1), Bc = ans - A;
+      how = `Split by the last digit. Last digit 0: the other ${L - 1} places take any of the remaining digits, ${A} numbers. Last digit ${ends.filter((x) => x).join(' or ')}: the first digit cannot be 0, giving ${Bc} numbers. Total ${A} + ${Bc} = ${ans}.`;
+      howVi = `Chia trường hợp theo chữ số cuối. Chữ số cuối là 0: ${L - 1} vị trí còn lại xếp tuỳ ý các chữ số còn lại, có ${A} số. Chữ số cuối là ${ends.filter((x) => x).join(' hoặc ')}: chữ số đầu phải khác 0, có ${Bc} số. Tổng cộng ${A} + ${Bc} = ${ans}.`;
+    } else if (cond === 'none') {
+      const first = D.length - (zero ? 1 : 0);
+      how = `First digit: ${first} choices${zero ? ' (not 0)' : ''}; then the other places take different remaining digits: ${first} × ${Pn(D.length - 1, L - 1)} = ${ans}.`;
+      howVi = `Chữ số đầu: ${first} cách${zero ? ' (khác 0)' : ''}; các vị trí còn lại chọn các chữ số khác nhau còn lại: ${first} × ${Pn(D.length - 1, L - 1)} = ${ans}.`;
+    } else {
+      const first = D.length - 1 - (zero ? 1 : 0);
+      how = `Choose the last digit first: ${ends.length} ways (${ends.join(', ')}). Then the first digit: ${first} ways (not the last digit${zero ? ', not 0' : ''}). Then the middle: ${Pn(D.length - 2, L - 2)} ways. ${ends.length} × ${first} × ${Pn(D.length - 2, L - 2)} = ${ans}.`;
+      howVi = `Chọn chữ số cuối trước: ${ends.length} cách (${ends.join(', ')}). Rồi chữ số đầu: ${first} cách (khác chữ số cuối${zero ? ', khác 0' : ''}). Rồi các chữ số ở giữa: ${Pn(D.length - 2, L - 2)} cách. ${ends.length} × ${first} × ${Pn(D.length - 2, L - 2)} = ${ans}.`;
+    }
+    return vi(
+      {
+        prompt: `How many ${adj}${L}-digit numbers${cond === 'div5' ? ' divisible by 5' : ''} can be formed from the digits ${digits}${distinct ? ', with no digit repeated' : ', if digits may be repeated'}?`,
+        ...opts(ans, [tally(true, true, distinct), tally(false, false, distinct), tally(false, true, !distinct)], r, nf, 1, 1),
+        explanation: zero ? `${how} Watch out: a number cannot start with 0.` : how,
+      },
+      `Từ các chữ số ${digits}, lập được bao nhiêu số tự nhiên có ${L} chữ số${condVi}${distinct ? ', các chữ số đôi một khác nhau' : ' (các chữ số có thể lặp lại)'}?`,
+      zero ? `${howVi} Chú ý: chữ số đầu tiên không được là 0.` : howVi,
+    );
+  }
+};
+
 export const number9Concepts: ConceptSeed[] = [
   {
     id: 'math.number.real-life',
@@ -853,6 +1406,27 @@ export const number9Patches: Record<string, Partial<ConceptSeed>> = {
       'aᵐ·aⁿ = aᵐ⁺ⁿ, aᵐ : aⁿ = aᵐ⁻ⁿ, (aᵐ)ⁿ = aᵐⁿ, aⁿbⁿ = (ab)ⁿ, a⁰ = 1, a⁻ⁿ = 1/aⁿ. Scientific notation: a × 10ⁿ with 1 ≤ a < 10. ∛(−27) = −3. To compare 2³⁰⁰ and 3²⁰⁰ make the exponents equal (8¹⁰⁰ < 9¹⁰⁰) or the bases equal (16¹⁹ = 2⁷⁶).',
     examRefs: ['Toán 9 · Căn bậc ba', 'Toán 7–8 · Luỹ thừa, kí hiệu khoa học'],
   },
+  'math.stats.average': {
+    name: 'Frequency tables & averages',
+    description: 'Toán 9 statistics: frequency and relative frequency tables, grouped data, the mean from a (grouped) frequency table, median and mode, a missing frequency from the mean.',
+    lesson:
+      'Relative frequency = frequency ÷ total × 100%. Mean from a table = Σ(value × frequency) ÷ total; from a relative frequency table, Σ(value × relative frequency). Grouped data [a; b): use the midpoint (a + b)/2 as the value, and remember [a; b) contains a but not b. Mode = the value with the highest frequency (not the frequency itself). Median: sort all n values (use running totals of the frequencies) and take the middle one, or the mean of the two middle ones when n is even.',
+    examRefs: ['Toán 9 · Bảng tần số, tần số tương đối', 'Toán 9 · Bảng tần số ghép nhóm'],
+  },
+  'math.stats.probability': {
+    name: 'Probability & sample spaces',
+    description: 'Toán 9 probability: write the sample space, count equally likely outcomes; coins, two dice, two-digit numbers, balls with and without replacement, choosing a pair.',
+    lesson:
+      'P(A) = number of favourable outcomes ÷ number of outcomes in the sample space, when all outcomes are equally likely. Write the sample space first: two coins give HH, HT, TH, TT (4, not 3); two dice give 36 ordered pairs; two-digit numbers are 10…99, 90 of them. Two balls drawn at the same time: unordered pairs, n(n − 1)/2 of them; drawn one after another with the first put back: n × n ordered outcomes. Give the answer in simplest form.',
+    examRefs: ['Toán 9 · Phép thử ngẫu nhiên và không gian mẫu', 'Toán 9 · Xác suất của biến cố', 'Vào 10 Hà Nội · Bài I (thống kê – xác suất)'],
+  },
+  'math.combinatorics.counting': {
+    name: 'Counting principles',
+    description: 'Multiplication and addition principles, arrangements, choosing 2 or 3 from n with or without order, numbers formed from digits with conditions.',
+    lesson:
+      'Steps one after another → multiply; separate cases → add. Arranging n objects: n! = n·(n − 1)·…·1. Choosing with different roles (order matters): n(n − 1) for 2, n(n − 1)(n − 2) for 3. Choosing a group (order does not matter): n(n − 1)/2 for 2, n(n − 1)(n − 2)/6 for 3. Numbers from digits: fill the restricted places first (the last digit for even / odd / divisible by 5, and the first digit can never be 0); when 0 is a possible last digit, split into cases.',
+    examRefs: ['Toán 9 · Quy tắc đếm (chuẩn bị cho xác suất)', 'Thi vào 10 chuyên · Tổ hợp'],
+  },
 };
 
 export const number9Generators: Record<string, Generator> = {
@@ -861,6 +1435,9 @@ export const number9Generators: Record<string, Generator> = {
   'math.number.powers': powers,
   'math.number.percent': percent,
   'math.number.real-life': realLife,
+  'math.stats.average': stats,
+  'math.stats.probability': probability,
+  'math.combinatorics.counting': counting,
 };
 
 export const number9LessonsVi: Record<string, string> = {
@@ -874,4 +1451,10 @@ export const number9LessonsVi: Record<string, string> = {
     'Đọc kĩ cách tính giá và chia số lượng thành từng phần: km đầu tiên, từ km thứ 2 đến km thứ 30, phần còn lại; hoặc từng bậc giá điện, mỗi bậc tính theo giá riêng. Cộng các phần lại, cuối cùng mới cộng thuế VAT (× 1,1 với VAT 10%). Khi làm ngược, đảo ngược thứ tự các bước: bỏ VAT trước (: 1,1), rồi xem số tiền còn lại thuộc đến bậc nào.',
   'math.number.powers':
     'aᵐ·aⁿ = aᵐ⁺ⁿ, aᵐ : aⁿ = aᵐ⁻ⁿ, (aᵐ)ⁿ = aᵐⁿ, aⁿbⁿ = (ab)ⁿ, a⁰ = 1, a⁻ⁿ = 1/aⁿ. Kí hiệu khoa học: a × 10ⁿ với 1 ≤ a < 10. ∛(−27) = −3. Để so sánh 2³⁰⁰ và 3²⁰⁰, đưa về cùng số mũ (8¹⁰⁰ < 9¹⁰⁰) hoặc cùng cơ số (16¹⁹ = 2⁷⁶).',
+  'math.stats.average':
+    'Tần số tương đối = tần số : tổng số × 100%. Số trung bình từ bảng tần số = tổng (giá trị × tần số) : tổng số; từ bảng tần số tương đối thì bằng tổng (giá trị × tần số tương đối). Bảng ghép nhóm [a; b): lấy điểm giữa (a + b)/2 làm giá trị đại diện, và nhớ nhóm [a; b) chứa a nhưng không chứa b. Mốt là giá trị có tần số lớn nhất (không phải bản thân tần số). Trung vị: sắp xếp n giá trị (cộng dồn tần số) rồi lấy số ở giữa, hoặc trung bình cộng hai số ở giữa nếu n chẵn.',
+  'math.stats.probability':
+    'Khi các kết quả có khả năng như nhau: P(A) = số kết quả thuận lợi cho A : số phần tử của không gian mẫu. Luôn viết không gian mẫu trước: gieo hai đồng xu được SS, SN, NS, NN (4 kết quả, không phải 3); gieo hai con xúc xắc được 36 cặp có thứ tự; các số có hai chữ số là 10…99, gồm 90 số. Lấy đồng thời hai quả bóng: các cặp không thứ tự, có n(n − 1)/2 cặp; lấy lần lượt có trả lại: n × n kết quả có thứ tự. Viết kết quả dưới dạng phân số tối giản.',
+  'math.combinatorics.counting':
+    'Các bước làm liên tiếp → nhân; các trường hợp tách biệt → cộng. Xếp n đối tượng thành hàng: n! = n·(n − 1)·…·1. Chọn có phân biệt vai trò (có thứ tự): n(n − 1) với 2 người, n(n − 1)(n − 2) với 3 người. Chọn một nhóm (không thứ tự): n(n − 1)/2 với 2, n(n − 1)(n − 2)/6 với 3. Lập số từ các chữ số: điền các vị trí có điều kiện trước (chữ số cuối cho số chẵn / lẻ / chia hết cho 5; chữ số đầu không bao giờ là 0); nếu chữ số cuối có thể là 0 thì chia trường hợp.',
 };
