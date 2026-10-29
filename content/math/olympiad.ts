@@ -11,6 +11,7 @@ const LOGIC = 'math.olympiad.logic';
 const ARITH = 'math.olympiad.arithmetic';
 const NT = 'math.olympiad.number-theory';
 const COMB = 'math.olympiad.combinatorics';
+const GEO = 'math.olympiad.geometry';
 
 export const olympiadConcepts: ConceptSeed[] = [
   {
@@ -57,6 +58,17 @@ export const olympiadConcepts: ConceptSeed[] = [
       "Count with the multiplication rule (choices for each step multiply) and divide out repeats: 6 people shaking hands make 6 × 5 ÷ 2 handshakes, and a grid path of a rights and b ups is a choice of C(a + b, a). For 'not next to each other' or 'at least one', count everything and subtract the opposite case. Pigeonhole: imagine the worst luck (one of each, or all of the wrong kind first), then add one.",
     examRefs: ['TIMO / FIMO style'],
   },
+  {
+    id: GEO,
+    domain: 'Advanced',
+    skill: 'Olympiad',
+    name: 'Olympiad geometry',
+    missionName: 'Star Compass',
+    description: 'Angles in polygons and stars, shaded and composite areas, similar triangles and Pythagoras tricks.',
+    lesson:
+      "Angles: the exterior angles of any convex polygon add up to 360°, so a regular n-gon has exterior angle 360°/n and interior angle 180° − 360°/n; look for isosceles triangles and chase equal angles. Areas: split a shape into pieces you know, or take the whole and subtract the corners. Lengths: Pythagoras (remember 3-4-5, 5-12-13, 7-24-25, 20-21-29), and a line parallel to a side cuts off a similar triangle — lengths scale by k and areas by k².",
+    examRefs: ['TIMO / FIMO style'],
+  },
 ];
 
 export const olympiadLessonsVi: Record<string, string> = {
@@ -68,6 +80,8 @@ export const olympiadLessonsVi: Record<string, string> = {
     "Chữ số tận cùng và số dư lặp theo chu kì: tìm độ dài chu kì rồi dùng số dư của số mũ (lũy thừa của 7 tận cùng 7, 9, 3, 1). Dấu hiệu chia hết: cho 4 xét hai chữ số cuối, cho 3 hoặc 9 xét tổng các chữ số; số dư cộng và nhân được, nên có thể thay một số bằng số dư của nó. Phân tích ra thừa số nguyên tố: n = pᵃqᵇ… có (a + 1)(b + 1)… ước; 'lại gặp nhau cùng lúc' là BCNN, 'chia đều thành các nhóm' là ƯCLN.",
   [COMB]:
     "Đếm bằng quy tắc nhân (số cách ở mỗi bước nhân với nhau) rồi chia bớt các lần đếm lặp: 6 người bắt tay có 6 × 5 : 2 cái bắt tay, và đường đi trên lưới gồm a bước phải, b bước lên là một cách chọn C(a + b, a). Với 'không đứng cạnh nhau' hay 'ít nhất một', đếm tất cả rồi trừ trường hợp ngược lại. Nguyên lí Dirichlet: hình dung trường hợp xui nhất (mỗi loại một cái, hoặc lấy hết loại không cần trước), rồi cộng thêm một.",
+  [GEO]:
+    "Góc: tổng các góc ngoài của mọi đa giác lồi là 360°, nên đa giác đều n cạnh có góc ngoài 360°/n và góc trong 180° − 360°/n; hãy tìm các tam giác cân và lần theo các góc bằng nhau. Diện tích: chia hình thành các phần đã biết, hoặc lấy cả hình trừ đi các phần ở góc. Độ dài: định lí Py-ta-go (nhớ bộ 3-4-5, 5-12-13, 7-24-25, 20-21-29), và đường thẳng song song với một cạnh tạo ra tam giác đồng dạng — độ dài nhân k thì diện tích nhân k².",
 };
 
 const { add, list } = makeBank('Atlas olympiad bank', 'oly-');
@@ -508,6 +522,123 @@ add(COMB, 5, 'How many ways are there to write 10 = a + b + c with a, b, c posit
   promptVi: 'Có bao nhiêu cách viết 10 = a + b + c với a, b, c là các số nguyên dương, có kể thứ tự (1 + 2 + 7 và 7 + 2 + 1 là khác nhau)?',
   explanation: 'Stars and bars: put 2 dividers in the 9 gaps between 10 stars: C(9, 2) = 36.',
   explanationVi: 'Phương pháp "chia kẹo": đặt 2 vách ngăn vào 9 khe giữa 10 ngôi sao: C(9, 2) = 36.',
+});
+
+// ── Geometry ─────────────────────────────────────────────────────────────
+add(GEO, 3, 'What is the size of each interior angle of a regular 12-sided polygon?', ['150°', '144°', '160°', '30°'], {
+  promptVi: 'Mỗi góc trong của một đa giác đều 12 cạnh bằng bao nhiêu độ?',
+  explanation: 'Each exterior angle is 360° ÷ 12 = 30°, so each interior angle is 180° − 30° = 150°.',
+  explanationVi: 'Mỗi góc ngoài bằng 360° : 12 = 30°, nên mỗi góc trong bằng 180° − 30° = 150°.',
+});
+add(GEO, 3, 'What is the sum of the interior angles of a convex 9-sided polygon?', ['1260°', '1620°', '1440°', '1080°'], {
+  promptVi: 'Tổng các góc trong của một đa giác lồi 9 cạnh là bao nhiêu độ?',
+  explanation: 'A polygon with n sides splits into n − 2 triangles from one vertex: (9 − 2) × 180° = 1260°.',
+  explanationVi: 'Từ một đỉnh, đa giác n cạnh chia được thành n − 2 tam giác: (9 − 2) × 180° = 1260°.',
+});
+add(GEO, 4, 'Each interior angle of a regular polygon is 156°. How many sides does it have?', ['15', '12', '18', '24'], {
+  promptVi: 'Mỗi góc trong của một đa giác đều bằng 156°. Đa giác đó có bao nhiêu cạnh?',
+  explanation: 'Each exterior angle is 180° − 156° = 24°, and the exterior angles add up to 360°: 360 ÷ 24 = 15 sides.',
+  explanationVi: 'Mỗi góc ngoài bằng 180° − 156° = 24°, và tổng các góc ngoài là 360°: 360 : 24 = 15 cạnh.',
+});
+add(GEO, 4, 'A five-pointed star is drawn with five straight segments, each joining every second point of five points on a circle (the points need not be evenly spaced). What is the sum of the five angles at the tips of the star?', ['180°', '360°', '540°', '300°'], {
+  promptVi: 'Một ngôi sao năm cánh được vẽ bằng năm đoạn thẳng, mỗi đoạn nối cách một điểm trong năm điểm trên một đường tròn (các điểm không nhất thiết cách đều). Tổng năm góc ở năm đỉnh ngôi sao bằng bao nhiêu?',
+  explanation: 'Each tip angle is an inscribed angle standing on one of the five arcs between neighbouring points, i.e. half that arc. The arcs add up to 360°, so the tips add up to 180°.',
+  explanationVi: 'Mỗi góc ở đỉnh là góc nội tiếp chắn một trong năm cung giữa hai điểm kề nhau, nên bằng nửa cung đó. Năm cung có tổng 360°, nên tổng năm góc là 180°.',
+});
+add(GEO, 4, 'Square ABCD and equilateral triangle ABE share the side AB, and E lies outside the square. What is angle AED?', ['15°', '30°', '45°', '75°'], {
+  promptVi: 'Hình vuông ABCD và tam giác đều ABE có chung cạnh AB, điểm E nằm ngoài hình vuông. Tính góc AED.',
+  explanation: 'AD = AB = AE, so triangle ADE is isosceles with angle DAE = 90° + 60° = 150°. Its base angles are (180° − 150°) ÷ 2 = 15°.',
+  explanationVi: 'AD = AB = AE nên tam giác ADE cân tại A, với góc DAE = 90° + 60° = 150°. Hai góc đáy bằng (180° − 150°) : 2 = 15°.',
+});
+add(GEO, 5, 'Square ABCD and equilateral triangle ABE share the side AB, and E lies inside the square. What is angle DEC?', ['150°', '120°', '135°', '160°'], {
+  promptVi: 'Hình vuông ABCD và tam giác đều ABE có chung cạnh AB, điểm E nằm trong hình vuông. Tính góc DEC.',
+  explanation: 'AD = AE and angle DAE = 90° − 60° = 30°, so angle AED = 75°; likewise angle BEC = 75°. Around E: 360° − 75° − 75° − 60° = 150°.',
+  explanationVi: 'AD = AE và góc DAE = 90° − 60° = 30°, nên góc AED = 75°; tương tự góc BEC = 75°. Quanh điểm E: 360° − 75° − 75° − 60° = 150°.',
+});
+add(GEO, 3, 'A right triangle has legs of 20 cm and 21 cm. How long is its hypotenuse?', ['29 cm', '41 cm', '30 cm', '28 cm'], {
+  promptVi: 'Một tam giác vuông có hai cạnh góc vuông dài 20 cm và 21 cm. Cạnh huyền dài bao nhiêu?',
+  explanation: '20² + 21² = 400 + 441 = 841 = 29², so the hypotenuse is 29 cm.',
+  explanationVi: '20² + 21² = 400 + 441 = 841 = 29², nên cạnh huyền dài 29 cm.',
+});
+add(GEO, 4, 'A rectangle has a diagonal of 25 cm and one side of 7 cm. What is its area?', ['168 cm²', '175 cm²', '84 cm²', '336 cm²'], {
+  promptVi: 'Một hình chữ nhật có đường chéo dài 25 cm và một cạnh dài 7 cm. Tính diện tích hình chữ nhật.',
+  explanation: 'The other side is √(25² − 7²) = √576 = 24 cm, so the area is 7 × 24 = 168 cm².',
+  explanationVi: 'Cạnh còn lại bằng √(25² − 7²) = √576 = 24 cm, nên diện tích là 7 × 24 = 168 cm².',
+});
+add(GEO, 4, 'In triangle ABC, D is on AB and E is on AC with DE parallel to BC. AD = 4 cm, DB = 6 cm and BC = 15 cm. How long is DE?', ['6 cm', '10 cm', '9 cm', '7.5 cm'], {
+  promptVi: 'Trong tam giác ABC, D thuộc AB và E thuộc AC sao cho DE song song với BC. AD = 4 cm, DB = 6 cm, BC = 15 cm. Tính DE.',
+  explanation: 'Triangles ADE and ABC are similar with ratio AD/AB = 4/10, so DE = 15 × 4/10 = 6 cm.',
+  explanationVi: 'Tam giác ADE đồng dạng với tam giác ABC theo tỉ số AD/AB = 4/10, nên DE = 15 × 4/10 = 6 cm.',
+});
+add(GEO, 5, 'In triangle ABC, DE is parallel to BC with D on AB and E on AC, and AD : DB = 2 : 3. The area of triangle ADE is 8 cm². What is the area of the trapezoid DBCE?', ['42 cm²', '50 cm²', '12 cm²', '18 cm²'], {
+  promptVi: 'Trong tam giác ABC, DE song song với BC (D thuộc AB, E thuộc AC) và AD : DB = 2 : 3. Diện tích tam giác ADE là 8 cm². Tính diện tích hình thang DBCE.',
+  explanation: 'AD : AB = 2 : 5, so areas are in ratio 4 : 25 and triangle ABC has area 8 × 25/4 = 50 cm². The trapezoid is 50 − 8 = 42 cm².',
+  explanationVi: 'AD : AB = 2 : 5, nên tỉ số diện tích là 4 : 25 và tam giác ABC có diện tích 8 × 25/4 = 50 cm². Hình thang có diện tích 50 − 8 = 42 cm².',
+});
+add(GEO, 3, 'A circle is drawn inside a square of side 10 cm, touching all four sides. What is the area of the part of the square outside the circle?', ['100 − 25π cm²', '100 − 100π cm²', '100 − 10π cm²', '25π cm²'], {
+  promptVi: 'Vẽ một hình tròn bên trong hình vuông cạnh 10 cm, tiếp xúc với cả bốn cạnh. Tính diện tích phần hình vuông nằm ngoài hình tròn.',
+  explanation: 'The circle has diameter 10, so radius 5 and area 25π. The remaining part is 100 − 25π cm².',
+  explanationVi: 'Hình tròn có đường kính 10, bán kính 5, diện tích 25π. Phần còn lại là 100 − 25π cm².',
+});
+add(GEO, 3, 'ABCD is a square of side 12 cm and M is the midpoint of BC. What is the area of quadrilateral AMCD?', ['108 cm²', '72 cm²', '36 cm²', '96 cm²'], {
+  promptVi: 'ABCD là hình vuông cạnh 12 cm, M là trung điểm của BC. Tính diện tích tứ giác AMCD.',
+  explanation: 'Cut off triangle ABM, which has area ½ × 12 × 6 = 36 cm²: 144 − 36 = 108 cm².',
+  explanationVi: 'Bỏ đi tam giác ABM có diện tích ½ × 12 × 6 = 36 cm²: 144 − 36 = 108 cm².',
+});
+add(GEO, 5, 'ABCD is a square of side 10 cm (vertices in order). E is on AB with AE = 4 cm, and F is on BC with BF = 6 cm. What is the area of triangle DEF?', ['42 cm²', '50 cm²', '38 cm²', '58 cm²'], {
+  promptVi: 'ABCD là hình vuông cạnh 10 cm (các đỉnh theo thứ tự). E thuộc AB với AE = 4 cm, F thuộc BC với BF = 6 cm. Tính diện tích tam giác DEF.',
+  explanation: 'Subtract the three corner triangles from the square: ADE = 20, EBF = ½ × 6 × 6 = 18, FCD = ½ × 4 × 10 = 20. 100 − 58 = 42 cm².',
+  explanationVi: 'Lấy hình vuông trừ ba tam giác ở góc: ADE = 20, EBF = ½ × 6 × 6 = 18, FCD = ½ × 4 × 10 = 20. 100 − 58 = 42 cm².',
+});
+add(GEO, 4, 'A 13 m ladder leans against a vertical wall with its foot 5 m from the wall. The foot slides 7 m further away from the wall. How far down the wall does the top slide?', ['7 m', '5 m', '12 m', '8 m'], {
+  promptVi: 'Một chiếc thang dài 13 m dựa vào bức tường thẳng đứng, chân thang cách tường 5 m. Chân thang trượt ra xa tường thêm 7 m. Đầu thang trượt xuống bao nhiêu mét?',
+  explanation: 'At first the top is √(13² − 5²) = 12 m high. With the foot 12 m away, the top is √(13² − 12²) = 5 m high. It slides 12 − 5 = 7 m.',
+  explanationVi: 'Lúc đầu đầu thang cao √(13² − 5²) = 12 m. Khi chân thang cách tường 12 m, đầu thang cao √(13² − 12²) = 5 m. Nó trượt xuống 12 − 5 = 7 m.',
+});
+add(GEO, 4, 'A right triangle has hypotenuse 10 cm and area 24 cm². What is its perimeter?', ['24 cm', '28 cm', '22 cm', '34 cm'], {
+  promptVi: 'Một tam giác vuông có cạnh huyền 10 cm và diện tích 24 cm². Tính chu vi tam giác.',
+  explanation: 'With legs a, b: a² + b² = 100 and ab = 48, so (a + b)² = 100 + 96 = 196 and a + b = 14. Perimeter 14 + 10 = 24 cm.',
+  explanationVi: 'Gọi hai cạnh góc vuông là a, b: a² + b² = 100 và ab = 48, nên (a + b)² = 100 + 96 = 196, a + b = 14. Chu vi 14 + 10 = 24 cm.',
+});
+add(GEO, 5, 'Triangle ABC has AB = AC and angle A = 20°. Point D lies on side AC with BD = BC. What is angle ABD?', ['60°', '20°', '40°', '50°'], {
+  promptVi: 'Tam giác ABC có AB = AC và góc A = 20°. Điểm D nằm trên cạnh AC sao cho BD = BC. Tính góc ABD.',
+  explanation: 'Angles B and C are 80°. In isosceles triangle BDC, angle BDC = angle C = 80°, so angle DBC = 20°. Then angle ABD = 80° − 20° = 60°.',
+  explanationVi: 'Góc B = góc C = 80°. Trong tam giác cân BDC, góc BDC = góc C = 80°, nên góc DBC = 20°. Vậy góc ABD = 80° − 20° = 60°.',
+});
+add(GEO, 5, 'Each exterior angle of a regular polygon is 24°. How many diagonals does it have?', ['90', '105', '15', '75'], {
+  promptVi: 'Mỗi góc ngoài của một đa giác đều bằng 24°. Đa giác đó có bao nhiêu đường chéo?',
+  explanation: 'It has 360 ÷ 24 = 15 sides, so 15 × (15 − 3) ÷ 2 = 90 diagonals.',
+  explanationVi: 'Đa giác có 360 : 24 = 15 cạnh, nên có 15 × (15 − 3) : 2 = 90 đường chéo.',
+});
+add(GEO, 3, 'The angles of a triangle are in the ratio 2 : 3 : 4. What is the largest angle?', ['80°', '90°', '60°', '100°'], {
+  promptVi: 'Ba góc của một tam giác tỉ lệ với 2 : 3 : 4. Góc lớn nhất bằng bao nhiêu?',
+  explanation: '2 + 3 + 4 = 9 parts make 180°, so one part is 20° and the largest angle is 4 × 20° = 80°.',
+  explanationVi: '2 + 3 + 4 = 9 phần ứng với 180°, mỗi phần 20°, góc lớn nhất là 4 × 20° = 80°.',
+});
+add(GEO, 3, 'What is the area of an equilateral triangle with side 6 cm?', ['9√3 cm²', '18√3 cm²', '18 cm²', '36√3 cm²'], {
+  promptVi: 'Tính diện tích tam giác đều có cạnh 6 cm.',
+  explanation: 'The height is √(6² − 3²) = √27 = 3√3, so the area is ½ × 6 × 3√3 = 9√3 cm² (in general a²√3/4).',
+  explanationVi: 'Chiều cao bằng √(6² − 3²) = √27 = 3√3, nên diện tích là ½ × 6 × 3√3 = 9√3 cm² (tổng quát a²√3/4).',
+});
+add(GEO, 4, 'A chord of length 8 cm is drawn in a circle of radius 5 cm. How far is the chord from the centre?', ['3 cm', '4 cm', '√41 cm', '1 cm'], {
+  promptVi: 'Một dây cung dài 8 cm trong đường tròn bán kính 5 cm. Khoảng cách từ tâm đến dây cung là bao nhiêu?',
+  explanation: 'The perpendicular from the centre bisects the chord, giving a right triangle with hypotenuse 5 and leg 4: the distance is √(25 − 16) = 3 cm.',
+  explanationVi: 'Đường vuông góc từ tâm chia đôi dây cung, tạo tam giác vuông có cạnh huyền 5 và một cạnh 4: khoảng cách là √(25 − 16) = 3 cm.',
+});
+add(GEO, 4, 'A right triangle has legs of 15 cm and 20 cm. How long is the altitude drawn to the hypotenuse?', ['12 cm', '25 cm', '10 cm', '17.5 cm'], {
+  promptVi: 'Một tam giác vuông có hai cạnh góc vuông 15 cm và 20 cm. Đường cao ứng với cạnh huyền dài bao nhiêu?',
+  explanation: 'The hypotenuse is 25. Twice the area is 15 × 20 = 300 = 25 × h, so h = 12 cm.',
+  explanationVi: 'Cạnh huyền bằng 25. Hai lần diện tích là 15 × 20 = 300 = 25 × h, nên h = 12 cm.',
+});
+add(GEO, 4, 'ABCDEF is a regular hexagon. What is angle ACD?', ['90°', '120°', '60°', '30°'], {
+  promptVi: 'ABCDEF là một lục giác đều. Tính góc ACD.',
+  explanation: 'Angle BCD = 120° and triangle ABC is isosceles with apex angle 120°, so angle BCA = 30°. Then angle ACD = 120° − 30° = 90° (AD is a diameter of the circumcircle).',
+  explanationVi: 'Góc BCD = 120°, tam giác ABC cân có góc ở đỉnh 120°, nên góc BCA = 30°. Vậy góc ACD = 120° − 30° = 90° (AD là đường kính đường tròn ngoại tiếp).',
+});
+add(GEO, 4, 'In a square of side 8 cm, a quarter circle of radius 4 cm is drawn at each corner, centred at that corner. What is the area of the part of the square not covered by the quarter circles?', ['64 − 16π cm²', '64 − 4π cm²', '64 − 64π cm²', '16π cm²'], {
+  promptVi: 'Trong hình vuông cạnh 8 cm, tại mỗi đỉnh vẽ một phần tư hình tròn bán kính 4 cm có tâm là đỉnh đó. Tính diện tích phần hình vuông không bị các phần tư hình tròn che phủ.',
+  explanation: 'The four quarter circles do not overlap (radius 4 is half the side) and together make one full circle of area 16π. 64 − 16π cm².',
+  explanationVi: 'Bốn phần tư hình tròn không chồng lên nhau (bán kính 4 bằng nửa cạnh) và ghép lại thành một hình tròn diện tích 16π. Kết quả 64 − 16π cm².',
 });
 
 export const olympiadQuestions = list;
