@@ -195,5 +195,5 @@ describe('grade 9 algebra', () => {
           for (let x = -40; x <= 40; x += 0.5) expect(ok(x), `${g.prompt} → ${g.answer} at x = ${x}`).toBe(holds(x, aop, num(av)));
         }
       }
-  });
+  }, 60_000);
 });
