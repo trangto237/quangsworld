@@ -38,7 +38,7 @@ function opts(ans: number, mistakes: number[], r: () => number, fmt: (n: number)
   const a = fmt(ans);
   const out = new Set<string>();
   for (const m of mistakes) {
-    if (!Number.isFinite(m) || m < min) continue;
+    if (!Number.isFinite(m) || m < min || (fmt === vnd && !Number.isInteger(m))) continue;
     const s = fmt(m);
     if (s !== a) out.add(s);
     if (out.size === 3) break;
@@ -525,7 +525,304 @@ const powers: Generator = (d, r) => {
   );
 };
 
-export const number9Concepts: ConceptSeed[] = [];
+// ── Percentages with money: discounts, VAT, profit, interest, growth ─────
+const ITEMS = [
+  { en: 'a jacket', vi: 'chiếc áo khoác' },
+  { en: 'a pair of shoes', vi: 'đôi giày' },
+  { en: 'a school bag', vi: 'chiếc cặp sách' },
+  { en: 'a rice cooker', vi: 'chiếc nồi cơm điện' },
+  { en: 'a bicycle', vi: 'chiếc xe đạp' },
+  { en: 'an electric fan', vi: 'chiếc quạt điện' },
+  { en: 'a phone', vi: 'chiếc điện thoại' },
+];
+const pct = (x: number) => `${nf(x)}%`;
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+/** p% as a Vietnamese decimal factor: 1,08. */
+const factorVi = (p: number) => dc(nf(1 + p / 100));
+/** Keep a mistake only if it is a clean percentage (at most one decimal place). */
+const cleanPct = (x: number) => (Number.isInteger(+(x * 10).toFixed(6)) ? x : NaN);
+
+const percent: Generator = (d, r) => {
+  const it = pick(r, ITEMS);
+  if (d === 1) {
+    if (r() < 0.5) {
+      const P = int(r, 10, 150) * 10000, p = pick(r, [10, 15, 20, 25, 30, 40]);
+      const ans = (P * (100 - p)) / 100;
+      return vi(
+        {
+          prompt: `${cap(it.en)} costs ${vnd(P)} VND. The shop gives a ${p}% discount. How much does it cost now (VND)?`,
+          ...opts(ans, [(P * p) / 100, (P * (100 + p)) / 100, P - p * 1000], r, vnd, 10000, 1),
+          explanation: `A ${p}% discount means you pay ${100 - p}% of the price: ${vnd(P)} × ${100 - p}/100 = ${vnd(ans)} VND. (${vnd((P * p) / 100)} VND is only the amount taken off.)`,
+        },
+        `Một ${it.vi} giá ${vndVi(P)} đồng. Cửa hàng giảm giá ${p}%. Giá mới là bao nhiêu đồng?`,
+        `Giảm ${p}% nghĩa là chỉ phải trả ${100 - p}% giá ban đầu: ${vndVi(P)} × ${100 - p}/100 = ${vndVi(ans)} đồng. (${vndVi((P * p) / 100)} đồng chỉ là số tiền được giảm.)`,
+      );
+    }
+    const A = int(r, 10, 100) * 10000, p = pick(r, [5, 10, 15, 20, 25, 40, 50]), up = r() < 0.5;
+    const B = (A * (100 + (up ? p : -p))) / 100;
+    return vi(
+      {
+        prompt: `The price of ${it.en} ${up ? 'rose' : 'fell'} from ${vnd(A)} VND to ${vnd(B)} VND. By what percentage did it ${up ? 'rise' : 'fall'}?`,
+        ...opts(p, [cleanPct((Math.abs(B - A) * 100) / B), Math.abs(B - A) / 10000, 100 - p], r, pct, 5, 1),
+        explanation: `Percentage change = change ÷ ORIGINAL price × 100%: ${vnd(Math.abs(B - A))} ÷ ${vnd(A)} × 100% = ${p}%. Do not divide by the new price.`,
+      },
+      `Giá một ${it.vi} ${up ? 'tăng' : 'giảm'} từ ${vndVi(A)} đồng ${up ? 'lên' : 'xuống'} ${vndVi(B)} đồng. Giá đã ${up ? 'tăng' : 'giảm'} bao nhiêu phần trăm?`,
+      `Phần trăm thay đổi = mức thay đổi ÷ giá BAN ĐẦU × 100%: ${vndVi(Math.abs(B - A))} ÷ ${vndVi(A)} × 100% = ${p}%. Không chia cho giá mới.`,
+    );
+  }
+  if (d === 2) {
+    const kind = pick(r, ['original', 'profit', 'vat'] as const);
+    if (kind === 'original') {
+      const P = int(r, 10, 200) * 10000, p = pick(r, [10, 20, 25, 30, 40, 50]);
+      const Y = (P * (100 - p)) / 100;
+      return vi(
+        {
+          prompt: `After a ${p}% discount, Lan paid ${vnd(Y)} VND for ${it.en}. What was the original price (VND)?`,
+          ...opts(P, [(Y * (100 + p)) / 100, (Y * (100 - p)) / 100, Y + p * 1000], r, vnd, 10000, 1),
+          explanation: `Lan paid ${100 - p}% of the original price x: x × ${100 - p}/100 = ${vnd(Y)}, so x = ${vnd(Y)} × 100/${100 - p} = ${vnd(P)} VND. Adding ${p}% to ${vnd(Y)} is wrong: the ${p}% is of the original price, not of ${vnd(Y)}.`,
+        },
+        `Sau khi được giảm ${p}%, Lan trả ${vndVi(Y)} đồng để mua một ${it.vi}. Hỏi giá ban đầu là bao nhiêu đồng?`,
+        `Lan đã trả ${100 - p}% giá ban đầu x: x × ${100 - p}/100 = ${vndVi(Y)}, nên x = ${vndVi(Y)} × 100/${100 - p} = ${vndVi(P)} đồng. Cộng thêm ${p}% của ${vndVi(Y)} là sai: ${p}% được tính trên giá ban đầu, không phải trên ${vndVi(Y)}.`,
+      );
+    }
+    if (kind === 'profit') {
+      const Cst = int(r, 20, 200) * 10000, p = pick(r, [10, 12, 15, 20, 25, 30, 40]), gain = r() < 0.6;
+      const S = (Cst * (100 + (gain ? p : -p))) / 100;
+      const word = gain ? 'profit' : 'loss';
+      return vi(
+        {
+          prompt: `A shop buys ${it.en} for ${vnd(Cst)} VND and sells it for ${vnd(S)} VND. What is the percentage ${word} on the cost price?`,
+          ...opts(p, [cleanPct((Math.abs(S - Cst) * 100) / S), 100 - p, 100 + p], r, pct, 5, 1),
+          explanation: `${gain ? 'Profit' : 'Loss'} = ${vnd(Math.abs(S - Cst))} VND. As a percentage of the cost price: ${vnd(Math.abs(S - Cst))} ÷ ${vnd(Cst)} × 100% = ${p}%.`,
+        },
+        `Một cửa hàng nhập một ${it.vi} với giá ${vndVi(Cst)} đồng và bán ra với giá ${vndVi(S)} đồng. Cửa hàng ${gain ? 'lãi' : 'lỗ'} bao nhiêu phần trăm so với giá nhập?`,
+        `Tiền ${gain ? 'lãi' : 'lỗ'} = ${vndVi(Math.abs(S - Cst))} đồng. Tính theo phần trăm của giá nhập: ${vndVi(Math.abs(S - Cst))} ÷ ${vndVi(Cst)} × 100% = ${p}%.`,
+      );
+    }
+    const P = int(r, 10, 300) * 10000, v = pick(r, [8, 10]);
+    const T = (P * (100 + v)) / 100;
+    return vi(
+      {
+        prompt: `The price of ${it.en} including ${v}% VAT is ${vnd(T)} VND. What is the price before VAT (VND)?`,
+        ...opts(P, [(T * (100 - v)) / 100, T - v * 1000, (T * v) / 100], r, vnd, 10000, 1),
+        explanation: `Price with VAT = price before VAT × ${nf(1 + v / 100)}, so the price before VAT is ${vnd(T)} ÷ ${nf(1 + v / 100)} = ${vnd(P)} VND. Taking ${v}% off ${vnd(T)} gives the wrong answer, because the VAT was ${v}% of the smaller price.`,
+      },
+      `Giá một ${it.vi} đã bao gồm ${v}% thuế VAT là ${vndVi(T)} đồng. Hỏi giá chưa có thuế VAT là bao nhiêu đồng?`,
+      `Giá có VAT = giá chưa VAT × ${factorVi(v)}, nên giá chưa VAT là ${vndVi(T)} : ${factorVi(v)} = ${vndVi(P)} đồng. Lấy ${vndVi(T)} trừ đi ${v}% của nó là sai, vì thuế ${v}% được tính trên giá chưa thuế (nhỏ hơn).`,
+    );
+  }
+  if (d === 3) {
+    const kind = pick(r, ['successive', 'simple', 'updown'] as const);
+    if (kind === 'successive') {
+      const P = int(r, 20, 300) * 10000;
+      const [p, qq] = shuffle(r, [10, 15, 20, 25, 30, 40]).slice(0, 2);
+      const ans = (P * (100 - p) * (100 - qq)) / 10000;
+      return vi(
+        {
+          prompt: `${cap(it.en)} costs ${vnd(P)} VND. It is reduced by ${p}%, and then the new price is reduced by a further ${qq}%. What is the final price (VND)?`,
+          ...opts(ans, [(P * (100 - p - qq)) / 100, (P * (100 - p)) / 100, (P * (100 - p) * (100 + qq)) / 10000], r, vnd, 10000, 1),
+          explanation: `Two discounts multiply, they do not add: ${vnd(P)} × ${nf(1 - p / 100)} × ${nf(1 - qq / 100)} = ${vnd(ans)} VND. (Taking ${p + qq}% off at once gives ${vnd((P * (100 - p - qq)) / 100)} VND, which is too little.)`,
+        },
+        `Một ${it.vi} giá ${vndVi(P)} đồng. Cửa hàng giảm giá ${p}%, sau đó lại giảm tiếp ${qq}% trên giá mới. Hỏi giá cuối cùng là bao nhiêu đồng?`,
+        `Hai lần giảm giá thì nhân, không cộng: ${vndVi(P)} × ${dc(nf(1 - p / 100))} × ${dc(nf(1 - qq / 100))} = ${vndVi(ans)} đồng. (Giảm một lần ${p + qq}% cho ${vndVi((P * (100 - p - qq)) / 100)} đồng, là sai.)`,
+      );
+    }
+    if (kind === 'simple') {
+      const X = int(r, 2, 50) * 10 ** 6, rate = pick(r, [5, 6, 7, 8]), n = pick(r, [2, 3]);
+      const ans = (X * (100 + n * rate)) / 100;
+      return vi(
+        {
+          prompt: `Mr Nam deposits ${vnd(X)} VND at a simple interest rate of ${rate}% per year (the interest is not added to the deposit). How much will he have after ${n} years (VND)?`,
+          ...opts(ans, [(X * (100 + rate) ** n) / 100 ** n, (X * n * rate) / 100, (X * (100 + rate)) / 100], r, vnd, 100000, 1),
+          explanation: `Simple interest is the same every year: ${vnd(X)} × ${rate}% = ${vnd((X * rate) / 100)} VND. After ${n} years: ${vnd(X)} + ${n} × ${vnd((X * rate) / 100)} = ${vnd(ans)} VND.`,
+        },
+        `Ông Nam gửi ${vndVi(X)} đồng vào ngân hàng với lãi suất đơn ${rate}%/năm (tiền lãi không nhập vào gốc). Sau ${n} năm ông có tất cả bao nhiêu đồng?`,
+        `Lãi đơn thì mỗi năm tiền lãi như nhau: ${vndVi(X)} × ${rate}% = ${vndVi((X * rate) / 100)} đồng. Sau ${n} năm: ${vndVi(X)} + ${n} × ${vndVi((X * rate) / 100)} = ${vndVi(ans)} đồng.`,
+      );
+    }
+    const p = pick(r, [10, 20, 30, 40, 50]);
+    const ans = ((100 + p) * (100 - p)) / 100;
+    return vi(
+      {
+        prompt: `A price is increased by ${p}% and then decreased by ${p}%. The final price is what percentage of the original price?`,
+        ...opts(ans, [100, 100 - p, 100 + (p * p) / 100], r, pct, 1, 1),
+        explanation: `Multiply the factors: ${nf(1 + p / 100)} × ${nf(1 - p / 100)} = ${nf(ans / 100)}, so the final price is ${pct(ans)} of the original. The decrease is taken from the bigger price, so you do not get back to 100%.`,
+      },
+      `Một mặt hàng được tăng giá ${p}%, sau đó lại giảm giá ${p}%. Giá cuối cùng bằng bao nhiêu phần trăm giá ban đầu?`,
+      `Nhân các hệ số: ${factorVi(p)} × ${dc(nf(1 - p / 100))} = ${dc(nf(ans / 100))}, nên giá cuối bằng ${dc(pct(ans))} giá ban đầu. Lần giảm được tính trên giá đã tăng (lớn hơn), nên không trở về 100%.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.6) {
+      const X = int(r, 10, 500) * 10 ** 6, rate = pick(r, [5, 6, 7, 8]), askI = r() < 0.4;
+      const tot = (X * (100 + rate) ** 2) / 10000, I = tot - X;
+      const ans = askI ? I : tot;
+      const mistakes = askI ? [(X * 2 * rate) / 100, (X * rate) / 100, tot] : [(X * (100 + 2 * rate)) / 100, (X * (100 + rate)) / 100, I];
+      return vi(
+        {
+          prompt: `Ms Hoa deposits ${vnd(X)} VND in a bank at ${rate}% per year, compound interest (each year's interest is added to the deposit). How much ${askI ? 'interest will she have earned' : 'will she have in total'} after 2 years (VND)?`,
+          ...opts(ans, mistakes, r, vnd, 100000, 1),
+          explanation: `After 1 year: ${vnd(X)} × ${nf(1 + rate / 100)} = ${vnd((X * (100 + rate)) / 100)}. After 2 years: × ${nf(1 + rate / 100)} again = ${vnd(tot)} VND, i.e. X(1 + r)². ${askI ? `Interest = ${vnd(tot)} − ${vnd(X)} = ${vnd(I)} VND.` : `Simple interest would give only ${vnd((X * (100 + 2 * rate)) / 100)} VND.`}`,
+        },
+        `Cô Hoa gửi ${vndVi(X)} đồng vào ngân hàng với lãi suất ${rate}%/năm theo hình thức lãi kép (tiền lãi mỗi năm được nhập vào gốc). Sau 2 năm, ${askI ? 'cô nhận được bao nhiêu tiền lãi' : 'cô có tất cả bao nhiêu tiền'} (đồng)?`,
+        `Sau 1 năm: ${vndVi(X)} × ${factorVi(rate)} = ${vndVi((X * (100 + rate)) / 100)}. Sau 2 năm: nhân tiếp ${factorVi(rate)} = ${vndVi(tot)} đồng, tức là X(1 + r)². ${askI ? `Tiền lãi = ${vndVi(tot)} − ${vndVi(X)} = ${vndVi(I)} đồng.` : `Nếu tính lãi đơn thì chỉ được ${vndVi((X * (100 + 2 * rate)) / 100)} đồng.`}`,
+      );
+    }
+    const P = int(r, 100, 900) * 10000, g = pick(r, [1, 2, 3]);
+    const ans = (P * (100 + g) ** 2) / 10000;
+    return vi(
+      {
+        prompt: `A city has ${vnd(P)} people. The population grows by ${g}% each year. What will the population be after 2 years?`,
+        ...opts(ans, [(P * (100 + 2 * g)) / 100, (P * (100 + g)) / 100, ans - P], r, vnd, 100, 1),
+        explanation: `Each year the population is multiplied by ${nf(1 + g / 100)}: ${vnd(P)} × ${nf(1 + g / 100)}² = ${vnd(ans)} people. The second year's growth is ${g}% of the bigger population, so it is more than ${2 * g}% in total.`,
+      },
+      `Một thành phố có ${vndVi(P)} người. Dân số tăng ${g}% mỗi năm. Hỏi sau 2 năm thành phố có bao nhiêu người?`,
+      `Mỗi năm dân số được nhân với ${factorVi(g)}: ${vndVi(P)} × ${factorVi(g)}² = ${vndVi(ans)} người. Năm thứ hai tăng ${g}% của số dân đã tăng, nên tổng cộng tăng nhiều hơn ${2 * g}%.`,
+    );
+  }
+  const kind = pick(r, ['deposit', 'rate', 'vat'] as const);
+  if (kind === 'vat') {
+    let a = 0, b = 0;
+    do {
+      a = int(r, 5, 30) * 100000;
+      b = int(r, 5, 30) * 100000;
+    } while (a === b);
+    const S = a + b, T = (110 * a + 108 * b) / 100;
+    return vi(
+      {
+        prompt: `A family buys a fridge and a washing machine for ${vnd(S)} VND in total before VAT. With VAT of 10% on the fridge and 8% on the washing machine they pay ${vnd(T)} VND. What is the price of the fridge before VAT (VND)?`,
+        ...opts(a, [b, S / 2, T - S], r, vnd, 100000, 1),
+        explanation: `Let the prices before VAT be x (fridge) and y: x + y = ${vnd(S)} and 1.1x + 1.08y = ${vnd(T)}. Subtract 1.08 × the first equation: 0.02x = ${vnd(T)} − ${vnd((108 * S) / 100)} = ${vnd(T - (108 * S) / 100)}, so x = ${vnd(a)} VND.`,
+      },
+      `Một gia đình mua một tủ lạnh và một máy giặt với tổng giá chưa thuế VAT là ${vndVi(S)} đồng. Thuế VAT của tủ lạnh là 10%, của máy giặt là 8%, nên gia đình phải trả ${vndVi(T)} đồng. Hỏi giá tủ lạnh chưa có thuế VAT là bao nhiêu đồng?`,
+      `Gọi giá chưa VAT của tủ lạnh là x, của máy giặt là y: x + y = ${vndVi(S)} và 1,1x + 1,08y = ${vndVi(T)}. Trừ đi 1,08 lần phương trình đầu: 0,02x = ${vndVi(T)} − ${vndVi((108 * S) / 100)} = ${vndVi(T - (108 * S) / 100)}, nên x = ${vndVi(a)} đồng.`,
+    );
+  }
+  const X = int(r, 10, 300) * 10 ** 6, rate = pick(r, kind === 'rate' ? [5, 6, 7, 8, 10, 12] : [5, 6, 7, 8, 10]);
+  const Y = (X * (100 + rate) ** 2) / 10000;
+  if (kind === 'rate')
+    return vi(
+      {
+        prompt: `Mr Tuấn deposited ${vnd(X)} VND in a bank with compound interest (the interest is added at the end of each year). After 2 years he has ${vnd(Y)} VND. What is the annual interest rate?`,
+        ...opts(rate, [((Y - X) * 50) / X, ((Y - X) * 100) / X, rate + 0.5], r, pct, 1, 1),
+        explanation: `Let the rate be r: ${vnd(X)}(1 + r)² = ${vnd(Y)}, so (1 + r)² = ${nf(Y / X)} and 1 + r = ${nf(1 + rate / 100)} (r > 0). The rate is ${rate}% per year. Halving the total growth (${nf(((Y - X) * 50) / X)}%) ignores the interest on the interest.`,
+      },
+      `Ông Tuấn gửi ${vndVi(X)} đồng vào ngân hàng theo hình thức lãi kép (cuối mỗi năm tiền lãi được nhập vào gốc). Sau 2 năm ông có ${vndVi(Y)} đồng. Hỏi lãi suất mỗi năm là bao nhiêu?`,
+      `Gọi lãi suất là r: ${vndVi(X)}(1 + r)² = ${vndVi(Y)}, nên (1 + r)² = ${dc(nf(Y / X))} và 1 + r = ${factorVi(rate)} (r > 0). Lãi suất là ${rate}%/năm. Lấy tổng phần trăm tăng chia đôi (${dc(nf(((Y - X) * 50) / X))}%) là bỏ qua tiền lãi của tiền lãi.`,
+    );
+  return vi(
+    {
+      prompt: `After 2 years at ${rate}% per year compound interest, Mr Tuấn has ${vnd(Y)} VND in the bank. How much did he deposit at the start (VND)?`,
+      ...opts(X, [(Y * (100 - rate) ** 2) / 10000, (Y * (100 - 2 * rate)) / 100, (Y * 100) / (100 + 2 * rate)].filter(Number.isInteger), r, vnd, 10 ** 6, 1),
+      explanation: `Let the deposit be x: x(1 + ${nf(rate / 100)})² = ${vnd(Y)}, so x = ${vnd(Y)} ÷ ${nf((1 + rate / 100) ** 2)} = ${vnd(X)} VND. Taking ${rate}% off twice does not undo the growth.`,
+    },
+    `Sau 2 năm gửi tiết kiệm với lãi suất ${rate}%/năm theo hình thức lãi kép, ông Tuấn có ${vndVi(Y)} đồng. Hỏi lúc đầu ông đã gửi bao nhiêu đồng?`,
+    `Gọi số tiền gửi là x: x(1 + ${dc(nf(rate / 100))})² = ${vndVi(Y)}, nên x = ${vndVi(Y)} : ${dc(nf((1 + rate / 100) ** 2))} = ${vndVi(X)} đồng. Trừ đi ${rate}% hai lần không đưa về số tiền ban đầu.`,
+  );
+};
+
+// ── Real-life money problems: offers, taxi fares, electricity bills ─────
+const TIERS: [number, number][] = [
+  [50, 1800],
+  [100, 1900],
+  [200, 2200],
+  [300, 2800],
+  [400, 3100],
+];
+const TIER_EN = `0–50 kWh: 1,800 VND; 51–100 kWh: 1,900 VND; 101–200 kWh: 2,200 VND; 201–300 kWh: 2,800 VND; 301–400 kWh: 3,100 VND`;
+const TIER_VI = `0–50 kWh: 1.800 đồng; 51–100 kWh: 1.900 đồng; 101–200 kWh: 2.200 đồng; 201–300 kWh: 2.800 đồng; 301–400 kWh: 3.100 đồng`;
+function bill(x: number): number {
+  let total = 0, from = 0;
+  for (const [to, price] of TIERS) {
+    if (x > from) total += (Math.min(x, to) - from) * price;
+    from = to;
+  }
+  return total;
+}
+const topPrice = (x: number) => TIERS.find(([to]) => x <= to)![1];
+const billSteps = (x: number, viet = false) => {
+  const parts: string[] = [];
+  let from = 0;
+  for (const [to, price] of TIERS) {
+    if (x > from) parts.push(`${Math.min(x, to) - from} × ${(viet ? vndVi : vnd)(price)}`);
+    from = to;
+  }
+  return parts.join(' + ');
+};
+
+const realLife: Generator = (d, r) => {
+  if (d === 1) {
+    const P = int(r, 5, 30) * 1000, n = int(r, 6, 25);
+    const ans = (n - Math.floor(n / 4)) * P;
+    return vi(
+      {
+        prompt: `Notebooks cost ${vnd(P)} VND each. The shop has an offer: "buy 3, get 1 free" (for every 4 notebooks you take, you pay for 3). How much does a class pay for ${n} notebooks (VND)?`,
+        ...opts(ans, [n * P, (n - Math.floor(n / 3)) * P, (n * P * 3) / 4], r, vnd, 1000, 1),
+        explanation: `${n} notebooks = ${Math.floor(n / 4)} groups of 4${n % 4 ? ` and ${n % 4} more` : ''}, so ${Math.floor(n / 4)} are free and the class pays for ${n - Math.floor(n / 4)}: ${n - Math.floor(n / 4)} × ${vnd(P)} = ${vnd(ans)} VND.`,
+      },
+      `Vở giá ${vndVi(P)} đồng một quyển. Cửa hàng khuyến mãi "mua 3 tặng 1" (cứ lấy 4 quyển thì chỉ trả tiền 3 quyển). Một lớp lấy ${n} quyển vở thì phải trả bao nhiêu đồng?`,
+      `${n} quyển = ${Math.floor(n / 4)} nhóm 4 quyển${n % 4 ? ` và ${n % 4} quyển lẻ` : ''}, nên được tặng ${Math.floor(n / 4)} quyển và phải trả tiền ${n - Math.floor(n / 4)} quyển: ${n - Math.floor(n / 4)} × ${vndVi(P)} = ${vndVi(ans)} đồng.`,
+    );
+  }
+  if (d === 2) {
+    const A = pick(r, [15000, 18000, 20000]), B = pick(r, [11000, 12000, 13500, 14000]), Cc = B - pick(r, [1500, 2000, 3000]);
+    const x = int(r, 8, 60);
+    const ans = A + B * (Math.min(x, 30) - 1) + Cc * Math.max(0, x - 30);
+    return vi(
+      {
+        prompt: `A taxi charges ${vnd(A)} VND for the first km, ${vnd(B)} VND per km from the 2nd to the 30th km, and ${vnd(Cc)} VND per km after the 30th km. How much does a ${x} km trip cost (VND)?`,
+        ...opts(ans, [A + B * (x - 1), A + B * Math.min(x, 30) + Cc * Math.max(0, x - 30), B * x], r, vnd, 1000, 1),
+        explanation: `Split the trip: 1 km at ${vnd(A)}, ${Math.min(x, 30) - 1} km at ${vnd(B)}${x > 30 ? `, and ${x - 30} km at ${vnd(Cc)}` : ''}. Total: ${vnd(A)} + ${Math.min(x, 30) - 1} × ${vnd(B)}${x > 30 ? ` + ${x - 30} × ${vnd(Cc)}` : ''} = ${vnd(ans)} VND.`,
+      },
+      `Một hãng taxi tính giá ${vndVi(A)} đồng cho km đầu tiên, ${vndVi(B)} đồng/km từ km thứ 2 đến km thứ 30, và ${vndVi(Cc)} đồng/km từ km thứ 31 trở đi. Một chuyến đi dài ${x} km hết bao nhiêu tiền?`,
+      `Chia quãng đường: 1 km giá ${vndVi(A)}, ${Math.min(x, 30) - 1} km giá ${vndVi(B)}${x > 30 ? `, và ${x - 30} km giá ${vndVi(Cc)}` : ''}. Tổng: ${vndVi(A)} + ${Math.min(x, 30) - 1} × ${vndVi(B)}${x > 30 ? ` + ${x - 30} × ${vndVi(Cc)}` : ''} = ${vndVi(ans)} đồng.`,
+    );
+  }
+  if (d <= 4) {
+    const x = int(r, 60, 380), v = d === 4 ? pick(r, [8, 10]) : 0;
+    const B = bill(x), ans = (B * (100 + v)) / 100;
+    const withVat = v ? `, plus ${v}% VAT` : '';
+    const mistakes = v ? [B, (x * topPrice(x) * (100 + v)) / 100, (B * v) / 100] : [x * topPrice(x), x * TIERS[0][1]];
+    return vi(
+      {
+        prompt: `Electricity is charged in tiers, per kWh: ${TIER_EN}${withVat}. A family uses ${x} kWh in a month. How much do they pay (VND)?`,
+        ...opts(ans, mistakes, r, vnd, 1000, 1),
+        explanation: `Each tier is charged at its own price: ${billSteps(x)} = ${vnd(B)} VND.${v ? ` With ${v}% VAT: ${vnd(B)} × ${nf(1 + v / 100)} = ${vnd(ans)} VND.` : ` Charging all ${x} kWh at ${vnd(topPrice(x))} VND is the usual mistake.`}`,
+      },
+      `Giá điện sinh hoạt tính theo bậc thang, mỗi kWh: ${TIER_VI}${v ? `, chưa gồm ${v}% thuế VAT` : ''}. Một gia đình dùng hết ${x} kWh trong tháng. Hỏi gia đình phải trả bao nhiêu đồng${v ? ' (đã gồm thuế VAT)' : ''}?`,
+      `Mỗi bậc tính theo giá của bậc đó: ${billSteps(x, true)} = ${vndVi(B)} đồng.${v ? ` Cộng ${v}% thuế VAT: ${vndVi(B)} × ${factorVi(v)} = ${vndVi(ans)} đồng.` : ` Tính cả ${x} kWh theo giá ${vndVi(topPrice(x))} đồng là sai.`}`,
+    );
+  }
+  const x = int(r, 80, 380), v = pick(r, [8, 10]);
+  const B = bill(x), T = (B * (100 + v)) / 100;
+  let noVat = 0;
+  while (bill(noVat + 1) <= T && noVat < 2000) noVat++;
+  const base = [300, 200, 100, 50].find((b) => x > b)!;
+  return vi(
+    {
+      prompt: `Electricity is charged in tiers, per kWh: ${TIER_EN}, plus ${v}% VAT. A family paid ${vnd(T)} VND (including VAT) for one month. How many kWh did they use?`,
+      ...opts(x, [noVat, Math.round(T / topPrice(x)), Math.round(B / topPrice(x))], r, nf, 10, 1),
+      explanation: `Remove the VAT first: ${vnd(T)} ÷ ${nf(1 + v / 100)} = ${vnd(B)} VND. The first ${base} kWh cost ${vnd(bill(base))} VND; the rest, ${vnd(B - bill(base))} VND, is at ${vnd(topPrice(x))} VND/kWh = ${x - base} kWh. Total ${x} kWh.`,
+    },
+    `Giá điện sinh hoạt tính theo bậc thang, mỗi kWh: ${TIER_VI}, chưa gồm ${v}% thuế VAT. Một gia đình trả ${vndVi(T)} đồng (đã gồm thuế VAT) cho một tháng. Hỏi gia đình đã dùng bao nhiêu kWh điện?`,
+    `Bỏ thuế VAT trước: ${vndVi(T)} : ${factorVi(v)} = ${vndVi(B)} đồng. ${base} kWh đầu hết ${vndVi(bill(base))} đồng; phần còn lại ${vndVi(B - bill(base))} đồng tính giá ${vndVi(topPrice(x))} đồng/kWh, tức là ${x - base} kWh. Tổng cộng ${x} kWh.`,
+  );
+};
+
+export const number9Concepts: ConceptSeed[] = [
+  {
+    id: 'math.number.real-life',
+    domain: 'Number',
+    skill: 'Percentages',
+    name: 'Money in real life',
+    missionName: 'Market Day',
+    description: 'Multi-step VND problems from the entrance exam: "buy 3 get 1" offers, taxi fares and tiered electricity bills with VAT, worked forwards and backwards.',
+    prerequisites: ['math.number.percent'],
+    lesson:
+      'Read the price rule carefully and split the quantity into its parts: the first km, km 2–30, the rest; or each electricity tier, each charged at its own price. Add the parts, then add VAT last (× 1.1 for 10%). Working backwards, undo the steps in reverse order: remove the VAT first (÷ 1.1), then see which tier the remaining money reaches.',
+    examRefs: ['Vào 10 Hà Nội · Bài toán thực tế (tiền điện, taxi, khuyến mãi)'],
+  },
+];
 
 export const number9Patches: Record<string, Partial<ConceptSeed>> = {
   'math.number.integers': {
@@ -542,6 +839,13 @@ export const number9Patches: Record<string, Partial<ConceptSeed>> = {
       'Change decimals to fractions (0.75 = 3/4). Brackets first, then powers, then × and : (dividing = multiplying by the reciprocal), then + and − with a common denominator. Watch the signs: (−2/3)² = 4/9. Telescoping: 1/(k(k + 1)) = 1/k − 1/(k + 1) and 1 − 1/k² = (k − 1)(k + 1)/k², so long sums and products collapse.',
     examRefs: ['Toán 9 · Số hữu tỉ, số thực', 'Vào 10 · Tính giá trị biểu thức'],
   },
+  'math.number.percent': {
+    name: 'Percentages & interest',
+    description: 'Exam-style percentages with VND: discounts and successive discounts, original price, profit and loss, VAT, simple and compound interest over 2 years, population growth.',
+    lesson:
+      'Turn every change into a multiplier: +8% → × 1.08, −25% → × 0.75. Successive changes multiply (−20% then −10% = × 0.72, i.e. −28%, not −30%). Percentage change = change ÷ original × 100%. To find the original, divide by the multiplier (after −20% it is 400,000 → 400,000 ÷ 0.8 = 500,000). Simple interest: X(1 + n·r). Compound interest (interest added each year): X(1 + r)ⁿ, so after 2 years X(1 + r)².',
+    examRefs: ['Vào 10 Hà Nội · Bài II (bài toán thực tế: lãi suất, giảm giá, VAT)', 'Toán 9 · Giải bài toán bằng cách lập phương trình'],
+  },
   'math.number.powers': {
     name: 'Powers, roots & scientific notation',
     description: 'Exponent laws with zero and negative exponents, scientific notation, cube roots, comparing large powers.',
@@ -555,6 +859,8 @@ export const number9Generators: Record<string, Generator> = {
   'math.number.integers': realNumbers,
   'math.number.fractions': fractions,
   'math.number.powers': powers,
+  'math.number.percent': percent,
+  'math.number.real-life': realLife,
 };
 
 export const number9LessonsVi: Record<string, string> = {
@@ -562,6 +868,10 @@ export const number9LessonsVi: Record<string, string> = {
     'Thứ tự thực hiện: ngoặc → luỹ thừa, căn → nhân chia (trái sang phải) → cộng trừ (trái sang phải). −3² = −9 nhưng (−3)² = 9. √(A²) = |A|, nên √((2 − √5)²) = √5 − 2. √A·√B = √(AB). Muốn so sánh c√s với một số, bình phương cả hai: 2√6 = √24 < 5 = √25. Rút gọn căn bằng cách đưa thừa số ra ngoài dấu căn (√75 = 5√3) rồi cộng các căn đồng dạng; trục căn thức ở mẫu bằng cách nhân với biểu thức liên hợp: (√a − b)(√a + b) = a − b².',
   'math.number.fractions':
     'Đổi số thập phân ra phân số (0,75 = 3/4). Làm trong ngoặc trước, rồi luỹ thừa, rồi nhân chia (chia cho một phân số là nhân với số nghịch đảo), cuối cùng cộng trừ sau khi quy đồng. Cẩn thận với dấu: (−2/3)² = 4/9. Tổng "triệt tiêu": 1/(k(k + 1)) = 1/k − 1/(k + 1) và 1 − 1/k² = (k − 1)(k + 1)/k², nên các tổng và tích dài rút gọn lại rất ngắn.',
+  'math.number.percent':
+    'Đổi mỗi lần thay đổi thành một hệ số nhân: tăng 8% → × 1,08, giảm 25% → × 0,75. Nhiều lần thay đổi liên tiếp thì nhân các hệ số (giảm 20% rồi giảm 10% = × 0,72, tức là giảm 28% chứ không phải 30%). Phần trăm thay đổi = mức thay đổi ÷ giá ban đầu × 100%. Muốn tìm giá ban đầu thì chia cho hệ số (sau khi giảm 20% còn 400.000 → 400.000 : 0,8 = 500.000). Lãi đơn: X(1 + n·r). Lãi kép (lãi nhập vào gốc mỗi năm): X(1 + r)ⁿ, nên sau 2 năm là X(1 + r)².',
+  'math.number.real-life':
+    'Đọc kĩ cách tính giá và chia số lượng thành từng phần: km đầu tiên, từ km thứ 2 đến km thứ 30, phần còn lại; hoặc từng bậc giá điện, mỗi bậc tính theo giá riêng. Cộng các phần lại, cuối cùng mới cộng thuế VAT (× 1,1 với VAT 10%). Khi làm ngược, đảo ngược thứ tự các bước: bỏ VAT trước (: 1,1), rồi xem số tiền còn lại thuộc đến bậc nào.',
   'math.number.powers':
     'aᵐ·aⁿ = aᵐ⁺ⁿ, aᵐ : aⁿ = aᵐ⁻ⁿ, (aᵐ)ⁿ = aᵐⁿ, aⁿbⁿ = (ab)ⁿ, a⁰ = 1, a⁻ⁿ = 1/aⁿ. Kí hiệu khoa học: a × 10ⁿ với 1 ≤ a < 10. ∛(−27) = −3. Để so sánh 2³⁰⁰ và 3²⁰⁰, đưa về cùng số mũ (8¹⁰⁰ < 9¹⁰⁰) hoặc cùng cơ số (16¹⁹ = 2⁷⁶).',
 };

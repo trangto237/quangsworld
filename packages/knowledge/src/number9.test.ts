@@ -53,6 +53,18 @@ const powLog = (s: string) => {
   return supNum(m[2]) * Math.log(Number(m[1]));
 };
 
+/** Tiered price list from a prompt ("0–50 kWh: 1,800 VND; 51–100 kWh: …") as [upper limit, price]. */
+const tiers = (s: string) => [...s.matchAll(/(\d+)–(\d+) kWh: ([\d,]+) VND/g)].map((m) => [+m[2], money(m[3])] as const);
+function tieredCost(t: readonly (readonly [number, number])[], x: number) {
+  let total = 0;
+  for (let k = 1; k <= x; k++) total += t.find(([to]) => k <= to)![1];
+  return total;
+}
+const grow = (x: number, rate: number, years: number) => {
+  for (let y = 0; y < years; y++) x += (x * rate) / 100;
+  return x;
+};
+
 const CHECKS: Record<string, Check[]> = {
   'math.number.integers': [
     [/^Arrange in increasing order: (.*)$/, (m) => ({
@@ -81,6 +93,52 @@ const CHECKS: Record<string, Check[]> = {
       return { value: p };
     }],
     [/^Calculate: (.*)$/, (m) => ({ value: ev(m[1]) })],
+  ],
+  'math.number.percent': [
+    [/costs ([\d,]+) VND\. The shop gives a (\d+)% discount/, (m) => ({ value: money(m[1]) - (money(m[1]) * +m[2]) / 100 })],
+    [/(rose|fell) from ([\d,]+) VND to ([\d,]+) VND/, (m) => ({ value: (Math.abs(money(m[3]) - money(m[2])) / money(m[2])) * 100 })],
+    [/After a (\d+)% discount, Lan paid ([\d,]+) VND/, (m) => ({ value: money(m[2]) / (1 - +m[1] / 100) })],
+    [/buys .* for ([\d,]+) VND and sells it for ([\d,]+) VND/, (m) => ({ value: (Math.abs(money(m[2]) - money(m[1])) / money(m[1])) * 100 })],
+    [/including (\d+)% VAT is ([\d,]+) VND/, (m) => ({ value: money(m[2]) / (1 + +m[1] / 100) })],
+    [/costs ([\d,]+) VND\. It is reduced by (\d+)%, and then the new price is reduced by a further (\d+)%/, (m) => {
+      const after = money(m[1]) * (1 - +m[2] / 100);
+      return { value: after - (after * +m[3]) / 100 };
+    }],
+    [/deposits ([\d,]+) VND at a simple interest rate of (\d+)% per year .* after (\d+) years/, (m) => ({ value: money(m[1]) + +m[3] * ((money(m[1]) * +m[2]) / 100) })],
+    [/increased by (\d+)% and then decreased by (\d+)%/, (m) => ({ value: 100 * (1 + +m[1] / 100) * (1 - +m[2] / 100) })],
+    [/deposits ([\d,]+) VND in a bank at (\d+)% per year, compound interest .* How much (interest|will she have)/, (m) => {
+      const end = grow(money(m[1]), +m[2], 2);
+      return { value: m[3] === 'interest' ? end - money(m[1]) : end };
+    }],
+    [/has ([\d,]+) people\. The population grows by (\d+)% each year/, (m) => ({ value: grow(money(m[1]), +m[2], 2) })],
+    [/fridge and a washing machine for ([\d,]+) VND in total before VAT\. With VAT of (\d+)% on the fridge and (\d+)% on the washing machine they pay ([\d,]+) VND/, (m) => {
+      // x + y = S, (1 + a)x + (1 + b)y = T
+      const [S, a, b, T] = [money(m[1]), +m[2] / 100, +m[3] / 100, money(m[4])];
+      return { value: (T - (1 + b) * S) / (a - b) };
+    }],
+    [/deposited ([\d,]+) VND .* After 2 years he has ([\d,]+) VND\. What is the annual interest rate/, (m) => ({ value: (Math.sqrt(money(m[2]) / money(m[1])) - 1) * 100 })],
+    [/After 2 years at (\d+)% per year compound interest, Mr Tuấn has ([\d,]+) VND/, (m) => ({ value: money(m[2]) / (1 + +m[1] / 100) ** 2 })],
+  ],
+  'math.number.real-life': [
+    [/Notebooks cost ([\d,]+) VND each\..*for every 4 notebooks you take, you pay for 3\)\. How much does a class pay for (\d+) notebooks/, (m) => {
+      let paid = 0;
+      for (let k = 1; k <= +m[2]; k++) if (k % 4 !== 0) paid++;
+      return { value: paid * money(m[1]) };
+    }],
+    [/([\d,]+) VND for the first km, ([\d,]+) VND per km from the 2nd to the 30th km, and ([\d,]+) VND per km after the 30th km\. How much does a (\d+) km trip/, (m) => {
+      let cost = 0;
+      for (let k = 1; k <= +m[4]; k++) cost += k === 1 ? money(m[1]) : k <= 30 ? money(m[2]) : money(m[3]);
+      return { value: cost };
+    }],
+    [/^Electricity .*?(?:plus (\d+)% VAT)?\. A family uses (\d+) kWh/, (m) => ({ value: tieredCost(tiers(m[0]), +m[2]) * (1 + (m[1] ? +m[1] : 0) / 100) })],
+    [/^Electricity .*plus (\d+)% VAT\. A family paid ([\d,]+) VND/, (m) => ({
+      ok: (a) => close(tieredCost(tiers(m[0]), +a) * (1 + +m[1] / 100), money(m[2])),
+      value: (() => {
+        let x = 0;
+        while (tieredCost(tiers(m[0]), x) * (1 + +m[1] / 100) < money(m[2])) x++;
+        return x;
+      })(),
+    })],
   ],
   'math.number.powers': [
     [/^Write ([\d,.]+) in scientific notation/, (m) => ({ ok: (a) => sciOk(a, money(m[1])), sameValueOk: true })],
