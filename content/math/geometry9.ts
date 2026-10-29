@@ -52,7 +52,7 @@ const qpi = (n: number, d = 1) => {
 const minus = (a: Q, b: Q) => q(`${a.s} − ${b.s}`, a.v - b.v);
 const plus = (a: Q, b: Q) => q(`${a.s} + ${b.s}`, a.v + b.v);
 /** Rounded to k decimal places (the value is the rounded value). */
-export const qdp = (x: number, k: number) => q(x.toFixed(k), Number(x.toFixed(k)));
+const qdp = (x: number, k: number) => q(x.toFixed(k), Number(x.toFixed(k)));
 /** Decimal comma for the Vietnamese text. */
 const viN = (s: string) => s.replace(/(\d)\.(\d)/g, '$1,$2');
 
@@ -591,12 +591,311 @@ const circles: Generator = (d, r) => {
   );
 };
 
-export const geometry9Concepts: ConceptSeed[] = [];
+// ── Trigonometric ratios in a right triangle ─────────────────────────────
+type Fn = 'sin' | 'cos' | 'tan' | 'cot';
+const FNS: Fn[] = ['sin', 'cos', 'tan', 'cot'];
+/** 12 × f²(α) for α = 30°, 45°, 60°. */
+const SQ12: Record<Fn, Record<number, number>> = {
+  sin: { 30: 3, 45: 6, 60: 9 },
+  cos: { 30: 9, 45: 6, 60: 3 },
+  tan: { 30: 4, 45: 12, 60: 36 },
+  cot: { 30: 36, 45: 12, 60: 4 },
+};
+const SWAP: Record<Fn, Fn> = { sin: 'cos', cos: 'sin', tan: 'cot', cot: 'tan' };
+const coef = (p: number) => (p === 1 ? '' : String(p));
+const RATIO_VI = 'sin = đối/huyền, cos = kề/huyền, tan = đối/kề, cot = kề/đối';
+const trig: Generator = (d, r) => {
+  if (d <= 1) {
+    const [p, qq, c] = pick(r, triples(30));
+    const at = pick(r, ['B', 'C'] as const);
+    const f = pick(r, FNS);
+    // AB = p, AC = qq, BC = c. Opposite B is AC; opposite C is AB.
+    const [opp, adj] = at === 'B' ? [qq, p] : [p, qq];
+    const val: Record<Fn, Q> = { sin: qf(opp, c), cos: qf(adj, c), tan: qf(opp, adj), cot: qf(adj, opp) };
+    const giveHyp = r() < 0.5;
+    const given = giveHyp ? `AB = ${p} cm and BC = ${c} cm` : `AB = ${p} cm and AC = ${qq} cm`;
+    const givenVi = giveHyp ? `AB = ${p} cm, BC = ${c} cm` : `AB = ${p} cm, AC = ${qq} cm`;
+    const step = giveHyp ? `AC = √(${c}² − ${p}²) = ${qq}` : `BC = √(${p}² + ${qq}²) = ${c}`;
+    return vi(
+      {
+        prompt: `Triangle ABC is right-angled at A with ${given}. Find ${f} ${at}.`,
+        ...choose(val[f], FNS.filter((g) => g !== f).map((g) => val[g])),
+        explanation: `${step}. For angle ${at}: opposite = ${opp}, adjacent = ${adj}, hypotenuse = ${c}. sin = opp/hyp, cos = adj/hyp, tan = opp/adj, cot = adj/opp, so ${f} ${at} = ${val[f].s}.`,
+        figure: rt(p, qq, c, giveHyp ? 'b' : 'c'),
+      },
+      `Tam giác ABC vuông tại A có ${givenVi}. Tính ${f} ${at}.`,
+      `${step}. Với góc ${at}: cạnh đối = ${opp}, cạnh kề = ${adj}, cạnh huyền = ${c}. ${RATIO_VI}, nên ${f} ${at} = ${val[f].s}.`,
+    );
+  }
+  if (d === 2) {
+    const [f1, f2] = [pick(r, FNS), pick(r, FNS)];
+    const [a1, a2] = [pick(r, [30, 45, 60]), pick(r, [30, 45, 60])];
+    const [p1, p2] = [int(r, 1, 4), int(r, 1, 4)];
+    const sg = r() < 0.5 ? 1 : -1;
+    const v = (f: Fn, a: number) => SQ12[f][a];
+    const val = (g1: Fn, g2: Fn, s = sg) => qf(p1 * v(g1, a1) + s * p2 * v(g2, a2), 12);
+    const e = `${coef(p1)}${f1}²${a1}° ${sg > 0 ? '+' : '−'} ${coef(p2)}${f2}²${a2}°`;
+    const ans = val(f1, f2);
+    const tbl = 'sin 30° = cos 60° = 1/2, sin 45° = cos 45° = √2/2, sin 60° = cos 30° = √3/2, tan 30° = cot 60° = √3/3, tan 45° = 1, tan 60° = cot 30° = √3';
+    return vi(
+      {
+        prompt: `Compute: ${e}`,
+        ...choose(ans, [val(SWAP[f1], f2), val(f1, SWAP[f2]), val(SWAP[f1], SWAP[f2]), val(f1, f2, -sg), qf(v(f1, a1) + sg * v(f2, a2), 12), qf(p1 * v(f1, a1), 12), qf(p1 * v(f1, a1) + sg * p2 * v(f2, a2) + 6, 12), qf(p1 * v(f1, a1) + sg * p2 * v(f2, a2) - 6, 12)], true),
+        explanation: `Use the exact values (${tbl}) and square them: ${f1}²${a1}° = ${fracN(v(f1, a1), 12)}, ${f2}²${a2}° = ${fracN(v(f2, a2), 12)}. Result: ${ans.s}.`,
+      },
+      `Tính: ${e}`,
+      `Dùng giá trị đặc biệt (${tbl.replace(/(\d),(\s)/g, '$1;$2')}) rồi bình phương: ${f1}²${a1}° = ${fracN(v(f1, a1), 12)}, ${f2}²${a2}° = ${fracN(v(f2, a2), 12)}. Kết quả: ${ans.s}.`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const a = pick(r, [10, 15, 20, 25, 35, 40, 50, 55, 65, 70, 75, 80]);
+      const b = pick(r, [12, 18, 22, 28, 32, 38, 52, 58, 62, 68, 72, 78]);
+      const p = int(r, 2, 5);
+      const kind = pick(r, [0, 1, 2]);
+      const [e, ans, mistakes] =
+        kind === 0
+          ? [`sin²${a}° + sin²${90 - a}° − ${p}tan ${b}°·tan ${90 - b}°`, 1 - p, [1 + p, 2 - p, -p, p - 1]]
+          : kind === 1
+            ? [`sin ${a}°/cos ${90 - a}° + ${p}tan ${b}°·cot ${b}°`, 1 + p, [p, 2 * p, 1 - p, p + 2]]
+            : [`${p}tan ${b}°/cot ${90 - b}° − cos²${a}° − cos²${90 - a}°`, p - 1, [p - 2, p, p + 1, 1 - p]];
+      return vi(
+        {
+          prompt: `Compute: ${e}`,
+          ...choose(qn(ans), mistakes.map(qn), true),
+          explanation: `Complementary angles: sin α = cos(90° − α) and tan α = cot(90° − α). So sin²α + sin²(90° − α) = sin²α + cos²α = 1, cos²α + cos²(90° − α) = 1, tan α·tan(90° − α) = tan α·cot α = 1. Result: ${num(ans)}.`,
+        },
+        `Tính: ${e}`,
+        `Hai góc phụ nhau: sin α = cos(90° − α), tan α = cot(90° − α). Do đó sin²α + sin²(90° − α) = sin²α + cos²α = 1, cos²α + cos²(90° − α) = 1, tan α·tan(90° − α) = tan α·cot α = 1. Kết quả: ${num(ans)}.`,
+      );
+    }
+    const [opp, adj, hyp] = pick(r, TRIPLES);
+    const val: Record<Fn, Q> = { sin: qf(opp, hyp), cos: qf(adj, hyp), tan: qf(opp, adj), cot: qf(adj, opp) };
+    const g = pick(r, ['sin', 'cos'] as const);
+    const f = pick(r, FNS.filter((x) => x !== g));
+    return vi(
+      {
+        prompt: `α is an acute angle with ${g} α = ${val[g].s}. Find ${f} α.`,
+        ...choose(val[f], FNS.filter((x) => x !== f).map((x) => val[x])),
+        explanation: `sin²α + cos²α = 1 gives ${SWAP[g]} α = √(1 − (${val[g].s})²) = ${val[SWAP[g]].s} (positive: α is acute). Then tan α = sin α/cos α, cot α = cos α/sin α: ${f} α = ${val[f].s}.`,
+      },
+      `Cho α là góc nhọn có ${g} α = ${val[g].s}. Tính ${f} α.`,
+      `Từ sin²α + cos²α = 1 suy ra ${SWAP[g]} α = √(1 − (${val[g].s})²) = ${val[SWAP[g]].s} (dương vì α nhọn). Rồi tan α = sin α/cos α, cot α = cos α/sin α: ${f} α = ${val[f].s}.`,
+    );
+  }
+  const R = (x: number) => (x * Math.PI) / 180;
+  if (d === 4) {
+    if (r() < 0.5) {
+      const c = int(r, 6, 25);
+      const b = pick(r, [20, 25, 28, 32, 35, 38, 40, 42, 48, 50, 52, 55, 58, 62, 65, 70]);
+      const side = pick(r, ['AC', 'AB'] as const);
+      const [f, g] = side === 'AC' ? [Math.sin, Math.cos] : [Math.cos, Math.sin];
+      const ans = qdp(c * f(R(b)), 2);
+      return vi(
+        {
+          prompt: `Triangle ABC is right-angled at A with BC = ${c} cm and angle B = ${b}°. Find ${side} (cm), rounded to 2 decimal places.`,
+          ...choose(ans, [qdp(c * g(R(b)), 2), qdp(c * Math.tan(R(b)), 2), qdp(c / f(R(b)), 2), qdp(c / Math.tan(R(b)), 2)]),
+          explanation: `${side} is the side ${side === 'AC' ? 'opposite' : 'adjacent to'} angle B and BC is the hypotenuse, so ${side} = BC·${side === 'AC' ? 'sin' : 'cos'} B = ${c}·${side === 'AC' ? 'sin' : 'cos'} ${b}° ≈ ${ans.s}.`,
+        },
+        `Tam giác ABC vuông tại A có BC = ${c} cm và góc B = ${b}°. Tính ${side} (cm), làm tròn đến chữ số thập phân thứ hai.`,
+        `${side} là cạnh ${side === 'AC' ? 'đối diện' : 'kề'} với góc B, BC là cạnh huyền, nên ${side} = BC·${side === 'AC' ? 'sin' : 'cos'} B = ${c}·${side === 'AC' ? 'sin' : 'cos'} ${b}° ≈ ${viN(ans.s)}.`,
+      );
+    }
+    let a = 0, b = 0;
+    do {
+      a = int(r, 3, 15);
+      b = int(r, 3, 15);
+    } while (a === b);
+    const B = Math.round((Math.atan(b / a) * 180) / Math.PI);
+    const mn = Math.min(a, b) / Math.max(a, b);
+    return vi(
+      {
+        prompt: `Triangle ABC is right-angled at A with AB = ${a} cm and AC = ${b} cm. Find angle B, rounded to the nearest degree.`,
+        ...chooseDeg(B, [90 - B, Math.round((Math.asin(mn) * 180) / Math.PI), Math.round((Math.acos(mn) * 180) / Math.PI)]),
+        explanation: `tan B = AC/AB = ${b}/${a} (opposite over adjacent), so B ≈ ${B}°. (Then C = 90° − B.)`,
+      },
+      `Tam giác ABC vuông tại A có AB = ${a} cm, AC = ${b} cm. Tính góc B (làm tròn đến độ).`,
+      `tan B = AC/AB = ${b}/${a} (đối chia kề), nên B ≈ ${B}°. (Khi đó C = 90° − B.)`,
+    );
+  }
+  if (r() < 0.5) {
+    const s = int(r, 8, 40), a = int(r, 25, 65);
+    const ans = qdp(s * Math.tan(R(a)), 1);
+    return vi(
+      {
+        prompt: `A pole casts a shadow ${s} m long when the sun's rays make an angle of ${a}° with the ground. How tall is the pole (m)? Round to 1 decimal place.`,
+        ...choose(ans, [qdp(s * Math.sin(R(a)), 1), qdp(s * Math.cos(R(a)), 1), qdp(s / Math.tan(R(a)), 1), qdp(s / Math.cos(R(a)), 1), qdp(s * Math.tan(R(a)) * 2, 1), qdp(s * Math.tan(R(a)) + 1, 1)]),
+        explanation: `The pole and its shadow are the legs of a right triangle; the ${a}° angle is at the tip of the shadow. Height = shadow × tan ${a}° = ${s}·tan ${a}° ≈ ${ans.s} m.`,
+      },
+      `Một cột cờ có bóng trên mặt đất dài ${s} m khi tia nắng mặt trời tạo với mặt đất một góc ${a}°. Tính chiều cao cột cờ (m), làm tròn đến chữ số thập phân thứ nhất.`,
+      `Cột cờ và bóng của nó là hai cạnh góc vuông; góc ${a}° nằm ở đầu bóng. Chiều cao = bóng × tan ${a}° = ${s}·tan ${a}° ≈ ${viN(ans.s)} m.`,
+    );
+  }
+  const al = int(r, 22, 38), be = al + int(r, 10, 25), dd = 5 * int(r, 2, 10);
+  const [ta, tb] = [Math.tan(R(al)), Math.tan(R(be))];
+  const h = (dd * ta * tb) / (tb - ta);
+  const ans = qdp(h, 1);
+  return vi(
+    {
+      prompt: `From point A on level ground the angle of elevation of the top of a tower is ${al}°. From point B, ${dd} m closer to the tower, it is ${be}°. Find the height of the tower (m), rounded to 1 decimal place.`,
+      ...choose(ans, [qdp(dd * tb, 1), qdp(dd * ta, 1), qdp(dd / (1 / ta + 1 / tb), 1), qdp(dd * (tb - ta), 1), qdp(dd * Math.sin(R(be)), 1), qdp(h + 1, 1), qdp(h - 1, 1)]),
+      explanation: `Let the height be h. The distances from the foot are h·cot ${al}° and h·cot ${be}°, and they differ by ${dd}: h(cot ${al}° − cot ${be}°) = ${dd}, so h = ${dd}/(cot ${al}° − cot ${be}°) ≈ ${ans.s} m.`,
+    },
+    `Từ điểm A trên mặt đất nhìn đỉnh một tòa tháp với góc nâng ${al}°. Đi thêm ${dd} m lại gần tháp đến điểm B thì góc nâng là ${be}°. Tính chiều cao tòa tháp (m), làm tròn đến chữ số thập phân thứ nhất.`,
+    `Gọi chiều cao là h. Khoảng cách từ chân tháp đến A và B là h·cot ${al}° và h·cot ${be}°, hơn kém nhau ${dd} m: h(cot ${al}° − cot ${be}°) = ${dd}, nên h = ${dd}/(cot ${al}° − cot ${be}°) ≈ ${viN(ans.s)} m.`,
+  );
+};
+
+// ── Relations in a right triangle with an altitude ──────────────────────
+/** Right at A, altitude AH: BH = t·m², CH = t·n², AH = t·m·n, BC = t(m² + n²). */
+const PAIRS: [number, number][] = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [2, 5], [1, 5], [3, 5], [4, 5]];
+const SETUP = 'Triangle ABC is right-angled at A with altitude AH';
+const SETUP_VI = 'Tam giác ABC vuông tại A, đường cao AH';
+const relations: Generator = (d, r) => {
+  let [m, n] = pick(r, PAIRS);
+  if (r() < 0.5) [m, n] = [n, m];
+  const t = Math.max(m, n) > 3 ? 1 : int(r, 1, 2);
+  const BH = t * m * m, CH = t * n * n, AH = t * m * n, BC = BH + CH;
+  if (d <= 1)
+    return vi(
+      {
+        prompt: `${SETUP}. BH = ${BH} cm and CH = ${CH} cm. Find AH (cm).`,
+        ...choose(qn(AH), [qn(BH * CH), qf(BC, 2), qroot(BC), qroot(BH * BH + CH * CH)]),
+        explanation: `AH² = BH·CH = ${BH}·${CH} = ${BH * CH}, so AH = ${AH}.`,
+      },
+      `${SETUP_VI}. BH = ${BH} cm, CH = ${CH} cm. Tính AH (cm).`,
+      `AH² = BH·CH = ${BH}·${CH} = ${BH * CH}, nên AH = ${AH}.`,
+    );
+  if (d === 2) {
+    const ans = qroot(BH * BC);
+    return vi(
+      {
+        prompt: `${SETUP}. BH = ${BH} cm and BC = ${BC} cm. Find AB (cm), in simplest radical form.`,
+        ...choose(ans, [qroot(CH * BC), qroot(BC * BC - BH * BH), qn(BH * BC), qroot(BH * CH)]),
+        explanation: `A leg squared = hypotenuse × its projection: AB² = BC·BH = ${BC}·${BH} = ${BH * BC}, so AB = ${ans.s}.`,
+      },
+      `${SETUP_VI}. BH = ${BH} cm, BC = ${BC} cm. Tính AB (cm), viết dưới dạng căn thức tối giản.`,
+      `Bình phương cạnh góc vuông bằng cạnh huyền nhân hình chiếu của nó: AB² = BC·BH = ${BC}·${BH} = ${BH * BC}, nên AB = ${ans.s}.`,
+    );
+  }
+  if (d === 3) {
+    if (r() < 0.5) {
+      const [p, qq, c] = pick(r, triples(30));
+      const ans = qf(p * qq, c);
+      return vi(
+        {
+          prompt: `${SETUP}. AB = ${p} cm and AC = ${qq} cm. Find AH (cm).`,
+          ...choose(ans, [qf(p * qq, 2), qf(c, 2), qf(p + qq, 2), qf(p * qq, p + qq)]),
+          explanation: `BC = √(${p}² + ${qq}²) = ${c}. Twice the area two ways: AH·BC = AB·AC, so AH = ${p}·${qq}/${c} = ${ans.s}.`,
+        },
+        `${SETUP_VI}. AB = ${p} cm, AC = ${qq} cm. Tính AH (cm).`,
+        `BC = √(${p}² + ${qq}²) = ${c}. Hai lần diện tích tính theo hai cách: AH·BC = AB·AC, nên AH = ${p}·${qq}/${c} = ${ans.s}.`,
+      );
+    }
+    let a = 0, b = 0;
+    do {
+      a = int(r, 1, 8);
+      b = int(r, 2, 9);
+    } while (isSq(a * a + b * b));
+    const N = a * a + b * b;
+    const [c, s] = simp(N);
+    const ans = qradf(a * b, c * s, s);
+    return vi(
+      {
+        prompt: `${SETUP}. AB = ${a} cm and AC = ${b} cm. Use 1/AH² = 1/AB² + 1/AC² to find AH (cm), with a rational denominator.`,
+        ...choose(ans, [qf(a * b, 2), qradf(c, 2, s), qroot(a * a + b * b), qf(a * b, N)]),
+        explanation: `1/AH² = 1/${a * a} + 1/${b * b} = ${N}/${a * a * b * b}, so AH = ${a * b}/√${N} = ${ans.s}.`,
+      },
+      `${SETUP_VI}. AB = ${a} cm, AC = ${b} cm. Dùng hệ thức 1/AH² = 1/AB² + 1/AC² để tính AH (cm), trục căn thức ở mẫu.`,
+      `1/AH² = 1/${a * a} + 1/${b * b} = ${N}/${a * a * b * b}, nên AH = ${a * b}/√${N} = ${ans.s}.`,
+    );
+  }
+  if (d === 4) {
+    if (r() < 0.5)
+      return vi(
+        {
+          prompt: `${SETUP}. AH = ${AH} cm and BH = ${BH} cm. Find BC (cm).`,
+          ...choose(qn(BC), [qn(CH), qn(BH + AH), qroot(AH * AH + BH * BH), qn(2 * AH)]),
+          explanation: `AH² = BH·CH, so CH = ${AH}²/${BH} = ${CH}. BC = BH + CH = ${BH} + ${CH} = ${BC}.`,
+        },
+        `${SETUP_VI}. AH = ${AH} cm, BH = ${BH} cm. Tính BC (cm).`,
+        `AH² = BH·CH, nên CH = ${AH}²/${BH} = ${CH}. BC = BH + CH = ${BH} + ${CH} = ${BC}.`,
+      );
+    const ans = qroot(CH * BC);
+    return vi(
+      {
+        prompt: `${SETUP}. AH = ${AH} cm and BH = ${BH} cm. Find AC (cm), in simplest radical form.`,
+        ...choose(ans, [qroot(BH * BC), qroot(AH * AH + BH * BH + 1), qn(CH), qroot(CH * CH - AH * AH)]),
+        explanation: `CH = AH²/BH = ${AH * AH}/${BH} = ${CH}, BC = ${BC}. AC² = BC·CH = ${BC}·${CH} = ${CH * BC}, so AC = ${ans.s}. (Or AC² = AH² + CH².)`,
+      },
+      `${SETUP_VI}. AH = ${AH} cm, BH = ${BH} cm. Tính AC (cm), viết dưới dạng căn thức tối giản.`,
+      `CH = AH²/BH = ${AH * AH}/${BH} = ${CH}, BC = ${BC}. AC² = BC·CH = ${BC}·${CH} = ${CH * BC}, nên AC = ${ans.s}. (Hoặc AC² = AH² + CH².)`,
+    );
+  }
+  if (r() < 0.5) {
+    const [small, big] = [Math.min(BH, CH), Math.max(BH, CH)];
+    return vi(
+      {
+        prompt: `${SETUP}, and AB < AC. BC = ${BC} cm and AH = ${AH} cm. Find BH (cm).`,
+        ...choose(qn(small), [qn(big), qf(BC, 2), qn(AH), qf(AH * AH, BC)]),
+        explanation: `BH + CH = ${BC} and BH·CH = AH² = ${AH * AH}, so BH and CH are the roots of x² − ${BC}x + ${AH * AH} = 0: ${small} and ${big}. AB < AC means BH < CH, so BH = ${small}.`,
+      },
+      `${SETUP_VI}, AB < AC. BC = ${BC} cm, AH = ${AH} cm. Tính BH (cm).`,
+      `BH + CH = ${BC} và BH·CH = AH² = ${AH * AH}, nên BH, CH là nghiệm của x² − ${BC}x + ${AH * AH} = 0: ${small} và ${big}. AB < AC nên BH < CH, vậy BH = ${small}.`,
+    );
+  }
+  const [p, qq, c] = pick(r, [[3, 4, 5], [4, 3, 5]] as const);
+  const j = int(r, 1, 4);
+  const AB = p * c * j, AC = qq * c * j, bc = c * c * j, bh = p * p * j;
+  return vi(
+    {
+      prompt: `${SETUP}. AB = ${AB} cm and BH = ${bh} cm. Find the area of triangle ABC (cm²).`,
+      ...choose(qn((AB * AC) / 2), [qn(AB * AC), qn((AB * bc) / 2), qn((bh * AB) / 2), qn((bc * bh) / 2)]),
+      explanation: `AB² = BC·BH gives BC = ${AB}²/${bh} = ${bc}. AC = √(${bc}² − ${AB}²) = ${AC}. Area = ½·AB·AC = ½·${AB}·${AC} = ${(AB * AC) / 2}.`,
+    },
+    `${SETUP_VI}. AB = ${AB} cm, BH = ${bh} cm. Tính diện tích tam giác ABC (cm²).`,
+    `AB² = BC·BH nên BC = ${AB}²/${bh} = ${bc}. AC = √(${bc}² − ${AB}²) = ${AC}. Diện tích = ½·AB·AC = ½·${AB}·${AC} = ${(AB * AC) / 2}.`,
+  );
+};
+
+export const geometry9Concepts: ConceptSeed[] = [
+  {
+    id: 'math.geometry.trig',
+    domain: 'Geometry',
+    skill: 'Trigonometry',
+    name: 'Trigonometric ratios',
+    missionName: 'Lighthouse Angles',
+    description: 'sin, cos, tan, cot of an acute angle; exact values at 30°, 45°, 60°; complementary angles; solving right triangles and heights.',
+    prerequisites: ['math.geometry.pythagoras'],
+    lesson:
+      'In a right triangle, for an acute angle α: sin α = opposite/hypotenuse, cos α = adjacent/hypotenuse, tan α = opposite/adjacent, cot α = adjacent/opposite. Exact values: sin 30° = cos 60° = 1/2, sin 45° = cos 45° = √2/2, sin 60° = cos 30° = √3/2, tan 30° = √3/3, tan 45° = 1, tan 60° = √3. Always sin²α + cos²α = 1, tan α = sin α/cos α, tan α·cot α = 1, and for complementary angles sin α = cos(90° − α), tan α = cot(90° − α). Solving a triangle: side = hypotenuse × sin (opposite) or × cos (adjacent); leg = other leg × tan. Round only at the end, as the question says.',
+    examRefs: ['Toán 9 · Tỉ số lượng giác của góc nhọn', 'Toán 9 · Hệ thức giữa cạnh và góc trong tam giác vuông', 'Vào 10 Hà Nội · Bài IV (thực tế)'],
+  },
+  {
+    id: 'math.geometry.right-relations',
+    domain: 'Geometry',
+    skill: 'Triangles',
+    name: 'Relations in a right triangle',
+    missionName: 'Altitude Bridge',
+    description: 'A right triangle with the altitude to the hypotenuse: b² = a·b′, h² = b′·c′, a·h = b·c, 1/h² = 1/b² + 1/c².',
+    prerequisites: ['math.geometry.pythagoras'],
+    lesson:
+      'Triangle ABC right-angled at A, altitude AH, BC = a, AC = b, AB = c, projections CH = b′, BH = c′, AH = h. Then b² = a·b′ and c² = a·c′ (a leg squared = hypotenuse × its projection), h² = b′·c′, a·h = b·c (twice the area), and 1/h² = 1/b² + 1/c². Pick the relation that links what you know to what you want; with BH + CH and BH·CH known, BH and CH are the roots of a quadratic.',
+    examRefs: ['Toán 9 · Một số hệ thức về cạnh và đường cao trong tam giác vuông'],
+  },
+];
 export const geometry9Patches: Record<string, Partial<ConceptSeed>> = {};
 export const geometry9Generators: Record<string, Generator> = {
   'math.geometry.pythagoras': pythagoras,
   'math.geometry.area': area,
   'math.geometry.angles': angles,
   'math.geometry.circles': circles,
+  'math.geometry.trig': trig,
+  'math.geometry.right-relations': relations,
 };
-export const geometry9LessonsVi: Record<string, string> = {};
+export const geometry9LessonsVi: Record<string, string> = {
+  'math.geometry.trig':
+    'Trong tam giác vuông, với góc nhọn α: sin α = đối/huyền, cos α = kề/huyền, tan α = đối/kề, cot α = kề/đối. Giá trị đặc biệt: sin 30° = cos 60° = 1/2, sin 45° = cos 45° = √2/2, sin 60° = cos 30° = √3/2, tan 30° = √3/3, tan 45° = 1, tan 60° = √3. Luôn có sin²α + cos²α = 1, tan α = sin α/cos α, tan α·cot α = 1; hai góc phụ nhau thì sin góc này bằng cos góc kia, tan góc này bằng cot góc kia. Giải tam giác vuông: cạnh góc vuông = cạnh huyền × sin góc đối (hoặc × cos góc kề) = cạnh góc vuông kia × tan góc đối. Chỉ làm tròn ở bước cuối theo yêu cầu đề bài.',
+  'math.geometry.right-relations':
+    'Tam giác ABC vuông tại A, đường cao AH, BC = a, AC = b, AB = c, hình chiếu CH = b′, BH = c′, AH = h. Khi đó b² = a·b′, c² = a·c′ (bình phương cạnh góc vuông bằng cạnh huyền nhân hình chiếu), h² = b′·c′, a·h = b·c (hai lần diện tích), 1/h² = 1/b² + 1/c². Chọn hệ thức nối cái đã biết với cái cần tìm; nếu biết BH + CH và BH·CH thì BH, CH là nghiệm của một phương trình bậc hai.',
+};

@@ -33,6 +33,7 @@ function evTrig(e: string): number {
 }
 
 type Check = [RegExp, (n: number[], m: RegExpMatchArray) => number, number?];
+
 /** Each prompt template with an independent re-derivation of its answer (groups arrive as numbers). Optional third
  * entry: the answer is rounded to that many decimal places. */
 const CHECKS: Record<string, Check[]> = {
@@ -87,6 +88,39 @@ const CHECKS: Record<string, Check[]> = {
       const B: P = [0, 0], C: P = [1, 0];
       const A = apex(B, C, b, c);
       return angleAt(A, [A[0], 0], bisectorFoot(A, B, C));
+    }],
+  ],
+  'math.geometry.trig': [
+    [/right-angled at A with AB = (\d+) cm and (BC|AC) = (\d+) cm\. Find (sin|cos|tan|cot) (B|C)\./, ([ab, , x], m) => {
+      const ac = m[2] === 'AC' ? x : Math.sqrt(x * x - ab * ab);
+      const B = deg(Math.atan(ac / ab));
+      return T[m[4]](m[5] === 'B' ? B : 90 - B);
+    }],
+    [/^Compute: (.*)$/, (_n, m) => evTrig(m[1])],
+    [/with (sin|cos) α = (\d+)\/(\d+)\. Find (sin|cos|tan|cot) α/, ([, p, q], m) => T[m[4]](deg(m[1] === 'sin' ? Math.asin(p / q) : Math.acos(p / q)))],
+    [/BC = (\d+) cm and angle B = (\d+)°\. Find (AC|AB) \(cm\), rounded to 2 decimal places/, ([c, b], m) => c * (m[3] === 'AC' ? T.sin(b) : T.cos(b)), 2],
+    [/AB = (\d+) cm and AC = (\d+) cm\. Find angle B, rounded to the nearest degree/, ([ab, ac]) => deg(Math.atan2(ac, ab)), 0],
+    [/shadow (\d+) m long when the sun's rays make an angle of (\d+)°/, ([s, a]) => s * T.tan(a), 1],
+    [/elevation of the top of a tower is (\d+)°\. From point B, (\d+) m closer to the tower, it is (\d+)°/, ([a, d, b]) => {
+      // Foot of the tower at the origin, B at distance x: x·tan b = (x + d)·tan a.
+      const x = (d * T.tan(a)) / (T.tan(b) - T.tan(a));
+      return x * T.tan(b);
+    }, 1],
+  ],
+  'math.geometry.right-relations': [
+    [/BH = (\d+) cm and CH = (\d+) cm\. Find AH/, ([b, c]) => Math.sqrt(b * c)],
+    [/BH = (\d+) cm and BC = (\d+) cm\. Find AB/, ([bh, bc]) => {
+      const ah = Math.sqrt(bh * (bc - bh));
+      return Math.hypot(ah, bh);
+    }],
+    [/AB = (\d+) cm and AC = (\d+) cm\. (Find|Use)/, ([b, c]) => (b * c) / Math.hypot(b, c)],
+    [/AH = (\d+) cm and BH = (\d+) cm\. Find BC/, ([h, bh]) => bh + (h * h) / bh],
+    [/AH = (\d+) cm and BH = (\d+) cm\. Find AC/, ([h, bh]) => Math.hypot(h, (h * h) / bh)],
+    [/AB < AC\. BC = (\d+) cm and AH = (\d+) cm\. Find BH/, ([a, h]) => (a - Math.sqrt(a * a - 4 * h * h)) / 2],
+    [/AB = (\d+) cm and BH = (\d+) cm\. Find the area/, ([ab, bh]) => {
+      const ah = Math.sqrt(ab * ab - bh * bh);
+      const ch = (ah * ah) / bh;
+      return ((bh + ch) * ah) / 2;
     }],
   ],
   'math.geometry.circles': [
@@ -170,7 +204,7 @@ describe('grade 9 geometry', () => {
           const hit = CHECKS[id].map(([re, f, dp]) => [g.prompt.match(re), f, dp] as const).find(([m]) => m);
           expect(hit, `no check for ${where}`).toBeTruthy();
           const [m, f, dp] = hit!;
-          const nums = m!.slice(1).map((x) => (x === undefined ? NaN : ev(x)));
+          const nums = m!.slice(1).map((x) => (x !== undefined && /^[\d√π.−/ ]+$/.test(x) ? ev(x) : NaN));
           const want = f(nums, m!);
           const got = ev(g.answer);
           if (dp === undefined) expect(Math.abs(got - want), where).toBeLessThan(1e-6);
@@ -180,4 +214,3 @@ describe('grade 9 geometry', () => {
   });
 });
 
-export { evTrig };
