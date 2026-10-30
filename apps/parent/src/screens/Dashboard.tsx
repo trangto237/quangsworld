@@ -7,14 +7,14 @@ import { MasteryHeatmap, SubjectBars, WeeklyBars } from '../components/charts';
 import { tr, useParentLang } from '../i18n';
 
 /** The engine writes its notes in English; show them in the parent's language. */
-function trDetail(d: string): string {
+export function trDetail(d: string): string {
   let m = d.match(/^(\d+)% correct in the last 2 weeks$/);
   if (m) return tr('{n}% correct in the last 2 weeks', { n: m[1] });
   m = d.match(/^mastery (\d+)\/100$/);
   if (m) return tr('mastery {n}/100', { n: m[1] });
   return d;
 }
-function trRecommendation(r: string, struggle?: { name: string; conceptId: string }): string {
+export function trRecommendation(r: string, struggle?: { name: string; conceptId: string }): string {
   if (struggle && r.startsWith(`Focus on ${struggle.name}`)) {
     const vi = useParentLang.getState().lang === 'vi';
     const tip = (vi && LESSONS_VI[struggle.conceptId]) || getConcept(struggle.conceptId)?.lesson;

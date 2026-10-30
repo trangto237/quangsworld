@@ -144,7 +144,7 @@ export function MasteryHeatmap({ cells, onSelect }: { cells: HeatCell[]; onSelec
               {[...cells].sort((a, b) => a.mastery - b.mastery).map((c) => (
                 <tr key={c.conceptId} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="py-1.5">{c.name}</td>
-                  <td className="text-slate-500">{c.domain}</td>
+                  <td className="text-slate-500">{tr(c.domain)}</td>
                   <td className="text-right tabular-nums">{c.assessed ? c.mastery : '—'}</td>
                   <td className="text-right tabular-nums">{c.attempts}</td>
                   <td className="text-right tabular-nums">{c.recentAccuracy == null ? '—' : `${Math.round(c.recentAccuracy * 100)}%`}</td>
@@ -163,7 +163,7 @@ export function MasteryHeatmap({ cells, onSelect }: { cells: HeatCell[]; onSelec
               <div className="space-y-1">
                 {g.domains.map((d) => (
                   <div key={d.name} className="flex items-center gap-2">
-                    <span className="w-28 shrink-0 truncate text-xs text-slate-600 sm:w-36 dark:text-slate-300">{d.name}</span>
+                    <span className="w-28 shrink-0 truncate text-xs text-slate-600 sm:w-36 dark:text-slate-300">{tr(d.name)}</span>
                     <div className="flex flex-wrap gap-0.5">
                       {d.cells.map((c) => (
                         <button

@@ -31,11 +31,11 @@ export function KnowledgeMap({ student }: { student: StudentProfile }) {
             <div className="space-y-4">
               {t.domains.map((d) => (
                 <div key={d.name}>
-                  <h3 className="mb-2 font-bold">{d.name}</h3>
+                  <h3 className="mb-2 font-bold">{tr(d.name)}</h3>
                   <div className="space-y-2 border-l-2 border-slate-200 pl-3 dark:border-slate-800">
                     {d.skills.map((sk) => (
                       <div key={sk.name}>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sk.name}</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tr(sk.name)}</div>
                         <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
                           {sk.concepts.map((cc) => {
                             const st = states[cc.id];

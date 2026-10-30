@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generators, questions } from '@atlas/content';
 import { rng } from '@atlas/shared';
-import { LESSONS_VI, allConcepts, glossaryLookup, translateExplanation, translatePrompt } from './index';
+import { LESSONS_VI, NAMES_VI, allConcepts, glossaryLookup, translateExplanation, translatePrompt } from './index';
 
 describe('Vietnamese help', () => {
   it('translates instructions without giving away the English being tested', () => {
@@ -56,5 +56,9 @@ describe('Vietnamese help', () => {
     expect(glossaryLookup('written')?.vi).toBe('viết');
     expect(glossaryLookup('bigger')?.vi).toBe('to, lớn');
     expect(glossaryLookup('the')).toBeUndefined();
+  });
+
+  it('has a Vietnamese name for every English, maths and logic topic', () => {
+    for (const c of allConcepts().filter((x) => x.subject !== 'literature' && !x.id.startsWith('custom.'))) expect(NAMES_VI[c.id], c.id).toBeTruthy();
   });
 });

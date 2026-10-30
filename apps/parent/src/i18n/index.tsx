@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { create } from 'zustand';
+import { NAMES_VI, allConcepts } from '@atlas/knowledge';
 import { VI_A } from './vi-a';
 import { VI_B } from './vi-b';
 import { VI_C } from './vi-c';
@@ -34,9 +35,21 @@ export const useParentLang = create<{ lang: ParentLang; setLang: (l: ParentLang)
       /* ignore */
     }
     document.documentElement.lang = lang;
+    localiseTopics(lang);
     set({ lang });
   },
 }));
+
+/** Topic names follow the language (the parent app's own copy of the knowledge graph). */
+const englishNames = new Map<string, string>();
+function localiseTopics(lang: ParentLang) {
+  for (const c of allConcepts()) {
+    if (!englishNames.has(c.id)) englishNames.set(c.id, c.name);
+    const vi = NAMES_VI[c.id];
+    (c as { name: string }).name = lang === 'vi' && vi ? vi : englishNames.get(c.id)!;
+  }
+}
+localiseTopics(useParentLang.getState().lang);
 
 const fill = (s: string, vars?: Record<string, string | number>) => (vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s);
 
@@ -58,10 +71,12 @@ export function LangToggle({ className }: { className?: string }) {
   return (
     <button
       onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-      className={className ?? 'rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800'}
+      className={className ?? 'rounded-xl px-2 py-2 text-sm font-semibold hover:bg-slate-100 sm:px-3 dark:hover:bg-slate-800'}
       title={lang === 'vi' ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
+      aria-label={lang === 'vi' ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
     >
-      {lang === 'vi' ? '🇬🇧 English' : '🇻🇳 Tiếng Việt'}
+      {lang === 'vi' ? '🇬🇧' : '🇻🇳'}
+      <span className="hidden sm:inline"> {lang === 'vi' ? 'English' : 'Tiếng Việt'}</span>
     </button>
   );
 }

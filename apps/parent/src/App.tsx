@@ -59,15 +59,15 @@ export function App() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
           <span className="text-2xl">🧭</span>
-          <div className="leading-tight">
-            <div className="font-display text-lg font-semibold">{tr('Atlas · Parent')}</div>
-            <div className="text-xs text-slate-500">{tr('Hi, {name}', { name: family.parentName })}</div>
+          <div className="min-w-0 leading-tight">
+            <div className="whitespace-nowrap font-display text-lg font-semibold">{tr('Atlas · Parent')}</div>
+            <div className="truncate text-xs text-slate-500">{tr('Hi, {name}', { name: family.parentName })}</div>
           </div>
           <LiveDot />
           <CloudBadge onClick={() => setTab('settings')} />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-0.5 whitespace-nowrap sm:gap-2">
             {students.length > 1 && (
               <select
                 value={student.id}
@@ -82,14 +82,15 @@ export function App() {
                 ))}
               </select>
             )}
-            <InstallButton labels={installLabels()} className="rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:bg-slate-100 dark:text-brand-400 dark:hover:bg-slate-800" />
+            <InstallButton labels={installLabels()} className="rounded-xl px-2 py-2 text-sm font-semibold sm:px-3 text-brand-600 hover:bg-slate-100 dark:text-brand-400 dark:hover:bg-slate-800" />
             <LangToggle />
             <ThemeToggle mode={mode} onCycle={cycle} label={mode === 'dark' ? tr('Dark') : mode === 'light' ? tr('Light') : tr('System')} />
-            <a href={`/?play=${student.id}`} title={tr('Open {name}’s app on this device', { name: student.name })} className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">
-              ▶ {tr('{name}’s app', { name: student.name })}
+            <a href={`/?play=${student.id}`} title={tr('Open {name}’s app on this device', { name: student.name })} className="rounded-xl px-2 py-2 text-sm font-semibold sm:px-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+              ▶<span className="hidden sm:inline"> {tr('{name}’s app', { name: student.name })}</span>
             </a>
-            <button onClick={signOut} title={tr('Lock the dashboard (stay signed in on this device)')} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-              {tr('Lock')}
+            <button onClick={signOut} title={tr('Lock the dashboard (stay signed in on this device)')} className="rounded-xl px-2 py-2 text-sm font-semibold sm:px-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <span className="sm:hidden" aria-hidden>🔒</span>
+              <span className="hidden sm:inline">{tr('Lock')}</span>
             </button>
             {signedInOnline && (
               <button
@@ -100,9 +101,11 @@ export function App() {
                   });
                   if (out) signOut();
                 }}
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                title={tr('Sign out')}
+                className="rounded-xl px-2 py-2 text-sm font-semibold sm:px-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                {tr('Sign out')}
+                <span className="sm:hidden" aria-hidden>🚪</span>
+                <span className="hidden sm:inline">{tr('Sign out')}</span>
               </button>
             )}
           </div>
@@ -113,7 +116,7 @@ export function App() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cx(
-                'shrink-0 rounded-xl px-3 py-2 text-sm font-semibold',
+                'shrink-0 rounded-xl px-2 py-2 text-sm font-semibold sm:px-3',
                 tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
               )}
               aria-current={tab === t.id ? 'page' : undefined}

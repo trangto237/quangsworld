@@ -55,7 +55,7 @@ export const generators: Record<string, Generator> = { ...mathGenerators, ...san
 
 export type { Generator, Generated };
 
-export { translatePrompt, translateExplanation, LESSONS_VI } from './vi';
+export { translatePrompt, translateExplanation, LESSONS_VI, NAMES_VI } from './vi';
 export { lookup as glossaryLookup, GLOSSARY, type Gloss } from './english/glossary-vi';
 export { stressOf, unmark, STRESS, SOUND_GROUPS, ED, S } from './english/pronunciation';
 export { PASSAGE_SETS } from './english/passages';
