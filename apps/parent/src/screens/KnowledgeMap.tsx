@@ -3,10 +3,11 @@ import type { StudentProfile } from '@atlas/db';
 import { isMastered } from '@atlas/engine';
 import { getConcept, knowledgeTree } from '@atlas/knowledge';
 import { Button, Card, Progress, cx, useQuery, useRepo } from '@atlas/ui';
+import { tr } from '../i18n';
 
 const rel = (ts: number) => {
   const d = Math.round((ts - Date.now()) / 86_400_000);
-  return d <= 0 ? 'due now' : d === 1 ? 'tomorrow' : `in ${d} days`;
+  return d <= 0 ? tr('due now') : d === 1 ? tr('tomorrow') : tr('in {n} days', { n: d });
 };
 
 /** Subject → Domain → Skill → Concept, with each concept's live learning state. */
@@ -26,7 +27,7 @@ export function KnowledgeMap({ student }: { student: StudentProfile }) {
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div className="space-y-4">
         {tree.map((t) => (
-          <Card key={t.subject.id} title={`${t.subject.emoji} ${t.subject.name}`}>
+          <Card key={t.subject.id} title={`${t.subject.emoji} ${tr(t.subject.name)}`}>
             <div className="space-y-4">
               {t.domains.map((d) => (
                 <div key={d.name}>
@@ -51,7 +52,7 @@ export function KnowledgeMap({ student }: { student: StudentProfile }) {
                                   <span className="font-semibold">{cc.name}</span>
                                   <span className="tabular-nums text-xs text-slate-500">{st ? Math.round(st.mastery) : '—'}</span>
                                 </div>
-                                <Progress value={st ? st.mastery : 0} className="mt-1.5 h-1.5" label={`${cc.name} mastery`} />
+                                <Progress value={st ? st.mastery : 0} className="mt-1.5 h-1.5" label={tr('{name} mastery', { name: cc.name })} />
                               </button>
                             );
                           })}
@@ -66,38 +67,38 @@ export function KnowledgeMap({ student }: { student: StudentProfile }) {
         ))}
       </div>
       <div className="lg:sticky lg:top-32 lg:self-start">
-        <Card title="Concept details">
+        <Card title={tr('Concept details')}>
           {!c ? (
-            <p className="text-sm text-slate-500">Select a concept to see its mastery, confidence, review schedule and lesson.</p>
+            <p className="text-sm text-slate-500">{tr('Select a concept to see its mastery, confidence, review schedule and lesson.')}</p>
           ) : (
             <div className="space-y-4 text-sm">
               <div>
                 <h3 className="text-lg font-extrabold">{c.name}</h3>
                 <p className="text-slate-500">{c.description}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  In-game: <b>{c.missionName}</b>
+                  {tr('In-game:')} <b>{c.missionName}</b>
                   {c.cefr && <> · CEFR {c.cefr}</>}
                 </p>
               </div>
               {s ? (
                 <dl className="grid grid-cols-2 gap-2">
-                  <Item k="Mastery" v={`${Math.round(s.mastery)}/100${isMastered(s) ? ' ✓' : ''}`} />
-                  <Item k="Confidence" v={`${Math.round(s.confidence * 100)}%`} />
-                  <Item k="Answers" v={`${s.correct}/${s.attempts} correct`} />
-                  <Item k="Next review" v={s.attempts ? rel(s.nextReview) : '—'} />
-                  <Item k="Last 30 days" v={recent.length ? `${Math.round((recent.filter((a) => a.correct).length / recent.length) * 100)}% of ${recent.length}` : '—'} />
-                  <Item k="Last mistake" v={s.lastWrongAt ? new Date(s.lastWrongAt).toLocaleDateString() : '—'} />
+                  <Item k={tr('Mastery')} v={`${Math.round(s.mastery)}/100${isMastered(s) ? ' ✓' : ''}`} />
+                  <Item k={tr('Confidence')} v={`${Math.round(s.confidence * 100)}%`} />
+                  <Item k={tr('Answers')} v={tr('{correct}/{total} correct', { correct: s.correct, total: s.attempts })} />
+                  <Item k={tr('Next review')} v={s.attempts ? rel(s.nextReview) : '—'} />
+                  <Item k={tr('Last 30 days')} v={recent.length ? tr('{pct}% of {n}', { pct: Math.round((recent.filter((a) => a.correct).length / recent.length) * 100), n: recent.length }) : '—'} />
+                  <Item k={tr('Last mistake')} v={s.lastWrongAt ? new Date(s.lastWrongAt).toLocaleDateString() : '—'} />
                 </dl>
               ) : (
-                <p className="text-slate-500">Not started yet.</p>
+                <p className="text-slate-500">{tr('Not started yet.')}</p>
               )}
               {c.lesson && (
                 <div className="rounded-xl bg-amber-50 p-3 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                  <b>Lesson:</b> {c.lesson}
+                  <b>{tr('Lesson:')}</b> {c.lesson}
                 </div>
               )}
-              {c.examRefs && <p className="text-xs text-slate-500">Exam references: {c.examRefs.join(' · ')}</p>}
-              {c.prerequisites && <p className="text-xs text-slate-500">Builds on: {c.prerequisites.map((p) => getConcept(p)?.name).join(', ')}</p>}
+              {c.examRefs && <p className="text-xs text-slate-500">{tr('Exam references:')} {c.examRefs.join(' · ')}</p>}
+              {c.prerequisites && <p className="text-xs text-slate-500">{tr('Builds on:')} {c.prerequisites.map((p) => getConcept(p)?.name).join(', ')}</p>}
               <Button
                 variant={focused ? 'secondary' : 'primary'}
                 className="w-full"
@@ -107,7 +108,7 @@ export function KnowledgeMap({ student }: { student: StudentProfile }) {
                   else await repo.setGoal(student.id, 'focusConcept', c.id);
                 }}
               >
-                {focused ? '✓ Focus concept — remove' : '🎯 Make this a focus concept'}
+                {focused ? tr('✓ Focus concept — remove') : tr('🎯 Make this a focus concept')}
               </Button>
             </div>
           )}

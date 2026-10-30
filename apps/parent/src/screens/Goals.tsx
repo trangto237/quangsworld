@@ -3,6 +3,7 @@ import { dailyMinutes } from '@atlas/engine';
 import { SUBJECTS, getConcept } from '@atlas/knowledge';
 import type { SubjectId } from '@atlas/shared';
 import { Button, Card, cx, useQuery, useRepo } from '@atlas/ui';
+import { tr } from '../i18n';
 import { useParent } from '../store';
 
 const BANDS = ['5.5', '6.0', '6.5', '7.0', '7.5', '8.0'];
@@ -24,8 +25,8 @@ export function Goals({ student }: { student: StudentProfile }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card title="Daily study time">
-        <p className="text-sm text-slate-500">The daily quest is sized to this. 20–30 minutes a day works better than long weekend sessions.</p>
+      <Card title={tr('Daily study time')}>
+        <p className="text-sm text-slate-500">{tr('The daily quest is sized to this. 20–30 minutes a day works better than long weekend sessions.')}</p>
         <div className="mt-4 flex items-center gap-4">
           <input
             type="range"
@@ -35,15 +36,15 @@ export function Goals({ student }: { student: StudentProfile }) {
             value={minutes}
             onChange={(e) => void repo.setGoal(student.id, 'dailyMinutes', e.target.value)}
             className="flex-1 accent-brand-600"
-            aria-label="Daily minutes"
+            aria-label={tr('Daily minutes')}
           />
-          <span className="w-20 text-right text-2xl font-extrabold tabular-nums">{minutes}m</span>
+          <span className="w-20 text-right text-2xl font-extrabold tabular-nums">{tr('{n}m', { n: minutes })}</span>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Changes apply from the next day's quest.</p>
+        <p className="mt-2 text-xs text-slate-500">{tr("Changes apply from the next day's quest.")}</p>
       </Card>
 
-      <Card title="IELTS target">
-        <p className="text-sm text-slate-500">Adds weight to concepts that appear in IELTS tasks.</p>
+      <Card title={tr('IELTS target')}>
+        <p className="text-sm text-slate-500">{tr('Adds weight to concepts that appear in IELTS tasks.')}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {BANDS.map((b) => (
             <button
@@ -57,8 +58,8 @@ export function Goals({ student }: { student: StudentProfile }) {
         </div>
       </Card>
 
-      <Card title="Focus subjects">
-        <p className="text-sm text-slate-500">Focus subjects get priority in daily missions (the engine still mixes in reviews).</p>
+      <Card title={tr('Focus subjects')}>
+        <p className="text-sm text-slate-500">{tr('Focus subjects get priority in daily missions (the engine still mixes in reviews).')}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {SUBJECTS.map((s) => {
             const on = focusSubjects.some((g) => g.value === s.id);
@@ -69,30 +70,30 @@ export function Goals({ student }: { student: StudentProfile }) {
                 aria-pressed={on}
                 className={cx('rounded-xl px-4 py-3 text-left font-semibold ring-2', on ? 'bg-brand-50 ring-brand-500 dark:bg-brand-700/20' : 'ring-slate-200 hover:bg-slate-50 dark:ring-slate-800 dark:hover:bg-slate-800')}
               >
-                {s.emoji} {s.name} {on && '✓'}
+                {s.emoji} {tr(s.name)} {on && '✓'}
               </button>
             );
           })}
         </div>
       </Card>
 
-      <Card title="Focus concepts">
+      <Card title={tr('Focus concepts')}>
         {focusConcepts.length ? (
           <ul className="space-y-2">
             {focusConcepts.map((g) => (
               <li key={g.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/60">
                 <span className="font-semibold">{getConcept(g.value)?.name ?? g.value}</span>
                 <Button variant="ghost" onClick={() => void repo.deleteGoal(g.id)}>
-                  Remove
+                  {tr('Remove')}
                 </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500">No focus concepts. Pick specific concepts from the knowledge map.</p>
+          <p className="text-sm text-slate-500">{tr('No focus concepts. Pick specific concepts from the knowledge map.')}</p>
         )}
         <Button variant="secondary" className="mt-4" onClick={() => setTab('knowledge')}>
-          Open knowledge map
+          {tr('Open knowledge map')}
         </Button>
       </Card>
     </div>
