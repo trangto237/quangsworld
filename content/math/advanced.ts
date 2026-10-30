@@ -11,7 +11,9 @@ import type { Generated, Generator } from './generators';
 import { fracN, gcd, int, num, numeric, nz, pick, poly, roots, signed, terms } from './util';
 
 type G = Generated;
-const vi = (g: G, promptVi: string, explanationVi?: string): G => ({ ...g, promptVi, explanationVi });
+/** One step per line: break after each sentence (the app shows explanations with line breaks). */
+const steps = (t?: string) => t?.replace(/(?<!\b(?:i\.e|e\.g))\. (?=\p{Lu}|[0-9(√∛−|∠])/gu, '.\n');
+const vi = (g: G, promptVi: string, explanationVi?: string): G => ({ ...g, explanation: steps(g.explanation), promptVi, explanationVi: steps(explanationVi) });
 
 /** Superscript exponents: sup(100) = "¹⁰⁰". */
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
@@ -156,8 +158,8 @@ const numberTheory: Generator = (d, r) => {
         `Có bao nhiêu số nguyên n với 1 ≤ n ≤ ${N} sao cho n² + ${c} chia hết cho ${m}?`,
         ans,
         [t * R.length, (t + 1) * R.length, Math.floor(N / m), ans + 1],
-        `Only the remainder of n mod ${m} matters. Trying 0, 1, …, ${m - 1}: n² + ${c} ≡ 0 (mod ${m}) exactly when n ≡ ${Rs}. Count such n up to ${N} = ${m}·${t} + ${N - m * t}: ${ans}.`,
-        `Chỉ cần xét số dư của n khi chia cho ${m}. Thử 0, 1, …, ${m - 1}: n² + ${c} chia hết cho ${m} khi và chỉ khi n chia ${m} dư ${Rs}. Đếm các số như vậy đến ${N} = ${m}·${t} + ${N - m * t}: có ${ans} số.`,
+        `Only the remainder of n when divided by ${m} matters (n ≡ k (mod ${m}) means n leaves remainder k). Trying k = 0, 1, …, ${m - 1}: n² + ${c} is divisible by ${m} exactly when n ≡ ${Rs}. ${N} = ${m}·${t} + ${N - m * t}: the ${t} full blocks of ${m} numbers give ${t}·${R.length} = ${t * R.length}, and the last ${N - m * t} numbers (${m * t + 1} to ${N}) add ${ans - t * R.length}. Total ${ans}.`,
+        `Chỉ cần xét số dư của n khi chia cho ${m}. Thử các số dư 0, 1, …, ${m - 1}: n² + ${c} chia hết cho ${m} khi và chỉ khi n chia ${m} dư ${Rs}. ${N} = ${m}·${t} + ${N - m * t}: ${t} nhóm đủ ${m} số cho ${t}·${R.length} = ${t * R.length} số, ${N - m * t} số cuối (từ ${m * t + 1} đến ${N}) thêm ${ans - t * R.length} số. Tổng cộng ${ans} số.`,
       );
     }
     if (kind === 'always') {
@@ -246,8 +248,8 @@ const diophantine: Generator = (d, r) => {
       `${PAIRS_VI} xy + x + y = ${N}?`,
       t - 2,
       [t, t - 1, Math.ceil((t - 2) / 2), 2 * t],
-      `Add 1 to both sides: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Both factors are at least 2, so x + 1 can be any divisor of ${M} except 1 and ${M}: ${t} − 2 = ${t - 2} pairs.`,
-      `Cộng 1 vào hai vế: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Hai thừa số đều lớn hơn hoặc bằng 2, nên x + 1 là một ước bất kì của ${M} trừ 1 và ${M}: có ${t} − 2 = ${t - 2} cặp.`,
+      `Add 1 to both sides: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Both factors are at least 2, so x + 1 can be any divisor of ${M} except 1 and ${M}. Divisors of ${M}: ${divisors(M).join(', ')} — ${t} of them. Each choice of x + 1 fixes y + 1 = ${M}/(x + 1): ${t} − 2 = ${t - 2} pairs.`,
+      `Cộng 1 vào hai vế: xy + x + y + 1 = (x + 1)(y + 1) = ${M}. Hai thừa số đều lớn hơn hoặc bằng 2, nên x + 1 là một ước bất kì của ${M} trừ 1 và ${M}. Các ước của ${M}: ${divisors(M).join('; ')} — có ${t} ước. Mỗi giá trị của x + 1 cho đúng một y + 1 = ${M}/(x + 1): có ${t} − 2 = ${t - 2} cặp.`,
     );
   }
   if (d === 2) {
@@ -282,6 +284,7 @@ const diophantine: Generator = (d, r) => {
       cnt = divisors(M).filter((u) => u > qq && M / u > p).length;
     } while (M - p * qq <= 0 || cnt < 1 || p === qq);
     const c = M - p * qq;
+    const okU = divisors(M).filter((u) => u > qq && M / u > p);
     const e = `${terms([[1, 'xy'], [p, 'x'], [qq, 'y']])} = ${c}`;
     return q(
       r,
@@ -289,8 +292,8 @@ const diophantine: Generator = (d, r) => {
       `${PAIRS_VI} ${e}?`,
       cnt,
       [tau(M), tau(M) - 2, divisors(M).filter((u) => u > qq).length, cnt + 1],
-      `Factor: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Now x + ${qq} must be a divisor of ${M} bigger than ${qq}, with ${M}/(x + ${qq}) bigger than ${p}: ${cnt} pair${cnt === 1 ? '' : 's'}.`,
-      `Phân tích: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Khi đó x + ${qq} là ước của ${M} lớn hơn ${qq}, và ${M}/(x + ${qq}) lớn hơn ${p}: có ${cnt} cặp.`,
+      `Factor: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Now x + ${qq} must be a divisor of ${M} bigger than ${qq}, with ${M}/(x + ${qq}) bigger than ${p} (x, y ≥ 1). The divisors that work: ${okU.map((u) => `${u}·${M / u}`).join(', ')}, giving ${okU.map((u) => `(${u - qq}, ${M / u - p})`).join(', ')}: ${cnt} pair${cnt === 1 ? '' : 's'}.`,
+      `Phân tích: (x + ${qq})(y + ${p}) = ${c} + ${p * qq} = ${M}. Khi đó x + ${qq} là ước của ${M} lớn hơn ${qq}, và ${M}/(x + ${qq}) lớn hơn ${p} (x, y ≥ 1). Các cách thỏa mãn: ${okU.map((u) => `${u}·${M / u}`).join('; ')}, cho ${okU.map((u) => `(${u - qq}; ${M / u - p})`).join(', ')}: có ${cnt} cặp.`,
     );
   }
   if (d === 3) {
@@ -308,8 +311,8 @@ const diophantine: Generator = (d, r) => {
       `Có bao nhiêu cặp số nguyên (x; y) thỏa mãn ${e}?`,
       2 * t,
       [t, 2 * t - 2, t - 2, 4 * t],
-      `Factor: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. x ${signed(qq)} can be any divisor of ${num(M)}, positive or negative: 2·${t} = ${2 * t} pairs.`,
-      `Phân tích: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. x ${signed(qq)} là một ước bất kì (dương hoặc âm) của ${num(M)}: có 2·${t} = ${2 * t} cặp.`,
+      `Factor: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. ${Math.abs(M)} has ${t} positive divisors (${divisors(Math.abs(M)).join(', ')}), and x ${signed(qq)} can be any of them or its negative; each choice fixes y ${signed(p)} = ${num(M)}/(x ${signed(qq)}): 2·${t} = ${2 * t} pairs.`,
+      `Phân tích: (x ${signed(qq)})(y ${signed(p)}) = ${num(c)} ${signed(p * qq)} = ${num(M)}. ${Math.abs(M)} có ${t} ước dương (${divisors(Math.abs(M)).join('; ')}), và x ${signed(qq)} là một ước bất kì, dương hoặc âm; mỗi giá trị cho đúng một y ${signed(p)} = ${num(M)}/(x ${signed(qq)}): có 2·${t} = ${2 * t} cặp.`,
     );
   }
   if (d === 4) {
@@ -885,8 +888,8 @@ const combinatorics: Generator = (d, r) => {
     const [a, b] = pick(r, [[4, 6], [6, 9], [4, 10], [6, 8], [3, 5], [2, 7], [6, 15], [10, 15], [4, 14], [3, 7], [9, 12]] as const);
     const N = int(r, 10, 99) * 10 + int(r, 0, 9), L = lcm(a, b);
     const A = Math.floor(N / a), B = Math.floor(N / b), AB = Math.floor(N / L), either = A + B - AB;
-    const how = `Multiples of ${a}: ${A}; of ${b}: ${B}; of both, i.e. of lcm(${a}, ${b}) = ${L}: ${AB}. Divisible by ${a} or ${b}: ${A} + ${B} − ${AB} = ${either}.`;
-    const howVi = `Bội của ${a}: ${A} số; bội của ${b}: ${B} số; bội của cả hai, tức là bội của BCNN(${a}, ${b}) = ${L}: ${AB} số. Chia hết cho ${a} hoặc ${b}: ${A} + ${B} − ${AB} = ${either} số.`;
+    const how = `The number of multiples of k from 1 to ${N} is the whole part of ${N} ÷ k. Multiples of ${a}: ${N} ÷ ${a} ${N % a ? `≈ ${+(N / a).toFixed(2)} ` : '= '}→ ${A}; of ${b}: ${N} ÷ ${b} ${N % b ? `≈ ${+(N / b).toFixed(2)} ` : '= '}→ ${B}; of both, i.e. of lcm(${a}, ${b}) = ${L}: ${N} ÷ ${L} ${N % L ? `≈ ${+(N / L).toFixed(2)} ` : '= '}→ ${AB}. Inclusion–exclusion (the numbers in both lists were counted twice): ${A} + ${B} − ${AB} = ${either}.`;
+    const howVi = `Số bội của k từ 1 đến ${N} bằng phần nguyên của ${N} : k. Bội của ${a}: ${N} : ${a} ${N % a ? `≈ ${String(+(N / a).toFixed(2)).replace('.', ',')} ` : '= '}→ ${A} số; bội của ${b}: ${N} : ${b} ${N % b ? `≈ ${String(+(N / b).toFixed(2)).replace('.', ',')} ` : '= '}→ ${B} số; bội của cả hai, tức là bội của BCNN(${a}, ${b}) = ${L}: ${N} : ${L} ${N % L ? `≈ ${String(+(N / L).toFixed(2)).replace('.', ',')} ` : '= '}→ ${AB} số. Nguyên lí bù trừ (các số thuộc cả hai nhóm bị đếm hai lần): ${A} + ${B} − ${AB} = ${either} số.`;
     const wrongAB = A + B - Math.floor(N / (a * b));
     if (r() < 0.6)
       return q(r, `How many integers from 1 to ${N} are divisible by ${a} or ${b}?`, `Có bao nhiêu số nguyên từ 1 đến ${N} chia hết cho ${a} hoặc ${b}?`, either, [A + B, wrongAB, N - either, A + B - 2 * AB], how, howVi);
@@ -937,8 +940,8 @@ const combinatorics: Generator = (d, r) => {
       `Từ các chữ số ${digits} có thể lập được bao nhiêu ${whatVi} có ${k} chữ số khác nhau?`,
       ans,
       [Lset.length * P(n - 1, k - 1), Lset.length * (n - 1) * rest, Lset.length * (n - 2) * rest, ans + rest],
-      `The last digit must be ${ends}.${zero ? ' Split by whether it is 0 (the first digit can\'t be 0).' : ''} ${zero ? `Last digit 0: first digit ${n - 1} choices, then ${rest} ways for the middle — ${(n - 1) * rest}. ` : ''}Last digit one of the ${nonzero} non-zero choices: first digit ${n - 2} choices (not 0, not the last digit), middle ${rest} ways — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest}. Total ${ans}.`,
-      `Chữ số tận cùng phải là ${ends}.${zero ? ' Chia trường hợp theo chữ số tận cùng có bằng 0 hay không (chữ số đầu không được bằng 0).' : ''} ${zero ? `Tận cùng là 0: chữ số đầu có ${n - 1} cách, phần giữa có ${rest} cách — ${(n - 1) * rest} số. ` : ''}Tận cùng là một trong ${nonzero} chữ số khác 0: chữ số đầu có ${n - 2} cách (khác 0 và khác chữ số tận cùng), phần giữa ${rest} cách — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest} số. Tổng cộng ${ans} số.`,
+      `The last digit must be ${ends}.${zero && nonzero ? ' Split by whether it is 0 (the first digit can\'t be 0).' : ''} ${zero ? `Last digit 0: first digit ${n - 1} choices, then ${rest} ways for the middle — ${(n - 1) * rest}. ` : ''}${nonzero ? `Last digit one of the ${nonzero} non-zero choices: first digit ${n - 2} choices (not 0, not the last digit), middle ${rest} ways — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest}. ` : ''}Total ${ans}.`,
+      `Chữ số tận cùng phải là ${ends}.${zero && nonzero ? ' Chia trường hợp theo chữ số tận cùng có bằng 0 hay không (chữ số đầu không được bằng 0).' : ''} ${zero ? `Tận cùng là 0: chữ số đầu có ${n - 1} cách, phần giữa có ${rest} cách — ${(n - 1) * rest} số. ` : ''}${nonzero ? `Tận cùng là một trong ${nonzero} chữ số khác 0: chữ số đầu có ${n - 2} cách (khác 0 và khác chữ số tận cùng), phần giữa ${rest} cách — ${nonzero}·${n - 2}·${rest} = ${nonzero * (n - 2) * rest} số. ` : ''}Tổng cộng ${ans} số.`,
     );
   }
   const kind = pick(r, ['same', 'same', 'each', 'sum'] as const);
