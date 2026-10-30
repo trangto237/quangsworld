@@ -11,7 +11,9 @@ import { fracN, gcd, int, num, pick, rad } from './util';
 
 type G = Generated;
 type Opts = Omit<G, 'prompt'>;
-const vi = (g: G, promptVi: string, explanationVi: string): G => ({ ...g, promptVi, explanationVi });
+/** One step per line: break after each sentence (the app shows explanations with line breaks). */
+const steps = (t?: string) => t?.replace(/(?<!\b(?:i\.e|e\.g))\. (?=\p{Lu}|[0-9(√∛−|])/gu, '.\n');
+const vi = (g: G, promptVi: string, explanationVi: string): G => ({ ...g, explanation: steps(g.explanation), promptVi, explanationVi: steps(explanationVi) });
 
 /** A number with at most 4 decimal places, without float noise: 7.1, 37.5, −2. */
 const nf = (x: number) => num(+x.toFixed(4) || 0);
@@ -73,6 +75,24 @@ const div = (a: Q, b: Q) => q(a[0] * b[1], a[1] * b[0]);
 const fs = (a: Q) => fracN(a[0], a[1]);
 /** A fraction in brackets when negative: (−2/3). */
 const fb = (a: Q) => (a[0] < 0 ? `(${fs(a)})` : fs(a));
+/** a ± b with the common denominator shown: 1/6 + 1/4 = 2/12 + 3/12 = 5/12. */
+function addSteps(a: Q, b: Q, minus = false): string {
+  const L = (a[1] * b[1]) / gcd(a[1], b[1]);
+  const A = (a[0] * L) / a[1], B = (b[0] * L) / b[1];
+  const op = minus ? '−' : '+';
+  const res = q(minus ? A - B : A + B, L);
+  const raw = `${num(minus ? A - B : A + B)}/${L}`;
+  const lead = `${fs(a)} ${op} ${fb(b)}`;
+  if (a[1] === b[1]) return `${lead} = ${raw}${raw === fs(res) ? '' : ` = ${fs(res)}`}`;
+  return `${lead} = ${num(A)}/${L} ${op} ${B < 0 ? `(${num(B)}/${L})` : `${B}/${L}`} = ${raw}${raw === fs(res) ? '' : ` = ${fs(res)}`}`;
+}
+const recip = (a: Q) => q(a[1], a[0]);
+/** a × b multiplying tops and bottoms: 2/3 × 9/4 = 18/12 = 3/2. */
+function mulSteps(a: Q, b: Q, sign = '×'): string {
+  const raw = `${num(a[0] * b[0])}/${a[1] * b[1]}`;
+  const res = mul(a, b);
+  return `${fs(a)} ${sign} ${fb(b)} = ${raw}${raw === fs(res) ? '' : ` = ${fs(res)}`}`;
+}
 
 function qOpts(ans: Q, mistakes: Q[], r: () => number, near: (k: number) => Q = (k) => add(ans, [r() < 0.5 ? -k : k, ans[1]])): Opts {
   const a = fs(ans);
@@ -262,10 +282,10 @@ const fractions: Generator = (d, r) => {
       {
         prompt: `Calculate: ${ex}`,
         ...qOpts(ans, [mul(add(x, y), z), [x[0] + yz[0], x[1] + yz[1]], add(x, div(y, z))], r),
-        explanation: `Multiply before adding: ${fs(y)} × ${fs(z)} = ${fs(yz)}. Then use a common denominator: ${fs(x)} + ${fs(yz)} = ${fs(ans)}.`,
+        explanation: `Order of operations: multiply before adding.\nMultiply tops and bottoms: ${mulSteps(y, z)}.\nTo add, use a common denominator (the smallest number both denominators go into): ${addSteps(x, yz)}.`,
       },
       `Tính: ${ex}`,
-      `Nhân trước, cộng sau: ${fs(y)} × ${fs(z)} = ${fs(yz)}. Rồi quy đồng mẫu số: ${fs(x)} + ${fs(yz)} = ${fs(ans)}.`,
+      `Thứ tự thực hiện: nhân trước, cộng sau.\nNhân tử với tử, mẫu với mẫu: ${mulSteps(y, z)}.\nQuy đồng mẫu số (mẫu chung nhỏ nhất) rồi cộng: ${addSteps(x, yz)}.`,
     );
   }
   if (d === 2) {
@@ -277,10 +297,10 @@ const fractions: Generator = (d, r) => {
       {
         prompt: `Calculate: ${ex}`,
         ...qOpts(ans, [div(sub(D, x), y), sub(D, mul(x, y)), sub(D, div(y, x))], r),
-        explanation: `Write the decimal as a fraction: ${dq(D)} = ${fs(D)}. Divide first (multiply by the reciprocal): ${fs(x)} : ${fs(y)} = ${fs(x)} × ${fracN(y[1], y[0])} = ${fs(xy)}. Then ${fs(D)} − ${fb(xy)} = ${fs(ans)}.`,
+        explanation: `Write the decimal as a fraction: ${dq(D)} = ${fs(D)}.\nDivide before subtracting. Dividing by a fraction = multiplying by its reciprocal (flip it upside down): ${fs(x)} : ${fs(y)} = ${mulSteps(x, recip(y))}.\nSubtract with a common denominator: ${addSteps(D, xy, true)}.`,
       },
       `Tính: ${dc(ex)}`,
-      `Đổi số thập phân ra phân số: ${dc(dq(D))} = ${fs(D)}. Chia trước (nhân với nghịch đảo): ${fs(x)} : ${fs(y)} = ${fs(x)} × ${fracN(y[1], y[0])} = ${fs(xy)}. Rồi ${fs(D)} − ${fb(xy)} = ${fs(ans)}.`,
+      `Đổi số thập phân ra phân số: ${dc(dq(D))} = ${fs(D)}.\nChia trước, trừ sau. Chia cho một phân số = nhân với phân số nghịch đảo (đảo ngược tử và mẫu): ${fs(x)} : ${fs(y)} = ${mulSteps(x, recip(y))}.\nQuy đồng mẫu số rồi trừ: ${addSteps(D, xy, true)}.`,
     );
   }
   if (d === 3) {
@@ -298,10 +318,10 @@ const fractions: Generator = (d, r) => {
       {
         prompt: `Calculate: ${ex}`,
         ...qOpts(ans, [div(bot, top), mul(top, bot), div(sub(x, y), bot), div(top, add(z, w))], r),
-        explanation: `Brackets first: ${fs(x)} + ${fs(y)} = ${fs(top)} and ${fs(z)} − ${fs(w)} = ${fs(bot)}. Then divide = multiply by the reciprocal: ${fs(top)} : ${fb(bot)} = ${fs(ans)}.`,
+        explanation: `Brackets first, using common denominators:\n${addSteps(x, y)}.\n${addSteps(z, w, true)}.\nDivide = multiply by the reciprocal (flip the second fraction): ${fs(top)} : ${fb(bot)} = ${mulSteps(top, recip(bot))}.`,
       },
       `Tính: ${ex}`,
-      `Trong ngoặc trước: ${fs(x)} + ${fs(y)} = ${fs(top)} và ${fs(z)} − ${fs(w)} = ${fs(bot)}. Rồi chia, tức là nhân với số nghịch đảo: ${fs(top)} : ${fb(bot)} = ${fs(ans)}.`,
+      `Tính trong ngoặc trước (quy đồng mẫu số):\n${addSteps(x, y)}.\n${addSteps(z, w, true)}.\nChia tức là nhân với phân số nghịch đảo: ${fs(top)} : ${fb(bot)} = ${mulSteps(top, recip(bot))}.`,
     );
   }
   if (d === 4) {
@@ -313,10 +333,10 @@ const fractions: Generator = (d, r) => {
       {
         prompt: `Calculate: ${ex}`,
         ...qOpts(ans, [sub(Dy, x2), add(x2, mul(D, y)), div(add(x2, D), y), add(q(2 * x[0], x[1]), Dy)], r),
-        explanation: `(${fs(x)})² = ${fs(x2)} (a square is never negative). ${dq(D)} = ${fs(D)}, and ${fs(D)} : (${fs(y)}) = ${fs(D)} × (${fracN(y[1], y[0])}) = ${fs(Dy)}. Power, then division, then addition: ${fs(x2)} + ${fb(Dy)} = ${fs(ans)}.`,
+        explanation: `Order: power first, then division, then addition.\nPower: (${fs(x)})² = ${fb(x)} × ${fb(x)} = ${fs(x2)} (a square is never negative).\nDivision: ${dq(D)} = ${fs(D)}, and ${fs(D)} : (${fs(y)}) = ${mulSteps(D, recip(y))} (multiply by the reciprocal).\nAddition: ${addSteps(x2, Dy)}.`,
       },
       `Tính: ${dc(ex)}`,
-      `(${fs(x)})² = ${fs(x2)} (bình phương không bao giờ âm). ${dc(dq(D))} = ${fs(D)}, và ${fs(D)} : (${fs(y)}) = ${fs(D)} × (${fracN(y[1], y[0])}) = ${fs(Dy)}. Luỹ thừa, rồi chia, rồi cộng: ${fs(x2)} + ${fb(Dy)} = ${fs(ans)}.`,
+      `Thứ tự: luỹ thừa, rồi chia, rồi cộng.\nLuỹ thừa: (${fs(x)})² = ${fb(x)} × ${fb(x)} = ${fs(x2)} (bình phương không bao giờ âm).\nPhép chia: ${dc(dq(D))} = ${fs(D)}, và ${fs(D)} : (${fs(y)}) = ${mulSteps(D, recip(y))} (nhân với số nghịch đảo).\nPhép cộng: ${addSteps(x2, Dy)}.`,
     );
   }
   const kind = pick(r, ['consecutive', 'odd', 'product'] as const);
@@ -741,13 +761,16 @@ function bill(x: number): number {
 }
 const topPrice = (x: number) => TIERS.find(([to]) => x <= to)![1];
 const billSteps = (x: number, viet = false) => {
-  const parts: string[] = [];
+  const parts: string[] = [], vals: string[] = [];
   let from = 0;
   for (const [to, price] of TIERS) {
-    if (x > from) parts.push(`${Math.min(x, to) - from} × ${(viet ? vndVi : vnd)(price)}`);
+    if (x > from) {
+      parts.push(`${Math.min(x, to) - from} × ${(viet ? vndVi : vnd)(price)}`);
+      vals.push((viet ? vndVi : vnd)((Math.min(x, to) - from) * price));
+    }
     from = to;
   }
-  return parts.join(' + ');
+  return parts.length > 1 ? `${parts.join(' + ')} = ${vals.join(' + ')}` : parts[0];
 };
 
 const realLife: Generator = (d, r) => {
@@ -875,10 +898,10 @@ const stats: Generator = (d, r) => {
         {
           prompt: `A survey of some ${L.who} gives this relative frequency table. ${t} Find the mean.`,
           ...opts(M, [clean2(sum(vals) / L.k), vals[p.indexOf(Math.max(...p))], M * 10], r, nf, 0.1),
-          explanation: `Mean = Σ(value × relative frequency): ${vals.map((v, i) => `${v}·${nf(p[i] / 100)}`).join(' + ')} = ${nf(M)}.`,
+          explanation: `With relative frequencies (%), mean = sum of value × relative frequency (as a decimal: ${p[0]}% = ${nf(p[0] / 100)}).\n${vals.map((v, i) => `${v}·${nf(p[i] / 100)}`).join(' + ')}\n= ${vals.map((v, i) => nf((v * p[i]) / 100)).join(' + ')} = ${nf(M)}.`,
         },
         `Kết quả khảo sát một số ${L.whoVi} được cho trong bảng tần số tương đối sau. ${tVi} Tính số trung bình.`,
-        `Số trung bình = tổng (giá trị × tần số tương đối): ${vals.map((v, i) => `${v}·${dc(nf(p[i] / 100))}`).join(' + ')} = ${dc(nf(M))}.`,
+        `Với tần số tương đối (%), số trung bình = tổng (giá trị × tần số tương đối) (đổi ra số thập phân: ${p[0]}% = ${dc(nf(p[0] / 100))}).\n${vals.map((v, i) => `${v}·${dc(nf(p[i] / 100))}`).join(' + ')}\n= ${vals.map((v, i) => dc(nf((v * p[i]) / 100))).join(' + ')} = ${dc(nf(M))}.`,
       );
     }
     if (kind === 'mean') {
@@ -887,10 +910,10 @@ const stats: Generator = (d, r) => {
         {
           prompt: `${intro} Find the mean.`,
           ...opts(M, [clean2(sum(vals) / L.k), clean2(S / L.k), medianOf(vals, f)], r, nf, 0.1),
-          explanation: `Mean = Σ(value × frequency) ÷ total: (${vals.map((v, i) => `${v}·${f[i]}`).join(' + ')}) ÷ ${N} = ${S} ÷ ${N} = ${nf(M)}. Each value counts as many times as its frequency.`,
+          explanation: `Mean = (sum of value × frequency) ÷ total number: each value counts as many times as its frequency.\nProducts: ${vals.map((v, i) => `${v}·${f[i]} = ${v * f[i]}`).join(', ')}.\nSum = ${vals.map((v, i) => v * f[i]).join(' + ')} = ${S}; total = ${N}.\nMean = ${S} ÷ ${N} = ${nf(M)}.`,
         },
         `${introVi} Tính số trung bình.`,
-        `Số trung bình = tổng (giá trị × tần số) : tổng số: (${vals.map((v, i) => `${v}·${f[i]}`).join(' + ')}) : ${N} = ${S} : ${N} = ${dc(nf(M))}. Mỗi giá trị được tính số lần bằng tần số của nó.`,
+        `Số trung bình = tổng (giá trị × tần số) : tổng số: mỗi giá trị được tính số lần bằng tần số của nó.\nCác tích: ${vals.map((v, i) => `${v}·${f[i]} = ${v * f[i]}`).join('; ')}.\nTổng = ${vals.map((v, i) => v * f[i]).join(' + ')} = ${S}; tổng số = ${N}.\nSố trung bình = ${S} : ${N} = ${dc(nf(M))}.`,
       );
     }
     const med = medianOf(vals, f);
@@ -913,10 +936,10 @@ const stats: Generator = (d, r) => {
       {
         prompt: `${intro} Find the median.`,
         ...opts(med, [mid, mode, Number.isInteger((S * 100) / N) ? S / N : NaN], r, nf, 0.5),
-        explanation: `List all ${N} values in order; the median is ${pos}. Running totals of the frequencies: ${cum}, so the median is ${nf(med)}.`,
+        explanation: `The median is the middle value when all ${N} values are listed in order; here it is ${pos}.\nRunning totals of the frequencies (how many values so far): ${cum}.\nSo the median is ${nf(med)}.`,
       },
       `${introVi} Tìm trung vị.`,
-      `Sắp xếp ${N} giá trị theo thứ tự; trung vị là ${posVi}. Cộng dồn tần số: ${cum}, nên trung vị là ${dc(nf(med))}.`,
+      `Trung vị là giá trị đứng giữa khi sắp xếp ${N} giá trị theo thứ tự; ở đây là ${posVi}.\nCộng dồn tần số (số giá trị tính đến mỗi giá trị): ${cum}.\nVậy trung vị là ${dc(nf(med))}.`,
     );
   }
   const L = pick(r, GROUPED);
@@ -938,10 +961,10 @@ const stats: Generator = (d, r) => {
         {
           prompt: `The table shows the scores of a class. Test score: ${vals.join(', ')}; frequency: ${shown}. The mean score is ${nf(M)}. Find x.`,
           ...opts(x, [(M * N0 - S0) / vals[j], (S0 - M * N0) / (M - vals[j]) + 1, N0].filter((y) => Number.isInteger(+y.toFixed(6))), r, nf, 1, 1),
-          explanation: `Mean = Σ(value × frequency) ÷ total: (${S0} + ${vals[j]}x) ÷ (${N0} + x) = ${nf(M)}. So ${S0} + ${vals[j]}x = ${nf(M)}(${N0} + x), giving ${nf(Math.abs(vals[j] - M))}x = ${nf(Math.abs(M * N0 - S0))} and x = ${x}.`,
+          explanation: `Mean = (sum of value × frequency) ÷ total number. Without the unknown group: sum = ${S0}, number = ${N0}; the score ${vals[j]} adds ${vals[j]}·x to the sum and x to the number.\n(${S0} + ${vals[j]}x) ÷ (${N0} + x) = ${nf(M)}.\nMultiply both sides by (${N0} + x): ${S0} + ${vals[j]}x = ${nf(M)}·${N0} + ${nf(M)}x = ${nf(M * N0)} + ${nf(M)}x.\nx terms to the left, numbers to the right: ${vals[j]}x − ${nf(M)}x = ${nf(M * N0)} − ${S0}, so ${cx(vals[j] - M)} = ${nf(M * N0)} − ${S0} = ${nf(M * N0 - S0)}, so x = ${x}.`,
         },
         `Bảng sau cho biết điểm kiểm tra của một lớp. Điểm kiểm tra: ${vals.join(', ')}; tần số: ${shown}. Điểm trung bình là ${dc(nf(M))}. Tìm x.`,
-        `Số trung bình = tổng (giá trị × tần số) : tổng số: (${S0} + ${vals[j]}x) : (${N0} + x) = ${dc(nf(M))}. Do đó ${S0} + ${vals[j]}x = ${dc(nf(M))}(${N0} + x), suy ra ${dc(nf(Math.abs(vals[j] - M)))}x = ${dc(nf(Math.abs(M * N0 - S0)))} và x = ${x}.`,
+        `Số trung bình = tổng (giá trị × tần số) : tổng số. Không kể nhóm chưa biết: tổng = ${S0}, số học sinh = ${N0}; điểm ${vals[j]} thêm ${vals[j]}·x vào tổng và x vào số học sinh.\n(${S0} + ${vals[j]}x) : (${N0} + x) = ${dc(nf(M))}.\nNhân hai vế với (${N0} + x): ${S0} + ${vals[j]}x = ${dc(nf(M))}·${N0} + ${dc(nf(M))}x = ${dc(nf(M * N0))} + ${dc(nf(M))}x.\nChuyển vế: ${vals[j]}x − ${dc(nf(M))}x = ${dc(nf(M * N0))} − ${S0}, nên ${dc(cx(vals[j] - M))} = ${dc(nf(M * N0))} − ${S0} = ${dc(nf(M * N0 - S0))}, nên x = ${x}.`,
       );
     }
   }
@@ -956,10 +979,10 @@ const stats: Generator = (d, r) => {
       {
         prompt: `${intro} Estimate the mean using the midpoints of the groups.`,
         ...opts(M, [M - L.w / 2, M + L.w / 2, sum(mids) / L.k], r, nf, 0.2),
-        explanation: `Use the midpoint of each group as its value: ${mids.join(', ')}. Mean ≈ (${mids.map((m, i) => `${m}·${f[i]}`).join(' + ')}) ÷ ${n} = ${nf(M)}.`,
+        explanation: `For grouped data, use the midpoint of each group [a; b), (a + b)/2, as its value: ${mids.join(', ')}.\nProducts midpoint × frequency: ${mids.map((m, i) => `${m}·${f[i]} = ${m * f[i]}`).join(', ')}.\nSum = ${sum(mids.map((m, i) => m * f[i]))}; mean ≈ ${sum(mids.map((m, i) => m * f[i]))} ÷ ${n} = ${nf(M)}.`,
       },
       `${introVi} Ước lượng số trung bình bằng giá trị đại diện (điểm giữa) của mỗi nhóm.`,
-      `Lấy điểm giữa của mỗi nhóm làm giá trị đại diện: ${mids.join(', ')}. Số trung bình ≈ (${mids.map((m, i) => `${m}·${f[i]}`).join(' + ')}) : ${n} = ${dc(nf(M))}.`,
+      `Với mẫu số liệu ghép nhóm, lấy điểm giữa (a + b)/2 của mỗi nhóm [a; b) làm giá trị đại diện: ${mids.join('; ')}.\nCác tích giá trị đại diện × tần số: ${mids.map((m, i) => `${m}·${f[i]} = ${m * f[i]}`).join('; ')}.\nTổng = ${sum(mids.map((m, i) => m * f[i]))}; số trung bình ≈ ${sum(mids.map((m, i) => m * f[i]))} : ${n} = ${dc(nf(M))}.`,
     );
   }
   if (r() < 0.5) {
@@ -980,10 +1003,10 @@ const stats: Generator = (d, r) => {
     {
       prompt: `${intro} What percentage of them ${L.least(b)}?`,
       ...opts(ans, [(sum(f.slice(t + 1)) * 100) / n, (sum(f.slice(t - 1)) * 100) / n, sum(f.slice(t))], r, pct, 2.5, 0),
-      explanation: `The group [a; b) contains a but not b, so "at least ${b}" means the groups from ${groups[t]} on: ${f.slice(t).join(' + ')} = ${sum(f.slice(t))} out of ${n}, i.e. ${pct(ans)}.`,
+      explanation: `The group [a; b) contains a but not b, so "at least ${b}" means the groups from ${groups[t]} on: ${f.slice(t).length > 1 ? `${f.slice(t).join(' + ')} = ` : ''}${sum(f.slice(t))} out of ${n}, i.e. ${pct(ans)}.`,
     },
     `${introVi} Có bao nhiêu phần trăm số ${L.whoVi} ${L.leastVi(b)}?`,
-    `Nhóm [a; b) chứa a nhưng không chứa b, nên "từ ${b} trở lên" gồm các nhóm từ ${groups[t]} trở đi: ${f.slice(t).join(' + ')} = ${sum(f.slice(t))} trên ${n}, tức là ${dc(pct(ans))}.`,
+    `Nhóm [a; b) chứa a nhưng không chứa b, nên "từ ${b} trở lên" gồm các nhóm từ ${groups[t]} trở đi: ${f.slice(t).length > 1 ? `${f.slice(t).join(' + ')} = ` : ''}${sum(f.slice(t))} trên ${n}, tức là ${dc(pct(ans))}.`,
   );
 };
 
@@ -997,6 +1020,11 @@ function pOpts(fav: number, total: number, mistakes: Q[], r: () => number): Opts
   });
 }
 const count = <T>(list: T[], f: (x: T) => boolean) => list.filter(f).length;
+/** "P = 6/90 = 1/15" (or "P = 3/8" when already simplest). */
+const pText = (fav: number, total: number) => `P = ${fav}/${total}${fs(q(fav, total)) === `${fav}/${total}` ? '' : ` = ${fs(q(fav, total))}`}`;
+const C2 = (n: number) => (n * (n - 1)) / 2;
+/** "x", "−x" or "0.5x". */
+const cx = (c: number) => (c === 1 ? 'x' : c === -1 ? '−x' : `${nf(c)}x`);
 const isPrime = (n: number) => n > 1 && range(2, Math.max(0, Math.floor(Math.sqrt(n)) - 1)).every((p) => n % p !== 0);
 
 const probability: Generator = (d, r) => {
@@ -1010,15 +1038,15 @@ const probability: Generator = (d, r) => {
       { en: 'is a prime number', vi: 'là số nguyên tố', t: isPrime },
       { en: 'has its tens digit greater than its units digit', vi: 'có chữ số hàng chục lớn hơn chữ số hàng đơn vị', t: (x: number) => Math.floor(x / 10) > x % 10 },
     ]);
-    const fav = count(nums, e.t), fav99 = count(range(1, 99), e.t);
+    const fav = count(nums, e.t), fav99 = count(range(1, 99), e.t), favList = nums.filter(e.t);
     return vi(
       {
         prompt: `A two-digit number is chosen at random. What is the probability that it ${e.en}?`,
         ...pOpts(fav, 90, [q(fav, 100), q(fav, 99), q(fav99, 90), q(fav99, 99)], r),
-        explanation: `The sample space is {10, 11, …, 99}: 99 − 10 + 1 = 90 equally likely numbers (not 99 or 100). There are ${fav} favourable numbers, so P = ${fav}/90 = ${fs(q(fav, 90))}.`,
+        explanation: `Probability P = (number of favourable outcomes) ÷ (number of all equally likely outcomes).\nThe sample space is {10, 11, …, 99}: 99 − 10 + 1 = 90 equally likely numbers (not 99 or 100).\nFavourable numbers: ${fav}${favList.length <= 12 ? ` (${favList.join(', ')})` : ''}.\n${pText(fav, 90)}.`,
       },
       `Chọn ngẫu nhiên một số tự nhiên có hai chữ số. Tính xác suất để số được chọn ${e.vi}.`,
-      `Không gian mẫu là {10; 11; …; 99} gồm 99 − 10 + 1 = 90 số có khả năng như nhau (không phải 99 hay 100). Có ${fav} kết quả thuận lợi, nên P = ${fav}/90 = ${fs(q(fav, 90))}.`,
+      `Xác suất P = số kết quả thuận lợi : số kết quả có thể (có khả năng như nhau).\nKhông gian mẫu là {10; 11; …; 99} gồm 99 − 10 + 1 = 90 số có khả năng như nhau (không phải 99 hay 100).\nSố kết quả thuận lợi: ${fav}${favList.length <= 12 ? ` (${favList.join('; ')})` : ''}.\n${pText(fav, 90)}.`,
     );
   }
   if (d === 2) {
@@ -1034,15 +1062,15 @@ const probability: Generator = (d, r) => {
     const e = pick(r, evs);
     const fav = count(seqs, (s) => e.t(heads(s)));
     const favU = count(range(0, n + 1), e.t);
-    const list = seqs.join(', ');
+    const list = seqs.join(', '), favL = seqs.filter((x) => e.t(heads(x))).join(', ');
     return vi(
       {
         prompt: `${n === 2 ? 'Two' : 'Three'} fair coins are tossed. What is the probability of ${e.en}?`,
         ...pOpts(fav, 2 ** n, [q(favU, n + 1), q(1, 2 ** n), q(fav, 2 * n)], r),
-        explanation: `List the sample space in order (H = head, T = tail): ${list}: ${2 ** n} equally likely outcomes. HT and TH are different outcomes. ${fav} are favourable, so P = ${fav}/${2 ** n} = ${fs(q(fav, 2 ** n))}.`,
+        explanation: `List the sample space in order (H = head, T = tail): ${list}: ${2 ** n} equally likely outcomes. HT and TH are different outcomes.\nFavourable: ${favL} — that is ${fav}.\n${pText(fav, 2 ** n)}.`,
       },
       `Gieo ${n === 2 ? 'hai' : 'ba'} đồng xu cân đối. Tính xác suất để ${e.vi}.`,
-      `Liệt kê không gian mẫu (S = sấp, N = ngửa): ${list.replace(/H/g, 'S').replace(/T/g, 'N')}: ${2 ** n} kết quả có khả năng như nhau. SN và NS là hai kết quả khác nhau. Có ${fav} kết quả thuận lợi, nên P = ${fav}/${2 ** n} = ${fs(q(fav, 2 ** n))}.`,
+      `Liệt kê không gian mẫu (S = sấp, N = ngửa): ${list.replace(/H/g, 'S').replace(/T/g, 'N')}: ${2 ** n} kết quả có khả năng như nhau. SN và NS là hai kết quả khác nhau.\nKết quả thuận lợi: ${favL.replace(/H/g, 'S').replace(/T/g, 'N')} — gồm ${fav} kết quả.\n${pText(fav, 2 ** n)}.`,
     );
   }
   if (d === 3) {
@@ -1060,14 +1088,15 @@ const probability: Generator = (d, r) => {
     const favU = count(pairs, ([a, b]) => a <= b && e.t(a, b));
     const shown = pairs.filter(([a, b]) => e.t(a, b));
     const list = shown.length <= 8 ? `: ${shown.map(([a, b]) => `(${a}, ${b})`).join(', ')}` : '';
+    const byFirst = (en: boolean) => `${range(1, 6).map((a) => `${a} → ${count(shown, ([x]) => x === a)}`).join(', ')}, ${en ? 'total' : 'tổng'} ${range(1, 6).map((a) => count(shown, ([x]) => x === a)).filter(Boolean).join(' + ')} = ${fav}`;
     return vi(
       {
         prompt: `Two fair dice are rolled. What is the probability that ${e.en}?`,
         ...pOpts(fav, 36, [q(favU, 21), e.extra, q(fav, 12)], r),
-        explanation: `The sample space is all ordered pairs (first die, second die): 6 × 6 = 36 equally likely outcomes; (1, 2) and (2, 1) are different. Favourable outcomes: ${fav}${list}. P = ${fav}/36 = ${fs(q(fav, 36))}.`,
+        explanation: `The sample space is all ordered pairs (first die, second die): 6 × 6 = 36 equally likely outcomes; (1, 2) and (2, 1) are different.\nFavourable outcomes: ${fav}${list || `; count them by the first die: ${byFirst(true)}`}.\n${pText(fav, 36)}.`,
       },
       `Gieo đồng thời hai con xúc xắc cân đối. Tính xác suất để ${e.vi}.`,
-      `Không gian mẫu gồm các cặp có thứ tự (con thứ nhất, con thứ hai): 6 × 6 = 36 kết quả có khả năng như nhau; (1; 2) và (2; 1) là hai kết quả khác nhau. Số kết quả thuận lợi: ${fav}${list.replace(/, (?=\d)/g, '; ')}. P = ${fav}/36 = ${fs(q(fav, 36))}.`,
+      `Không gian mẫu gồm các cặp có thứ tự (con thứ nhất, con thứ hai): 6 × 6 = 36 kết quả có khả năng như nhau; (1; 2) và (2; 1) là hai kết quả khác nhau.\nSố kết quả thuận lợi: ${fav}${list.replace(/, (?=\d)/g, '; ') || `; đếm theo con thứ nhất: ${byFirst(false).replace(/, /g, '; ')}`}.\n${pText(fav, 36)}.`,
     );
   }
   if (d === 4) {
@@ -1085,19 +1114,19 @@ const probability: Generator = (d, r) => {
     const fav = favOf(back), total = back ? N * N : N * (N - 1);
     const other = q(favOf(!back), back ? N * (N - 1) : N * N);
     const how = back
-      ? `With the first ball put back, the sample space has ${N} × ${N} = ${N * N} equally likely ordered outcomes; ${fav} are favourable.`
-      : `Drawing two at once, the sample space is all pairs of balls: ${N}·${N - 1}/2 = ${(N * (N - 1)) / 2} equally likely pairs; ${fav / 2} are favourable.`;
+      ? `With the first ball put back, the sample space has ${N} × ${N} = ${N * N} equally likely ordered outcomes (first ball, second ball).\nRed then red: ${R}·${R} = ${R * R}; blue then blue: ${B}·${B} = ${B * B}; different colours: 2·${R}·${B} = ${2 * R * B} (red–blue or blue–red).\nFavourable for "${e.en}": ${fav}.`
+      : `Drawing two at once, the order does not matter: the sample space is all pairs of balls, ${N}·${N - 1}/2 = ${C2(N)} equally likely pairs.\nTwo red: ${R}·${R - 1}/2 = ${C2(R)}; two blue: ${B}·${B - 1}/2 = ${C2(B)}; one of each: ${R}·${B} = ${R * B}.\nFavourable for "${e.en}": ${fav / 2}.`;
     const howVi = back
-      ? `Có trả lại quả thứ nhất, không gian mẫu gồm ${N} × ${N} = ${N * N} kết quả (có thứ tự) có khả năng như nhau; có ${fav} kết quả thuận lợi.`
-      : `Lấy đồng thời hai quả, không gian mẫu gồm mọi cặp hai quả bóng: ${N}·${N - 1}/2 = ${(N * (N - 1)) / 2} cặp có khả năng như nhau; có ${fav / 2} cặp thuận lợi.`;
+      ? `Có trả lại quả thứ nhất, không gian mẫu gồm ${N} × ${N} = ${N * N} kết quả (có thứ tự: quả thứ nhất, quả thứ hai) có khả năng như nhau.\nĐỏ rồi đỏ: ${R}·${R} = ${R * R}; xanh rồi xanh: ${B}·${B} = ${B * B}; khác màu: 2·${R}·${B} = ${2 * R * B} (đỏ–xanh hoặc xanh–đỏ).\nSố kết quả thuận lợi cho biến cố "${e.vi}": ${fav}.`
+      : `Lấy đồng thời hai quả thì không tính thứ tự: không gian mẫu gồm mọi cặp hai quả, ${N}·${N - 1}/2 = ${C2(N)} cặp có khả năng như nhau.\nHai quả đỏ: ${R}·${R - 1}/2 = ${C2(R)}; hai quả xanh: ${B}·${B - 1}/2 = ${C2(B)}; một đỏ một xanh: ${R}·${B} = ${R * B}.\nSố cặp thuận lợi cho biến cố "${e.vi}": ${fav / 2}.`;
     return vi(
       {
         prompt: `A bag has ${R} red and ${B} blue balls. ${back ? 'Two balls are drawn one after the other, and the first ball is put back before the second draw.' : 'Two balls are drawn at the same time.'} What is the probability that ${e.en}?`,
         ...pOpts(fav, total, [other, q(back ? fav : fav / 2, N * (N - 1)), q(R, N)], r),
-        explanation: `${how} P = ${fs(q(fav, total))}.${back ? '' : ' Without replacement the second draw has one ball fewer.'}`,
+        explanation: `${how}\n${back ? pText(fav, total) : pText(fav / 2, C2(N))}.`,
       },
       `Một túi có ${R} quả bóng đỏ và ${B} quả bóng xanh. ${back ? 'Lấy ngẫu nhiên lần lượt hai quả, lấy xong quả thứ nhất thì trả lại vào túi rồi mới lấy quả thứ hai.' : 'Lấy ngẫu nhiên đồng thời hai quả bóng.'} Tính xác suất để ${e.vi}.`,
-      `${howVi} P = ${fs(q(fav, total))}.${back ? '' : ' Không trả lại thì lần lấy thứ hai còn ít hơn một quả.'}`,
+      `${howVi}\n${back ? pText(fav, total) : pText(fav / 2, C2(N))}.`,
     );
   }
   if (r() < 0.55) {
@@ -1115,29 +1144,30 @@ const probability: Generator = (d, r) => {
       {
         prompt: `A group has ${b} boys and ${g} girls. Two students are chosen at random to represent the group. What is the probability that ${e.en}?`,
         ...pOpts(fav, total, [q(fav, N * (N - 1)), e.extra, q(fav, N * N)], r),
-        explanation: `The order of choosing does not matter: there are ${N}·${N - 1}/2 = ${total} equally likely pairs of students. ${fav} pairs are favourable, so P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+        explanation: `The order of choosing does not matter: there are ${N}·${N - 1}/2 = ${total} equally likely pairs of students.\nTwo boys: ${b}·${b - 1}/2 = ${C2(b)}; two girls: ${g}·${g - 1}/2 = ${C2(g)}; a boy and a girl: ${b}·${g} = ${b * g}; pairs that include An: ${N - 1}.\nFavourable pairs: ${fav}.\n${pText(fav, total)}.`,
       },
       `Một nhóm có ${b} bạn nam và ${g} bạn nữ. Chọn ngẫu nhiên hai bạn đi đại diện cho nhóm. Tính xác suất để ${e.vi}.`,
-      `Thứ tự chọn không quan trọng: có ${N}·${N - 1}/2 = ${total} cặp hai bạn có khả năng như nhau. Có ${fav} cặp thuận lợi, nên P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+      `Thứ tự chọn không quan trọng: có ${N}·${N - 1}/2 = ${total} cặp hai bạn có khả năng như nhau.\nHai bạn nam: ${b}·${b - 1}/2 = ${C2(b)}; hai bạn nữ: ${g}·${g - 1}/2 = ${C2(g)}; một nam một nữ: ${b}·${g} = ${b * g}; các cặp có An: ${N - 1}.\nSố cặp thuận lợi: ${fav}.\n${pText(fav, total)}.`,
     );
   }
   const N = int(r, 6, 12);
   const e = pick(r, [
-    { en: 'the sum of the two numbers is even', vi: 'tổng hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a + b) % 2 === 0 },
-    { en: 'the product of the two numbers is even', vi: 'tích hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a * b) % 2 === 0 },
-    { en: 'the sum of the two numbers is divisible by 3', vi: 'tổng hai số ghi trên hai thẻ chia hết cho 3', t: (a: number, b: number) => (a + b) % 3 === 0 },
+    { k: 0, en: 'the sum of the two numbers is even', vi: 'tổng hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a + b) % 2 === 0 },
+    { k: 1, en: 'the product of the two numbers is even', vi: 'tích hai số ghi trên hai thẻ là số chẵn', t: (a: number, b: number) => (a * b) % 2 === 0 },
+    { k: 3, en: 'the sum of the two numbers is divisible by 3', vi: 'tổng hai số ghi trên hai thẻ chia hết cho 3', t: (a: number, b: number) => (a + b) % 3 === 0 },
   ]);
   const pairs = range(1, N).flatMap((a) => range(a + 1, N - a).map((b) => [a, b] as const));
   const withRep = range(1, N).flatMap((a) => range(1, N).map((b) => [a, b] as const));
   const fav = count(pairs, ([a, b]) => e.t(a, b)), total = pairs.length;
+  const od = Math.ceil(N / 2), ev = Math.floor(N / 2), r3 = [0, 1, 2].map((m) => count(range(1, N), (x) => x % 3 === m));
   return vi(
     {
       prompt: `A box has ${N} cards numbered 1 to ${N}. Two cards are drawn at the same time. What is the probability that ${e.en}?`,
       ...pOpts(fav, total, [q(count(withRep, ([a, b]) => e.t(a, b)), N * N), q(fav, N * (N - 1)), q(1, 2)], r),
-      explanation: `Two cards drawn together form a pair: ${N}·${N - 1}/2 = ${total} equally likely pairs (no card twice). Count the favourable pairs: ${fav}. P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+      explanation: `Two cards drawn together form a pair: ${N}·${N - 1}/2 = ${total} equally likely pairs (no card twice).\nFrom 1 to ${N} there are ${od} odd and ${ev} even numbers${e.k === 3 ? `; by remainder when divided by 3: ${r3[0]} numbers with remainder 0, ${r3[1]} with remainder 1, ${r3[2]} with remainder 2` : ''}.\n${e.k === 0 ? `Sum even ⇔ both odd or both even: ${od}·${od - 1}/2 + ${ev}·${ev - 1}/2 = ${C2(od)} + ${C2(ev)} = ${fav}.` : e.k === 1 ? `Product even unless both are odd: ${total} − ${od}·${od - 1}/2 = ${total} − ${C2(od)} = ${fav}.` : `Sum divisible by 3 ⇔ both remainder 0, or remainders 1 and 2: ${r3[0]}·${r3[0] - 1}/2 + ${r3[1]}·${r3[2]} = ${C2(r3[0])} + ${r3[1] * r3[2]} = ${fav}.`}\n${pText(fav, total)}.`,
     },
     `Một hộp có ${N} tấm thẻ được đánh số từ 1 đến ${N}. Rút ngẫu nhiên đồng thời hai thẻ. Tính xác suất để ${e.vi}.`,
-    `Rút đồng thời hai thẻ ta được một cặp thẻ: có ${N}·${N - 1}/2 = ${total} cặp có khả năng như nhau (không rút trùng một thẻ). Đếm các cặp thuận lợi: ${fav}. P = ${fav}/${total} = ${fs(q(fav, total))}.`,
+    `Rút đồng thời hai thẻ ta được một cặp thẻ: có ${N}·${N - 1}/2 = ${total} cặp có khả năng như nhau (không rút trùng một thẻ).\nTừ 1 đến ${N} có ${od} số lẻ và ${ev} số chẵn${e.k === 3 ? `; theo số dư khi chia cho 3: ${r3[0]} số dư 0, ${r3[1]} số dư 1, ${r3[2]} số dư 2` : ''}.\n${e.k === 0 ? `Tổng chẵn ⇔ hai số cùng lẻ hoặc cùng chẵn: ${od}·${od - 1}/2 + ${ev}·${ev - 1}/2 = ${C2(od)} + ${C2(ev)} = ${fav}.` : e.k === 1 ? `Tích chẵn trừ khi cả hai số đều lẻ: ${total} − ${od}·${od - 1}/2 = ${total} − ${C2(od)} = ${fav}.` : `Tổng chia hết cho 3 ⇔ cả hai số dư 0, hoặc một số dư 1 và một số dư 2: ${r3[0]}·${r3[0] - 1}/2 + ${r3[1]}·${r3[2]} = ${C2(r3[0])} + ${r3[1] * r3[2]} = ${fav}.`}\n${pText(fav, total)}.`,
   );
 };
 
