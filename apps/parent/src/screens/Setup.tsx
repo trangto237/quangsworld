@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button, Card, Field, InstallButton, inputClass, useRepo } from '@atlas/ui';
-import { INSTALL_LABELS } from '../components/install';
+import { installLabels } from '../components/install';
 import { StudentForm } from '../components/StudentForm';
 import { LinkChoice, useCloud } from '../components/Cloud';
 import { useParent } from '../store';
+import { LangToggle, tr } from '../i18n';
 
-const friendly = (m: string) => (/failed to fetch|network/i.test(m) ? "Can't reach the cloud. Check your internet connection." : m);
+const friendly = (m: string) => (/failed to fetch|network/i.test(m) ? tr('Can’t reach the cloud. Check your internet connection.') : m);
 
 /**
  * First run on a device. With cloud sync set up there is ONE parent login (email + password): create it
@@ -47,7 +48,7 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
 
   /** The account exists and is signed in: create the family for it (name + the account password). */
   const finishFamily = async (password: string) => {
-    if (!name.trim()) throw new Error('Add your name to finish.');
+    if (!name.trim()) throw new Error(tr('Add your name to finish.'));
     await repo.createFamily(name.trim(), password);
     await cloud.link('merge');
     signIn();
@@ -70,15 +71,15 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
 
   /** Local only (no cloud): a dashboard password on this device. */
   const createLocal = run(async () => {
-    if (pw !== pw2) throw new Error('Passwords do not match');
-    await repo.createFamily(name.trim() || 'Parent', pw);
+    if (pw !== pw2) throw new Error(tr('Passwords do not match'));
+    await repo.createFamily(name.trim() || tr('Parent'), pw);
     signIn();
     setStep('kid');
   });
 
   /** One parent account in the cloud; the same password unlocks the dashboard. */
   const createOnline = run(async () => {
-    if (pw !== pw2) throw new Error('Passwords do not match');
+    if (pw !== pw2) throw new Error(tr('Passwords do not match'));
     let r: 'signed-in' | 'confirm-email';
     try {
       r = await cloud.signUp(email.trim(), pw);
@@ -90,7 +91,7 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
     }
     if (r === 'confirm-email') {
       setMode('signin');
-      setNote('Account created! Open the confirmation email we just sent and tap the link — it brings you back here, signed in.');
+      setNote(tr('Account created! Open the confirmation email we just sent and tap the link — it brings you back here, signed in.'));
       return;
     }
     await cloud.link(repo.getFamily() ? 'auto' : 'cloud');
@@ -109,7 +110,7 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
     if (!repo.getFamily()) {
       // A new account without a family yet (e.g. confirmed by email just now): one last step.
       setMode('finish');
-      setNote('Signed in! One last step: your name.');
+      setNote(tr('Signed in! One last step: your name.'));
       return;
     }
     await repo.setParentPassword(pw);
@@ -125,19 +126,22 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   });
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4 dark:from-slate-950 dark:to-slate-900">
+    <div className="relative grid min-h-dvh place-items-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4 dark:from-slate-950 dark:to-slate-900">
+      <div className="absolute right-4 top-4">
+        <LangToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="text-5xl">🧭</div>
-          <h1 className="mt-2 font-display text-3xl font-bold">Welcome to Atlas</h1>
+          <h1 className="mt-2 font-display text-3xl font-bold">{tr('Welcome to Atlas')}</h1>
           <p className="mt-1 text-slate-500">
-            {online ? 'One parent account for all your devices. Your family’s data is private to your family.' : 'A game-first learning world for your child. Everything stays private on this device.'}
+            {online ? tr('One parent account for all your devices. Your family’s data is private to your family.') : tr('A game-first learning world for your child. Everything stays private on this device.')}
           </p>
         </div>
-        <Card title={step === 'kid' ? 'Step 2 · Your child' : mode === 'finish' ? 'Finish setting up' : online ? 'Parent account' : 'Step 1 · Parent account'}>
+        <Card title={step === 'kid' ? tr('Step 2 · Your child') : mode === 'finish' ? tr('Finish setting up') : online ? tr('Parent account') : tr('Step 1 · Parent account')}>
           {step === 'kid' ? (
             <StudentForm
-              submitLabel="Create hero profile"
+              submitLabel={tr('Create hero profile')}
               onSubmit={async (v) => {
                 await repo.addStudent({ ...v, pin: v.pin || undefined });
                 signIn();
@@ -145,59 +149,59 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
             />
           ) : !online ? (
             <form className="space-y-4" onSubmit={createLocal}>
-              <Field label="Your name">
-                <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trang" required />
+              <Field label={tr('Your name')}>
+                <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('e.g. Trang')} required />
               </Field>
-              <Field label="Parent password" hint="Protects the dashboard, goals and uploads from curious players.">
+              <Field label={tr('Parent password')} hint={tr('Protects the dashboard, goals and uploads from curious players.')}>
                 <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={4} required autoComplete="new-password" />
               </Field>
-              <Field label="Confirm password">
+              <Field label={tr('Confirm password')}>
                 <input className={inputClass} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={4} required autoComplete="new-password" />
               </Field>
               {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
               <Button type="submit" className="w-full" disabled={busy}>
-                Continue
+                {tr('Continue')}
               </Button>
             </form>
           ) : (
             <div className="space-y-4">
               {mode !== 'finish' && (
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Create the family's parent account. Already have one?{' '}
+                  {tr('Create the family’s parent account. Already have one?')}{' '}
                   <a href="/" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
-                    Sign in
+                    {tr('Sign in')}
                   </a>
                 </p>
               )}
               <form className="space-y-4" onSubmit={mode === 'create' ? createOnline : mode === 'finish' ? finishOnline : signInOnline}>
                 {mode === 'finish' && (
                   <p className="text-sm text-slate-600 dark:text-slate-300">
-                    You're signed in{status.email || email ? ` as ${status.email || email}` : ''}. Add your name to finish setting up your family.
+                    {status.email || email ? tr('You’re signed in as {email}. Add your name to finish setting up your family.', { email: status.email || email }) : tr('You’re signed in. Add your name to finish setting up your family.')}
                   </p>
                 )}
                 {mode !== 'signin' && (
-                  <Field label="Your name">
-                    <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trang" required />
+                  <Field label={tr('Your name')}>
+                    <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('e.g. Trang')} required />
                   </Field>
                 )}
                 {mode !== 'finish' && (
-                  <Field label="Email">
+                  <Field label={tr('Email')}>
                     <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
                   </Field>
                 )}
-                <Field label="Password" hint={mode === 'create' ? 'At least 6 characters. Use it to sign in on any device and to unlock this dashboard.' : mode === 'finish' ? 'Your account password — it also unlocks this dashboard.' : undefined}>
+                <Field label={tr('Password')} hint={mode === 'create' ? tr('At least 6 characters. Use it to sign in on any device and to unlock this dashboard.') : mode === 'finish' ? tr('Your account password — it also unlocks this dashboard.') : undefined}>
                   <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required autoComplete={mode === 'create' ? 'new-password' : 'current-password'} />
                 </Field>
                 {mode === 'create' && (
-                  <Field label="Confirm password">
+                  <Field label={tr('Confirm password')}>
                     <input className={inputClass} type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={6} required autoComplete="new-password" />
                   </Field>
                 )}
                 {note && <p className="text-sm font-semibold text-emerald-600">{note}</p>}
                 {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
-                {status.state === 'syncing' && <p className="text-sm text-slate-500">Downloading your family’s data…</p>}
+                {status.state === 'syncing' && <p className="text-sm text-slate-500">{tr('Downloading your family’s data…')}</p>}
                 <Button type="submit" className="w-full" disabled={busy}>
-                  {mode === 'create' ? 'Create account' : mode === 'finish' ? 'Finish' : 'Sign in'}
+                  {mode === 'create' ? tr('Create account') : mode === 'finish' ? tr('Finish') : tr('Sign in')}
                 </Button>
               </form>
             </div>
@@ -205,11 +209,12 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
         </Card>
         {step === 'kid' && (
           <p className="mt-4 text-center text-sm text-slate-500">
-            Next, your child opens the kid app and starts the Trial of Five Realms (placement test).{online ? ' On their own laptop they sign in with their email, or the family code from Settings.' : ''}
+            {tr('Next, your child opens the kid app and starts the Trial of Five Realms (placement test).')}
+            {online ? ' ' + tr('On their own laptop they sign in with their email, or the family code from Settings.') : ''}
           </p>
         )}
         <div className="mt-4 flex justify-center">
-          <InstallButton labels={INSTALL_LABELS} className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700" />
+          <InstallButton labels={installLabels()} className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700" />
         </div>
         <LinkChoice />
       </div>
