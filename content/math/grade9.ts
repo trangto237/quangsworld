@@ -293,7 +293,6 @@ const quadratics: Generator = (d, r) => {
       // (ax − m)(x − n) = 0 with a ≠ 1: the quadratic formula
       const a = int(r, 2, 5), m = nz(r, -7, 7), n = nz(r, -5, 5);
       const B = -(a * n + m), C = m * n;
-      const D = B * B - 4 * a * C;
       const e = `${poly([a, B, C])} = 0`;
       return vi(
         {
