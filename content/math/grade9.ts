@@ -472,15 +472,32 @@ const quadratics: Generator = (d, r) => {
   const askVi = { double: 'có nghiệm kép', two: 'có hai nghiệm phân biệt', none: 'vô nghiệm' }[kind];
   const answer = kind === 'double' ? `m = ${num(v)}` : kind === 'two' ? `m < ${num(v)}` : `m > ${num(v)}`;
   const wrong = b * b + k === v ? 4 * b * b - k : b * b + k;
+  const cTxt = k ? `m ${signed(k)}` : 'm';
+  const cPar = k ? `(m ${signed(k)})` : 'm';
+  const steps5 = (en: boolean) =>
+    [
+      en
+        ? `① Written as ax² + bx + c = 0: a = 1, b = ${num(-2 * b)}, and c = ${cTxt} (everything without x).`
+        : `① Viết dạng ax² + bx + c = 0: a = 1, b = ${num(-2 * b)}, c = ${cTxt} (phần không chứa x).`,
+      en
+        ? `② b is even, so use b′ = b/2 = ${num(-b)} and Δ′ ("delta-prime") = b′² − ac. Δ′ decides the number of solutions: Δ′ > 0 two, Δ′ = 0 a double root, Δ′ < 0 none.`
+        : `② b chẵn nên dùng b′ = b/2 = ${num(-b)} và Δ′ ("đen-ta phẩy") = b′² − ac. Δ′ quyết định số nghiệm: Δ′ > 0 hai nghiệm, Δ′ = 0 nghiệm kép, Δ′ < 0 vô nghiệm.`,
+      `Δ′ = ${pv(-b)}² − 1·${cPar} = ${b * b} − ${cPar} = ${num(v)} − m.`,
+      kind === 'double'
+        ? en ? `③ A double root needs Δ′ = 0: ${num(v)} − m = 0, so m = ${num(v)}.` : `③ Nghiệm kép khi Δ′ = 0: ${num(v)} − m = 0, nên m = ${num(v)}.`
+        : kind === 'two'
+          ? en ? `③ Two distinct solutions need Δ′ > 0: ${num(v)} − m > 0, so m < ${num(v)}.` : `③ Hai nghiệm phân biệt khi Δ′ > 0: ${num(v)} − m > 0, nên m < ${num(v)}.`
+          : en ? `③ No real solution needs Δ′ < 0: ${num(v)} − m < 0, so m > ${num(v)}.` : `③ Vô nghiệm khi Δ′ < 0: ${num(v)} − m < 0, nên m > ${num(v)}.`,
+    ].join('\n');
   return vi(
     {
       prompt: `Find m so that ${e} ${ask}.`,
       answer,
       distractors: kind === 'double' ? [`m = ${num(-v)}`, `m = ${num(wrong)}`, `m < ${num(v)}`] : [kind === 'two' ? `m > ${num(v)}` : `m < ${num(v)}`, `m = ${num(v)}`, `${answer.slice(0, 4)}${num(wrong)}`],
-      explanation: `Δ′ = b′² − ac = ${b * b} − (m ${signed(k)}) = ${num(v)} − m. ${kind === 'double' ? 'Double root: Δ′ = 0.' : kind === 'two' ? 'Two solutions: Δ′ > 0.' : 'No solution: Δ′ < 0.'}`,
+      explanation: steps5(true),
     },
     `Tìm m để phương trình ${e} ${askVi}.`,
-    `Δ′ = b′² − ac = ${b * b} − (m ${signed(k)}) = ${num(v)} − m. ${kind === 'double' ? 'Nghiệm kép: Δ′ = 0.' : kind === 'two' ? 'Hai nghiệm phân biệt: Δ′ > 0.' : 'Vô nghiệm: Δ′ < 0.'}`,
+    steps5(false),
   );
 };
 
