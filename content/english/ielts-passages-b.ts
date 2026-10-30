@@ -116,4 +116,52 @@ const PAPER: IeltsPassage = {
   ],
 };
 
-export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER];
+const DESALINATION: IeltsPassage = {
+  id: 'desalination',
+  title: 'Turning the sea into drinking water',
+  level: 3,
+  paragraphs: [
+    'About 97 per cent of all the water on Earth is in the oceans, and it is far too salty to drink or to use on crops. As populations grow and droughts become more frequent, more and more places are turning to desalination, the removal of salt from seawater. The technology is now common in the Middle East, in island nations and in dry coastal regions of Australia and the United States, and thousands of plants around the world supply water to cities, hotels and factories.',
+    'The oldest method is distillation, which copies what the sun does to the ocean every day. Seawater is heated until it turns into steam, which rises and leaves the salt behind. The steam is then cooled so that it becomes liquid again, producing very pure water. The method is simple and reliable, but heating such large quantities of water needs huge amounts of heat. For this reason, large distillation plants have mainly been built in countries where oil and gas are cheap, such as those around the Persian Gulf.',
+    'Most new plants use a different method called reverse osmosis. A plant of this kind on the coast near the fictional town of Port Halden shows how it works. First, seawater is drawn in through a long pipe that starts several hundred metres out at sea. The end of the pipe is covered with screens that keep fish and other large animals out. Next comes pre-treatment: the water passes through layers of sand and then through fine filters, which remove sand, seaweed and tiny organisms. This stage matters because even small particles could block the delicate parts of the system later on.',
+    'The heart of the process comes next. Powerful high-pressure pumps push the cleaned seawater against special membranes. These are thin plastic sheets with holes so small that water molecules can pass through but salt cannot. At Port Halden, about 45 per cent of the seawater comes out on the other side as fresh water. The rest, now much saltier than before, leaves the plant as a waste liquid called brine. Even then the fresh water is not ready to drink. It is so pure that it would damage metal pipes and taste flat, so minerals such as calcium are added back, and chlorine is used to kill any remaining germs. Finally, the water is stored in large tanks before it is sent to homes.',
+    'Reverse osmosis uses far less energy than distillation, but it is still more expensive than cleaning water from rivers or lakes, because pushing water through the membranes requires great force. One important improvement has been the energy recovery device. The brine leaving the membranes is still under high pressure, and these devices capture that pressure and reuse it to help push the next lot of seawater into the system. Engineers at Port Halden say that without such devices their electricity bill would be almost twice as high.',
+    'Desalination also raises environmental concerns. The brine is usually returned to the sea, and because it is heavier than normal seawater it tends to sink and spread across the seabed, where it can harm plants and animals that cannot move away. To reduce the damage, many plants now release the brine through long pipes with many small openings, called diffusers, which mix it quickly with the surrounding water. Some researchers are also testing ways to extract useful salts and metals from brine so that less of it needs to be thrown away.',
+    'Looking ahead, many experts expect desalination to become cheaper and cleaner. Plants powered by solar panels or wind turbines are already operating in a few places, and small units that fit inside a shipping container can now supply a single village or hospital. Desalination will never replace rivers and rainfall, but for many dry coastal communities it is becoming an important part of the answer.',
+  ],
+  glossary: ['membrane: a very thin sheet that lets some things pass through but not others', 'germ: a very small living thing that can cause disease'],
+  tfng: [
+    { statement: 'Desalination plants are found only in the Middle East.', answer: 'FALSE', why: 'Paragraph A lists the Middle East, island nations, Australia and the United States. "only" makes it false.' },
+    { statement: 'Distillation produces water of very high purity.', answer: 'TRUE', why: 'Paragraph B: cooling the steam produces "very pure water".' },
+    { statement: 'The intake pipe at Port Halden was difficult and expensive to build.', answer: 'NOT GIVEN', why: 'Paragraph C gives the pipe’s length and its screens, but says nothing about the cost or difficulty of building it.', d: 4 },
+    { statement: 'At Port Halden, more than half of the seawater becomes fresh water.', answer: 'FALSE', why: 'Paragraph D: "about 45 per cent" becomes fresh water — less than half.', d: 4 },
+    { statement: 'Reverse osmosis is cheaper than treating river water.', answer: 'FALSE', why: 'Paragraph E: "it is still more expensive than cleaning water from rivers or lakes". It is cheaper than distillation only in energy.' },
+    { statement: 'Container-sized desalination units can provide water for a hospital.', answer: 'TRUE', why: 'Paragraph G: small units "can now supply a single village or hospital".', d: 3 },
+  ],
+  completion: [
+    {
+      kind: 'flow-chart',
+      title: 'Reverse osmosis at Port Halden',
+      limit: 2,
+      gaps: [
+        { text: 'Seawater enters a pipe far offshore; ___ stop fish getting in. → Pre-treatment', answer: 'screens', why: 'Paragraph C: "covered with screens that keep fish and other large animals out".' },
+        { text: 'Pre-treatment: sand and fine filters remove sand, seaweed and ___. → Pumping', answer: 'tiny organisms', why: 'Paragraph C: filters "remove sand, seaweed and tiny organisms". "Small particles" is the reason, not the list.', d: 4 },
+        { text: 'High-pressure pumps force water through ___ that hold back the salt. → Separation', answer: 'membranes', why: 'Paragraph D: pumps "push the cleaned seawater against special membranes".' },
+        { text: 'Separation: fresh water on one side; very salty ___ leaves the plant. → Post-treatment', answer: 'brine', why: 'Paragraph D: the rest "leaves the plant as a waste liquid called brine".' },
+        { text: 'Post-treatment: minerals such as ___ added; chlorine kills germs → water stored in tanks', answer: 'calcium', why: 'Paragraph D: "minerals such as calcium are added back". Chlorine is already given in the box.' },
+      ],
+    },
+    {
+      kind: 'note',
+      title: 'Costs and concerns',
+      limit: 1,
+      gaps: [
+        { text: 'Distillation: needs a lot of ___, so mostly used where oil and gas are cheap', answer: 'heat', why: 'Paragraph B: "needs huge amounts of heat". "energy" is the general idea, but the passage word here is heat.' },
+        { text: 'Energy recovery devices: reuse the ___ of the brine to push in more seawater', answer: 'pressure', why: 'Paragraph E: "these devices capture that pressure and reuse it".', d: 4 },
+        { text: 'Brine sinks and harms living things on the ___', answer: 'seabed', why: 'Paragraph F: it tends to "sink and spread across the seabed".' },
+      ],
+    },
+  ],
+};
+
+export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION];
