@@ -7,6 +7,7 @@ import { BusyError, generateIeltsWithAI, readExamWithAI } from '../lib/ai';
 import { pdfText } from '../lib/extract';
 import { openPdf, pageJpeg, photoJpeg } from '../lib/ocr';
 import { useCloud } from './Cloud';
+import { tr } from '../i18n';
 
 const MAX_PAGES = 28;
 const GEN_TYPES = [
@@ -65,20 +66,20 @@ export function ExamImport() {
     setDone(null);
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
-      setBusy('Writing a new passage and questions with AI… (about a minute)');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
+      setBusy(tr('Writing a new passage and questions with AI… (about a minute)'));
       const opts = { topic: genTopic, level: genLevel, types: genTypes };
       let raw: unknown;
       try {
         raw = await generateIeltsWithAI(token, opts);
       } catch (e) {
         if (!(e instanceof BusyError)) throw e;
-        setBusy('The AI is busy — trying again in 20 seconds…');
+        setBusy(tr('The AI is busy — trying again in 20 seconds…'));
         await new Promise((r) => setTimeout(r, 20_000));
         raw = await generateIeltsWithAI(token, opts);
       }
       setKind('ielts-reading');
-      setFile({ name: 'AI-generated IELTS Reading', kind: 'text', size: 0, pages: 0 });
+      setFile({ name: tr('AI-generated IELTS Reading'), kind: 'text', size: 0, pages: 0 });
       setExam(flagUnsure(buildImportedExam(raw as object, { id: uid('exam_'), name: name || undefined, kind: 'ielts-reading' })));
     } catch (e) {
       setError((e as Error).message);
@@ -102,7 +103,7 @@ export function ExamImport() {
         setFile({ name: list[0].name, kind: 'text', size: list[0].size, pages: 0 });
         setExam(buildImportedExam(raw as object, { id: uid('exam_'), name, kind: k }));
       } catch (e) {
-        setError(`This file couldn't be read as an exam paper: ${(e as Error).message}`);
+        setError(tr("This file couldn't be read as an exam paper: {error}", { error: (e as Error).message }));
       }
       return;
     }
@@ -114,14 +115,14 @@ export function ExamImport() {
         setFrom(1);
         setTo(Math.min(pdf.numPages, MAX_PAGES));
       } catch {
-        setError("This PDF couldn't be opened.");
+        setError(tr("This PDF couldn't be opened."));
       }
       return;
     }
     const photos = list.filter((f) => /^image\//.test(f.type));
-    if (!photos.length) return setError('Choose a PDF, or photos of the pages.');
-    if (photos.length > MAX_PAGES) return setError(`At most ${MAX_PAGES} photos at a time.`);
-    setFile({ name: photos.length === 1 ? photos[0].name : `${photos.length} photos`, kind: 'image', size: photos.reduce((s, f) => s + f.size, 0), pages: photos.length, photos });
+    if (!photos.length) return setError(tr('Choose a PDF, or photos of the pages.'));
+    if (photos.length > MAX_PAGES) return setError(tr('At most {n} photos at a time.', { n: MAX_PAGES }));
+    setFile({ name: photos.length === 1 ? photos[0].name : tr('{n} photos', { n: photos.length }), kind: 'image', size: photos.reduce((s, f) => s + f.size, 0), pages: photos.length, photos });
     setFrom(1);
     setTo(photos.length);
   };
@@ -132,20 +133,20 @@ export function ExamImport() {
     setExam(null);
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
       const images: { mediaType: string; data: string }[] = [];
       let text: string | undefined;
       if (file.kind === 'pdf') {
         const pdf = await openPdf(file.bytes!);
         for (let n = from; n <= to; n++) {
-          setBusy(`Preparing page ${n - from + 1} of ${to - from + 1}…`);
+          setBusy(tr('Preparing page {n} of {total}…', { n: n - from + 1, total: to - from + 1 }));
           images.push(await pageJpeg(pdf, n, 1400));
         }
         const layer = await pdfText(file.bytes!).catch(() => null);
         if (layer && !layer.scanned) text = layer.text.split(PAGE_BREAK).slice(from - 1, to).join('\n\n').slice(0, 80_000) || undefined;
       } else {
         for (const [i, f] of file.photos!.entries()) {
-          setBusy(`Preparing photo ${i + 1} of ${file.photos!.length}…`);
+          setBusy(tr('Preparing photo {n} of {total}…', { n: i + 1, total: file.photos!.length }));
           const url = URL.createObjectURL(f);
           try {
             images.push(await photoJpeg(url, 1400));
@@ -154,13 +155,13 @@ export function ExamImport() {
           }
         }
       }
-      setBusy(`Reading ${images.length} page${images.length === 1 ? '' : 's'} with AI… (this can take a minute or two)`);
+      setBusy(images.length === 1 ? tr('Reading 1 page with AI… (this can take a minute or two)') : tr('Reading {n} pages with AI… (this can take a minute or two)', { n: images.length }));
       let raw: unknown;
       try {
         raw = await readExamWithAI(token, kind, images, text);
       } catch (e) {
         if (!(e instanceof BusyError)) throw e;
-        setBusy('The AI is busy — trying again in 20 seconds…');
+        setBusy(tr('The AI is busy — trying again in 20 seconds…'));
         await new Promise((r) => setTimeout(r, 20_000));
         raw = await readExamWithAI(token, kind, images, text);
       }
@@ -175,7 +176,7 @@ export function ExamImport() {
   const save = async () => {
     if (!exam || !file) return;
     await repo.saveImportedExam(exam, { name: file.name, kind: file.kind, bytes: file.bytes, size: file.size });
-    setDone(`“${exam.name}” is now in the Exam Hall (${examSize(exam)} questions).`);
+    setDone(tr('“{name}” is now in the Exam Hall ({n} questions).', { name: exam.name, n: examSize(exam) }));
     setExam(null);
     setFile(null);
     setName('');
@@ -194,11 +195,10 @@ export function ExamImport() {
   const aiCount = exam ? exam.aiAnswered.filter((id) => exam.sections.some((s) => s.questions.some((q) => q.id === id))).length : 0;
 
   return (
-    <Card title="Exam papers (real past papers & IELTS tests)" className="lg:col-span-2">
+    <Card title={tr('Exam papers (real past papers & IELTS tests)')} className="lg:col-span-2">
       <div className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Upload a past Hà Nội grade-10 English paper, a sample paper (đề minh họa) or an IELTS practice test. AI reads the pages; you check the answers; the paper appears in Quang's
-          Exam Hall with a real timer and marking. Include the answer-key pages (đáp án) if you have them — otherwise the AI works out the answers and you check them.
+          {tr("Upload a past Hà Nội grade-10 English paper, a sample paper (đề minh họa) or an IELTS practice test. AI reads the pages; you check the answers; the paper appears in Quang's Exam Hall with a real timer and marking. Include the answer-key pages (đáp án) if you have them — otherwise the AI works out the answers and you check them.")}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {KINDS.map((k) => (
@@ -207,51 +207,47 @@ export function ExamImport() {
               onClick={() => setKind(k)}
               className={cx('rounded-xl p-3 text-left text-sm ring-1', kind === k ? 'bg-brand-50 ring-2 ring-brand-500 dark:bg-brand-950' : 'ring-slate-300 dark:ring-slate-700')}
             >
-              <span className="text-xl">{KIND_INFO[k].emoji}</span> <b>{KIND_INFO[k].label}</b>
+              <span className="text-xl">{KIND_INFO[k].emoji}</span> <b>{tr(KIND_INFO[k].label)}</b>
             </button>
           ))}
         </div>
         {kind === 'ielts-listening' && (
           <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            Listening tests are played by the device's voice from the transcript, so include the pages with the audioscript (in Cambridge books it's near the back). Parts without a
-            transcript are left out.
+            {tr("Listening tests are played by the device's voice from the transcript, so include the pages with the audioscript (in Cambridge books it's near the back). Parts without a transcript are left out.")}
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Name (optional)" hint="e.g. Hà Nội 2024, or Cambridge IELTS 18 — Test 1">
+          <Field label={tr('Name (optional)')} hint={tr('e.g. Hà Nội 2024, or Cambridge IELTS 18 — Test 1')}>
             <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="The paper: a PDF, photos of the pages, or an Atlas .json paper">
+          <Field label={tr('The paper: a PDF, photos of the pages, or an Atlas .json paper')}>
             <input type="file" accept=".pdf,.json,image/jpeg,image/png,image/webp" multiple className={inputClass} onChange={(e) => void pick(e.target.files)} />
           </Field>
         </div>
         {file?.kind === 'pdf' && (
           <div className="flex flex-wrap items-end gap-3 text-sm">
-            <span className="pb-2">
-              {file.pages} pages — read pages
-            </span>
-            <input type="number" min={1} max={file.pages} value={from} onChange={(e) => setFrom(Math.max(1, Math.min(file.pages, Number(e.target.value) || 1)))} className={cx(inputClass, 'w-20')} aria-label="From page" />
-            <span className="pb-2">to</span>
-            <input type="number" min={from} max={file.pages} value={to} onChange={(e) => setTo(Math.max(from, Math.min(file.pages, Number(e.target.value) || from)))} className={cx(inputClass, 'w-20')} aria-label="To page" />
-            {to - from + 1 > MAX_PAGES && <span className="pb-2 text-rose-600">At most {MAX_PAGES} pages at a time — for a whole book, import one test at a time.</span>}
+            <span className="pb-2">{tr('{n} pages — read pages', { n: file.pages })}</span>
+            <input type="number" min={1} max={file.pages} value={from} onChange={(e) => setFrom(Math.max(1, Math.min(file.pages, Number(e.target.value) || 1)))} className={cx(inputClass, 'w-20')} aria-label={tr('From page')} />
+            <span className="pb-2">{tr('to')}</span>
+            <input type="number" min={from} max={file.pages} value={to} onChange={(e) => setTo(Math.max(from, Math.min(file.pages, Number(e.target.value) || from)))} className={cx(inputClass, 'w-20')} aria-label={tr('To page')} />
+            {to - from + 1 > MAX_PAGES && <span className="pb-2 text-rose-600">{tr('At most {n} pages at a time — for a whole book, import one test at a time.', { n: MAX_PAGES })}</span>}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!file || file.kind === 'text' || !!busy || to - from + 1 > MAX_PAGES} onClick={() => void read()}>
-            ✨ Read the paper with AI
+            {tr('✨ Read the paper with AI')}
           </Button>
           {busy && <span className="text-sm text-slate-500">{busy}</span>}
         </div>
         <div className="space-y-3 rounded-xl p-4 ring-1 ring-slate-300 dark:ring-slate-700">
           <p className="text-sm">
-            <b>✨ Or generate a new IELTS Reading test</b> — AI writes an original passage with 13–14 questions of the types you pick (up to 4). You check it, then it is saved
-            to the family's Exam Hall like an imported paper.
+            <b>{tr('✨ Or generate a new IELTS Reading test')}</b> — {tr("AI writes an original passage with 13–14 questions of the types you pick (up to 4). You check it, then it is saved to the family's Exam Hall like an imported paper.")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Topic (optional)" hint="e.g. coral reefs, the history of maps — empty = AI chooses">
+            <Field label={tr('Topic (optional)')} hint={tr('e.g. coral reefs, the history of maps — empty = AI chooses')}>
               <input className={inputClass} value={genTopic} onChange={(e) => setGenTopic(e.target.value)} />
             </Field>
-            <Field label="Level">
+            <Field label={tr('Level')}>
               <select className={inputClass} value={genLevel} onChange={(e) => setGenLevel(Number(e.target.value) as 3 | 4 | 5)}>
                 <option value={3}>Band 5.5</option>
                 <option value={4}>Band 6.5</option>
@@ -269,13 +265,13 @@ export function ExamImport() {
                   className={cx('rounded-full px-3 py-1 text-xs ring-1', on ? 'bg-brand-50 font-semibold ring-2 ring-brand-500 dark:bg-brand-950' : 'ring-slate-300 dark:ring-slate-700')}
                 >
                   {on ? '✓ ' : ''}
-                  {label}
+                  {tr(label)}
                 </button>
               );
             })}
           </div>
           <Button disabled={!!busy || !genTypes.length} onClick={() => void generate()}>
-            ✨ Generate a test
+            {tr('✨ Generate a test')}
           </Button>
         </div>
         {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -284,18 +280,18 @@ export function ExamImport() {
         {exam && (
           <div className="space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
             <div className="flex flex-wrap items-end gap-3">
-              <Field label="Paper name">
+              <Field label={tr('Paper name')}>
                 <input className={inputClass} value={exam.name} onChange={(e) => setExam({ ...exam, name: e.target.value })} />
               </Field>
-              <Field label="Minutes">
+              <Field label={tr('Minutes')}>
                 <input type="number" min={5} max={240} className={cx(inputClass, 'w-24')} value={exam.minutes} onChange={(e) => setExam({ ...exam, minutes: Math.max(5, Math.min(240, Number(e.target.value) || 60)) })} />
               </Field>
               <p className="pb-2 text-sm">
-                <b>{examSize(exam)}</b> questions in {exam.sections.length} parts
+                {tr('{n} questions in {parts} parts', { n: examSize(exam), parts: exam.sections.length })}
                 {aiCount > 0 && (
                   <>
                     {' '}
-                    · <span className="font-semibold text-amber-700 dark:text-amber-300">{aiCount} answers worked out by AI — please check those (marked 🤖)</span>
+                    · <span className="font-semibold text-amber-700 dark:text-amber-300">{tr('{n} answers worked out by AI — please check those (marked 🤖)', { n: aiCount })}</span>
                   </>
                 )}
               </p>
@@ -303,15 +299,15 @@ export function ExamImport() {
             {exam.skipped.length > 0 && (
               <ul className="list-disc pl-5 text-xs text-slate-500">
                 {exam.skipped.map((s, i) => (
-                  <li key={i}>Left out: {s}</li>
+                  <li key={i}>{tr('Left out: {reason}', { reason: s })}</li>
                 ))}
               </ul>
             )}
             {exam.sections.map((s, si) => (
               <details key={s.id} open={si === 0} className="rounded-lg bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
                 <summary className="cursor-pointer font-semibold">
-                  Part {si + 1}. {s.title} — {s.questions.length} questions
-                  {s.questions[0]?.script ? ' · 🔊 transcript found' : ''}
+                  {tr('Part {n}. {title} — {count} questions', { n: si + 1, title: s.title, count: s.questions.length })}
+                  {s.questions[0]?.script ? ` · ${tr('🔊 transcript found')}` : ''}
                 </summary>
                 <p className="mt-1 text-xs text-slate-500">{s.instructions}</p>
                 {s.questions[0]?.passage && <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-line rounded bg-amber-50 p-2 text-xs dark:bg-amber-950/30">{s.questions[0].passage}</p>}
@@ -322,16 +318,16 @@ export function ExamImport() {
                       <li key={q.id} className={cx('rounded-lg p-2 text-sm', ai && 'bg-amber-50 dark:bg-amber-950/30')}>
                         <div className="flex items-start gap-2">
                           <span className="flex-1">
-                            {ai && <span title="Answer worked out by AI">🤖 </span>}
+                            {ai && <span title={tr('Answer worked out by AI')}>🤖 </span>}
                             {q.prompt}
                           </span>
-                          <button onClick={() => patch(si, qi, () => null)} className="text-xs text-slate-400 hover:text-rose-600" aria-label="Remove this question">
+                          <button onClick={() => patch(si, qi, () => null)} className="text-xs text-slate-400 hover:text-rose-600" aria-label={tr('Remove this question')}>
                             ✕
                           </button>
                         </div>
                         {q.type === 'input' ? (
                           <label className="mt-1 flex items-center gap-2 text-xs">
-                            Answer:
+                            {tr('Answer:')}
                             <input className={cx(inputClass, 'py-1')} value={q.options[0]} onChange={(e) => patch(si, qi, (x) => ({ ...x, options: [e.target.value] }))} />
                           </label>
                         ) : (
@@ -353,11 +349,11 @@ export function ExamImport() {
                 </ol>
               </details>
             ))}
-            <p className="text-xs text-slate-500">Tap an option to change the right answer. ✕ removes a question that was read wrongly.</p>
+            <p className="text-xs text-slate-500">{tr('Tap an option to change the right answer. ✕ removes a question that was read wrongly.')}</p>
             <div className="flex gap-2">
-              <Button onClick={() => void save()}>Save to the Exam Hall</Button>
+              <Button onClick={() => void save()}>{tr('Save to the Exam Hall')}</Button>
               <Button variant="ghost" onClick={() => setExam(null)}>
-                Cancel
+                {tr('Cancel')}
               </Button>
             </div>
           </div>
@@ -365,15 +361,15 @@ export function ExamImport() {
 
         {exams.length > 0 && (
           <div>
-            <p className="text-sm font-semibold">In the Exam Hall now:</p>
+            <p className="text-sm font-semibold">{tr('In the Exam Hall now:')}</p>
             <ul className="mt-1 list-disc pl-5 text-sm text-slate-600 dark:text-slate-300">
               {exams.map((e) => (
                 <li key={e.id}>
-                  {KIND_INFO[e.kind].emoji} {e.name} — {examSize(e)} questions, {e.minutes} min
+                  {KIND_INFO[e.kind].emoji} {e.name} — {tr('{n} questions, {min} min', { n: examSize(e), min: e.minutes })}
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-xs text-slate-500">To remove a paper, delete it in the list of materials below.</p>
+            <p className="mt-1 text-xs text-slate-500">{tr('To remove a paper, delete it in the list of materials below.')}</p>
           </div>
         )}
       </div>
