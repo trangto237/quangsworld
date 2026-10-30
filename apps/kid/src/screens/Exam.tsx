@@ -382,6 +382,7 @@ function PaperQuestion({
   onChange: (v: string) => void;
   onFlag: () => void;
 }) {
+  const lang = useLang();
   return (
     <li id={`q-${q.id}`} className="scroll-mt-24">
       <div className="relative flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2">
@@ -393,6 +394,7 @@ function PaperQuestion({
           <p className="whitespace-pre-line">
             <Marked text={q.prompt.replace(/^Choose the sentence (closest in meaning to|that best combines): /, '')} />
           </p>
+          {q.promptVi && lang !== 'en' && <p className="mt-0.5 whitespace-pre-line text-sm text-slate-500 dark:text-slate-400">🇻🇳 {q.promptVi}</p>}
           {q.type === 'input' ? (
             <input
               value={value}

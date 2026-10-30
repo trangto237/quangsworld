@@ -6,7 +6,11 @@ import { Panel, TownButton } from '../town/ui';
 import { T, TB } from '../i18n';
 import { useKid } from '../store';
 
-const ICON: Record<string, string> = { hn10: '🏫', 'ielts-reading': '📖', 'ielts-listening': '🎧' };
+const SUBJECTS = [
+  ['english', '🇬🇧 English'],
+  ['math', '📐 Toán · Maths'],
+  ['literature', '✍️ Ngữ văn'],
+] as const;
 
 export const formatScore = (r: { score: number | null; band: number | null }) => (r.score != null ? `${r.score.toFixed(2)} / 10` : r.band != null ? `Band ${r.band.toFixed(1)}` : '—');
 
@@ -28,14 +32,17 @@ export function ExamHall({ student }: { student: StudentProfile }) {
           <T en="Real exam format, real timer. No game — just you and the paper. Your mistakes go to the Mistake Book afterwards." />
         </p>
       </Panel>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {EXAMS.map((e) => {
+        {SUBJECTS.map(([subject, label]) => (
+          <section key={subject} className="mt-6">
+            <h2 className="font-display text-2xl font-bold">{label}</h2>
+            <div className="mt-3 grid gap-4 md:grid-cols-3">
+          {EXAMS.filter((e) => e.subject === subject).map((e) => {
             const mine = results.filter((r) => r.examId === e.id);
             const last = mine.at(-1);
             const resuming = inProgress?.examId === e.id;
             return (
               <section key={e.id} className={cx('town-panel flex flex-col gap-0 p-4', resuming && 'bg-tint-amber')}>
-                <div className="grid size-14 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-3xl">{ICON[e.id]}</div>
+                <div className="grid size-14 place-items-center rounded-2xl border-2 border-ink bg-paper-2 text-3xl">{e.icon}</div>
                 <h2 className="mt-2 font-display text-xl font-bold leading-tight">{e.name}</h2>
                 <p className="mt-1 text-sm text-ink-soft">{e.description}</p>
                 <div className="mb-4 mt-3 text-sm text-ink-soft">
@@ -53,7 +60,9 @@ export function ExamHall({ student }: { student: StudentProfile }) {
               </section>
             );
           })}
-        </div>
+            </div>
+          </section>
+        ))}
         {real.length > 0 && (
           <section className="mt-8">
             <h2 className="font-display text-2xl font-bold">

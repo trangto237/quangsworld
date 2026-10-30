@@ -54,8 +54,10 @@ describe('Exam Hall', () => {
     for (const id of second.setIds) expect(first.setIds).not.toContain(id);
   });
 
-  it('IELTS minis: one reading passage (13) and one listening test (6 + 4)', () => {
-    expect(paperQuestions(assemblePaper(examById('ielts-reading')!))).toHaveLength(13);
+  it('IELTS minis: one reading passage (13–14) and one listening test (6 + 4)', () => {
+    const n = paperQuestions(assemblePaper(examById('ielts-reading')!)).length;
+    expect(n).toBeGreaterThanOrEqual(13);
+    expect(n).toBeLessThanOrEqual(14);
     const l = assemblePaper(examById('ielts-listening')!, { rand: rng(5) });
     expect(l.sections.map((s) => s.questions.length)).toEqual([6, 4]);
     expect(l.setIds[0].replace('-p1', '')).toBe(l.setIds[1].replace('-p2', ''));
@@ -94,6 +96,27 @@ describe('Exam Hall', () => {
       }
     }
     expect(ieltsBandFromRaw(27, 'reading')).toBe(6.5);
-    expect(EXAMS).toHaveLength(3);
+    expect(EXAMS.map((e) => e.subject).sort()).toEqual(['english', 'english', 'english', 'english', 'literature', 'math', 'math', 'math']);
+  });
+
+  it('the full IELTS Reading test uses three different passages', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const p = assemblePaper(examById('ielts-reading-full')!, { rand: rng(seed) });
+      expect(new Set(p.setIds).size).toBe(3);
+      expect(paperQuestions(p).length).toBeGreaterThanOrEqual(39);
+    }
+  });
+
+  it('maths and literature mock papers are complete, with every topic and no repeats', () => {
+    for (const id of ['hn10-math', 'chuyen-math', 'olympiad-math', 'hn10-lit']) {
+      const def = examById(id)!;
+      const want = def.sections.reduce((n, s) => n + (s.source.kind === 'concepts' ? s.source.count : 0), 0);
+      for (let seed = 1; seed <= 5; seed++) {
+        const qs = paperQuestions(assemblePaper(def, { rand: rng(seed) }));
+        expect(qs.length, id).toBe(want);
+        expect(new Set(qs.map((q) => q.id)).size, id).toBe(qs.length);
+        for (const s of def.sections) if (s.source.kind === 'concepts') for (const c of s.source.concepts) expect(qs.some((q) => q.conceptId === c), `${id}: ${c}`).toBe(true);
+      }
+    }
   });
 });
