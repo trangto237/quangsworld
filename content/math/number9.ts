@@ -411,10 +411,10 @@ const powers: Generator = (d, r) => {
       {
         prompt: `Write ${shown} in scientific notation (a × 10ⁿ with 1 ≤ a < 10).`,
         ...sOpts(sciS([m, x]), [sciS([m, x + 1]), sciS([m, x - 1]), sciS([m, -x]), `${Mc} × 10${sup(e)}`]),
-        explanation: `Move the decimal point to just after the first non-zero digit: a = ${m}. It moved ${Math.abs(x)} place${Math.abs(x) === 1 ? '' : 's'} ${x > 0 ? 'left, so n = ' + x : 'right, so n = ' + num(x)}: ${sciS([m, x])}.`,
+        explanation: `Move the decimal point to just after the first non-zero digit: a = ${m}. It moved ${Math.abs(x)} place${Math.abs(x) === 1 ? '' : 's'} ${x > 0 ? 'left, so n = ' + x : 'right, so n = ' + num(x)}: ${sciS([m, x])}. (${Mc} × 10${sup(e)} has the same value, but ${Mc} is not between 1 and 10, so it is not scientific notation.)`,
       },
       `Viết ${shownVi} dưới dạng kí hiệu khoa học (a × 10ⁿ với 1 ≤ a < 10).`,
-      `Dời dấu phẩy đến ngay sau chữ số khác 0 đầu tiên: a = ${dc(m)}. Dấu phẩy dời ${Math.abs(x)} chữ số sang ${x > 0 ? 'trái, nên n = ' + x : 'phải, nên n = ' + num(x)}: ${dc(sciS([m, x]))}.`,
+      `Dời dấu phẩy đến ngay sau chữ số khác 0 đầu tiên: a = ${dc(m)}. Dấu phẩy dời ${Math.abs(x)} chữ số sang ${x > 0 ? 'trái, nên n = ' + x : 'phải, nên n = ' + num(x)}: ${dc(sciS([m, x]))}. (${Mc} × 10${sup(e)} có cùng giá trị nhưng ${Mc} không nằm giữa 1 và 10 nên không phải kí hiệu khoa học.)`,
     );
   }
   if (d === 3) {
@@ -426,12 +426,12 @@ const powers: Generator = (d, r) => {
       if (A * B >= 1000) cands.unshift(`${nf((A * B) / 100)} × 10${sup(m + n)}`);
       return vi(
         {
-          prompt: `Calculate and write in scientific notation: ${ex}`,
+          prompt: `Calculate and write in scientific notation (a × 10ⁿ with 1 ≤ a < 10): ${ex}`,
           ...sOpts(sciS([mm, x]), cands),
-          explanation: `Multiply the numbers and add the powers of 10: ${nf(A / 10)} × ${nf(B / 10)} = ${nf((A * B) / 100)} and 10${sup(m)} · 10${sup(n)} = 10${sup(m + n)}.${A * B >= 1000 ? ` ${nf((A * B) / 100)} ≥ 10, so move the point once more: ` : ' '}${sciS([mm, x])}.`,
+          explanation: `Multiply the numbers and add the powers of 10: ${nf(A / 10)} × ${nf(B / 10)} = ${nf((A * B) / 100)} and 10${sup(m)} · 10${sup(n)} = 10${sup(m + n)}.${A * B >= 1000 ? ` ${nf((A * B) / 100)} × 10${sup(m + n)} has the right value, but it is NOT scientific notation: the first number must be at least 1 and less than 10, and ${nf((A * B) / 100)} ≥ 10. Move the point one place left and add 1 to the power: ` : ' So the answer is '}${sciS([mm, x])}.`,
         },
-        `Tính và viết kết quả dưới dạng kí hiệu khoa học: ${dc(ex)}`,
-        `Nhân các số với nhau và cộng số mũ của 10: ${dc(nf(A / 10))} × ${dc(nf(B / 10))} = ${dc(nf((A * B) / 100))} và 10${sup(m)} · 10${sup(n)} = 10${sup(m + n)}.${A * B >= 1000 ? ` ${dc(nf((A * B) / 100))} ≥ 10 nên dời dấu phẩy thêm một chữ số: ` : ' '}${dc(sciS([mm, x]))}.`,
+        `Tính và viết kết quả dưới dạng kí hiệu khoa học (a × 10ⁿ với 1 ≤ a < 10): ${dc(ex)}`,
+        `Nhân các số với nhau và cộng số mũ của 10: ${dc(nf(A / 10))} × ${dc(nf(B / 10))} = ${dc(nf((A * B) / 100))} và 10${sup(m)} · 10${sup(n)} = 10${sup(m + n)}.${A * B >= 1000 ? ` ${dc(nf((A * B) / 100))} × 10${sup(m + n)} có giá trị đúng nhưng CHƯA phải kí hiệu khoa học: số đứng trước phải lớn hơn hoặc bằng 1 và nhỏ hơn 10, mà ${dc(nf((A * B) / 100))} ≥ 10. Dời dấu phẩy sang trái một chữ số và cộng thêm 1 vào số mũ: ` : ' Vậy đáp án là '}${dc(sciS([mm, x]))}.`,
       );
     }
     const a = int(r, 2, 5), k = int(r, 2, 4), b = int(r, 2, 4), c = int(r, 2, 6);

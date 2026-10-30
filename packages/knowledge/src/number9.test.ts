@@ -316,7 +316,7 @@ const CHECKS: Record<string, Check[]> = {
   ],
   'math.number.powers': [
     [/^Write ([\d,.]+) in scientific notation/, (m) => ({ ok: (a) => sciOk(a, money(m[1])), sameValueOk: true })],
-    [/^Calculate and write in scientific notation: (.*)$/, (m) => ({ ok: (a) => sciOk(a, ev(m[1])), sameValueOk: true })],
+    [/^Calculate and write in scientific notation \(a × 10ⁿ with 1 ≤ a < 10\): (.*)$/, (m) => ({ ok: (a) => sciOk(a, ev(m[1])), sameValueOk: true })],
     [/^Simplify \(x ≠ 0\): (.*)$/, (m) => ({
       ok: (a) => [2, 3, 0.5].every((x) => close(ev(a, { x }), ev(m[1], { x }))),
       read: (s) => ev(s, { x: 2 }),
