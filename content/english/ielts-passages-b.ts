@@ -219,4 +219,53 @@ const LANGUAGES: IeltsPassage = {
   },
 };
 
-export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION, LANGUAGES];
+const SLEEP: IeltsPassage = {
+  id: 'sleep-memory',
+  title: 'What the sleeping brain remembers',
+  level: 5,
+  paragraphs: [
+    'For most of history, sleep was regarded as a kind of switching off: a period in which the body rested and the mind, apart from the occasional dream, did nothing of value. Over the past few decades, however, sleep laboratories have assembled a very different picture. It now appears that some of the most important work involved in forming lasting memories is carried out not while we are studying, but in the hours after we have closed our books and gone to bed.',
+    'An early and influential experiment was conducted by the psychologist Professor Edmund Varga. He taught two groups of volunteers lists of meaningless word pairs; one group was tested after a night’s sleep, the other after spending the same number of daytime hours awake. The sleepers consistently recalled more. Varga, however, interpreted his result cautiously. In his view, sleep did nothing to the memories themselves; it simply shielded them, because a sleeping person is not taking in the flood of new information that, during the day, interferes with what has recently been learned. For many years, this "passive protection" account was the accepted explanation.',
+    'The first serious challenge came from studies of animals. Dr Ingrid Solberg recorded the activity of individual cells in the hippocampus, a region deep in the brain, while rats ran through a maze. Different cells fired at different points along the route. When the rats later fell into deep, or slow-wave, sleep, the same cells fired again in the same order, as if the animals were running the maze in their heads, but at up to twenty times the original speed. Crucially, when Solberg used a brief electrical signal to interrupt these replays without waking the rats, the animals made noticeably more errors in the maze the next day. Replay, she concluded, was not a side effect of learning but part of the mechanism by which it is made permanent, a finding that is difficult to reconcile with a purely passive role for sleep.',
+    'Researchers now believe that during slow-wave sleep the brain repeatedly reactivates the day’s experiences, gradually transferring them from the hippocampus, which acts as a temporary store, to the cortex, where long-term memories are kept. The other main stage of sleep, known as REM sleep and associated with vivid dreaming, seems to do something different. Dr Rafael Montoya gave volunteers a long series of number problems that could be solved step by step but also contained a hidden shortcut. Of those who slept for a night between two sessions, 59 per cent discovered the shortcut, compared with 22 per cent of those who remained awake. Montoya argues that sleep, and REM sleep in particular, does not merely store memories but reorganises them, linking pieces of information in ways that were not obvious at the time of learning.',
+    'If memories are strengthened during sleep, can the process be deliberately encouraged? Dr Mei Hanazawa has explored a technique known as targeted memory reactivation. Volunteers learn the positions of objects on a screen while each object is paired with a particular sound. Later, while they are in deep sleep, some of the sounds are played quietly. On waking, people remember the positions of the "cued" objects slightly better than the rest. Hanazawa stresses that the improvements are modest and that the method only strengthens material which has already been learned; nobody can acquire a new language by listening to recordings in bed. She has also publicly warned consumers against devices that claim to boost learning overnight, arguing that the laboratory evidence does not yet justify such products.',
+    'The research has obvious implications for students. Staying up all night before an examination may provide a few extra hours of revision, but it sacrifices precisely the stage at which those hours would have been turned into durable memories. Teenagers face a particular difficulty, because their body clocks shift later during adolescence, making it hard for them to fall asleep early. Solberg is among those who have argued that schools should start later in the morning for this age group. For those who cannot sleep longer at night, there is some evidence that daytime naps of 60 to 90 minutes, long enough to include slow-wave sleep, can bring part of the same benefit.',
+    'Many questions remain unanswered. It is still unclear how the sleeping brain selects which experiences to replay, and why some memories are strengthened while others fade. One intriguing proposal is that forgetting is itself part of the process: during sleep, the brain may weaken unimportant connections so that the significant ones stand out more clearly. If this is correct, a good night’s sleep improves memory partly by helping us to forget.',
+  ],
+  glossary: ['hippocampus: a part of the brain important for forming new memories', 'cortex: the outer layer of the brain'],
+  features: {
+    instruction: 'Matching features — Which researcher is this? A: Professor Edmund Varga, B: Dr Ingrid Solberg, C: Dr Rafael Montoya, D: Dr Mei Hanazawa',
+    options: ['Professor Edmund Varga', 'Dr Ingrid Solberg', 'Dr Rafael Montoya', 'Dr Mei Hanazawa'],
+    items: [
+      { item: 'showed that disturbing a pattern of brain activity during sleep led to poorer performance', answer: 'Dr Ingrid Solberg', why: 'Paragraph C: interrupting the replays meant the rats "made noticeably more errors in the maze the next day". Hanazawa also works during sleep, but she adds sounds to help, not to disturb.' },
+      { item: 'believed that sleep helps memory only by keeping new information away', answer: 'Professor Edmund Varga', why: 'Paragraph B: sleep "simply shielded" memories from new information that "interferes". The word "only" matches "did nothing to the memories themselves".' },
+      { item: 'found that people who had slept were more likely to spot a concealed method', answer: 'Dr Rafael Montoya', why: 'Paragraph D: 59 per cent of sleepers "discovered the shortcut" — hidden shortcut = concealed method.' },
+      { item: 'cautioned the public about products that claim to improve learning', answer: 'Dr Mei Hanazawa', why: 'Paragraph E: she "publicly warned consumers against devices that claim to boost learning overnight".', d: 4 },
+      { item: 'has called for a change to the timetable of secondary schools', answer: 'Dr Ingrid Solberg', why: 'Paragraph F: "Solberg is among those who have argued that schools should start later in the morning for this age group" (teenagers). The letter B is used twice.' },
+    ],
+  },
+  endings: {
+    items: [
+      { start: 'In Solberg’s rats, the replay of the maze route during sleep was', ending: 'much faster than the original experience.', why: 'Paragraph C: the cells fired "at up to twenty times the original speed".', d: 4 },
+      { start: 'According to Montoya, REM sleep is especially important for', ending: 'connecting pieces of information in new ways.', why: 'Paragraph D: sleep reorganises memories, "linking pieces of information in ways that were not obvious". The trap about transferring memories is the job of slow-wave sleep (and it reverses the direction).' },
+      { start: 'Targeted memory reactivation can only help with', ending: 'information that has already been learned.', why: 'Paragraph E: "the method only strengthens material which has already been learned". The trap "information presented for the first time" is exactly what she says is impossible.' },
+      { start: 'Students who revise through the night before an exam', ending: 'lose the stage in which memories become lasting.', why: 'Paragraph F: it "sacrifices precisely the stage at which those hours would have been turned into durable memories". durable = lasting.' },
+    ],
+    distractors: ['information presented for the first time during sleep.', 'transferring memories from the cortex to the hippocampus.', 'remember more because they avoid new information.'],
+  },
+  completion: [
+    {
+      kind: 'summary',
+      title: 'How sleep shapes memory',
+      limit: 3,
+      gaps: [
+        { text: 'In slow-wave sleep, the brain moves memories from the hippocampus, a temporary store, to the ___, where they are kept long-term.', answer: 'cortex', why: 'Paragraph D: "transferring them from the hippocampus… to the cortex, where long-term memories are kept". The order matters: it is NOT from the cortex to the hippocampus.', d: 4 },
+        { text: 'Teenagers find it difficult to sleep early because their ___ move later during adolescence.', answer: 'body clocks', why: 'Paragraph F: "their body clocks shift later during adolescence".' },
+        { text: 'A daytime nap lasting ___ minutes may give some of the benefits of a night’s sleep.', answer: '60 to 90', why: 'Paragraph F: "daytime naps of 60 to 90 minutes, long enough to include slow-wave sleep". Three words — the limit allows it.' },
+        { text: 'One theory suggests that, during sleep, the brain weakens ___ so that important memories become clearer.', answer: 'unimportant connections', why: 'Paragraph G: "the brain may weaken unimportant connections so that the significant ones stand out more clearly".', d: 4 },
+      ],
+    },
+  ],
+};
+
+export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION, LANGUAGES, SLEEP];
