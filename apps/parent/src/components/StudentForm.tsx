@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AVATARS, Button, Field, cx, inputClass } from '@atlas/ui';
+import { tr } from '../i18n';
 
 export interface StudentFormValue {
   name: string;
@@ -27,18 +28,18 @@ export function StudentForm({ initial, onSubmit, submitLabel, pinOptional = true
         }
       }}
     >
-      <Field label="Child's name">
+      <Field label={tr('Child’s name')}>
         <input className={inputClass} value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} required maxLength={40} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Age">
+        <Field label={tr('Age')}>
           <input className={inputClass} type="number" min={6} max={19} value={v.age} onChange={(e) => setV({ ...v, age: Number(e.target.value) })} />
         </Field>
-        <Field label="School grade">
+        <Field label={tr('School grade')}>
           <input className={inputClass} type="number" min={1} max={12} value={v.grade} onChange={(e) => setV({ ...v, grade: Number(e.target.value) })} />
         </Field>
       </div>
-      <Field label="Avatar">
+      <Field label={tr('Avatar')}>
         <div className="flex flex-wrap gap-2">
           {AVATARS.map((a) => (
             <button
@@ -46,14 +47,14 @@ export function StudentForm({ initial, onSubmit, submitLabel, pinOptional = true
               key={a}
               onClick={() => setV({ ...v, avatar: a })}
               className={cx('grid size-11 place-items-center rounded-xl text-2xl ring-2', v.avatar === a ? 'bg-brand-50 ring-brand-500 dark:bg-brand-700/30' : 'ring-transparent hover:bg-slate-100 dark:hover:bg-slate-800')}
-              aria-label={`Avatar ${a}`}
+              aria-label={tr('Avatar {emoji}', { emoji: a })}
             >
               {a}
             </button>
           ))}
         </div>
       </Field>
-      <Field label={pinOptional ? 'Kid PIN (optional, 4 digits)' : 'Kid PIN (4 digits)'} hint="Protects the profile when siblings share a device. Leave blank for none.">
+      <Field label={pinOptional ? tr('Kid PIN (optional, 4 digits)') : tr('Kid PIN (4 digits)')} hint={tr('Protects the profile when siblings share a device. Leave blank for none.')}>
         <input className={inputClass} inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={(e) => setV({ ...v, pin: e.target.value.replace(/\D/g, '') })} />
       </Field>
       <Button type="submit" disabled={busy || !v.name.trim() || !pinOk} className="w-full">
