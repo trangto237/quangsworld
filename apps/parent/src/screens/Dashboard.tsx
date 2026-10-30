@@ -4,7 +4,19 @@ import { WRITING_PROMPTS, getConcept } from '@atlas/knowledge';
 import { DAY_MS } from '@atlas/shared';
 import { Button, Card, Marked, Stat, useQuery } from '@atlas/ui';
 import { MasteryHeatmap, SubjectBars, WeeklyBars } from '../components/charts';
+import { tr } from '../i18n';
 import { useParent } from '../store';
+
+const PLACEMENT_LABELS = (): Record<string, string> => ({
+  vocabulary: tr('Vocabulary'),
+  grammar: tr('Grammar'),
+  listening: tr('Listening'),
+  reading: tr('Reading'),
+  number: tr('Number'),
+  algebra: tr('Algebra'),
+  geometry: tr('Geometry'),
+  logic: tr('Logic'),
+});
 
 export function Dashboard({ student }: { student: StudentProfile }) {
   const setTab = useParent((s) => s.setTab);
@@ -41,13 +53,12 @@ export function Dashboard({ student }: { student: StudentProfile }) {
       <Card>
         <div className="py-10 text-center">
           <div className="text-5xl">🗺️</div>
-          <h2 className="mt-3 text-xl font-bold">{student.name} hasn't taken the placement trial yet</h2>
+          <h2 className="mt-3 text-xl font-bold">{tr("{name} hasn't taken the placement trial yet", { name: student.name })}</h2>
           <p className="mx-auto mt-2 max-w-md text-slate-500">
-            Open the kid app on this device. The "Trial of Five Realms" (about 25 minutes) estimates vocabulary, grammar, listening, reading and maths so the
-            curriculum adapts from day one.
+            {tr('Open the kid app on this device. The "Trial of Five Realms" (about 25 minutes) estimates vocabulary, grammar, listening, reading and maths so the curriculum adapts from day one.')}
           </p>
           <a href="/" className="mt-5 inline-block">
-            <Button>Open the kid app</Button>
+            <Button>{tr('Open the kid app')}</Button>
           </a>
         </div>
       </Card>
@@ -58,27 +69,27 @@ export function Dashboard({ student }: { student: StudentProfile }) {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-extrabold">
-            {student.avatar} {student.name}'s progress
+            {student.avatar} {tr("{name}'s progress", { name: student.name })}
           </h1>
           <p className="text-sm text-slate-500">
-            Level {levelFromXp(wallet.xp).level} · {ins.questions7d} challenges this week
-            {ins.accuracy7d != null && <> · {Math.round(ins.accuracy7d * 100)}% correct</>}
+            {tr('Level {level} · {n} challenges this week', { level: levelFromXp(wallet.xp).level, n: ins.questions7d })}
+            {ins.accuracy7d != null && <> · {tr('{pct}% correct', { pct: Math.round(ins.accuracy7d * 100) })}</>}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon="⏱️" label="This week" value={`${ins.weeklyMinutes}m`} hint={`avg ${Math.round(ins.weeklyMinutes / 7)} min/day · target ${goal}`} />
-        <Stat icon="🔥" label="Streak" value={`${ins.streakDays}d`} hint={ins.streakDays ? 'consecutive study days' : 'play today to start one'} />
-        <Stat icon="🏅" label="Mastered" value={ins.masteredCount} hint={`of ${ins.totalConcepts} concepts`} />
-        <Stat icon="🎓" label="IELTS estimate" value={ins.ielts ? ins.ielts.band.toFixed(1) : '—'} hint={ins.ielts ? `≈ CEFR ${ins.ielts.cefr} · rough guide, not an exam score` : 'after placement'} />
+        <Stat icon="⏱️" label={tr('This week')} value={tr('{n}m', { n: ins.weeklyMinutes })} hint={tr('avg {avg} min/day · target {goal}', { avg: Math.round(ins.weeklyMinutes / 7), goal })} />
+        <Stat icon="🔥" label={tr('Streak')} value={tr('{n}d', { n: ins.streakDays })} hint={ins.streakDays ? tr('consecutive study days') : tr('play today to start one')} />
+        <Stat icon="🏅" label={tr('Mastered')} value={ins.masteredCount} hint={tr('of {n} concepts', { n: ins.totalConcepts })} />
+        <Stat icon="🎓" label={tr('IELTS estimate')} value={ins.ielts ? ins.ielts.band.toFixed(1) : '—'} hint={ins.ielts ? tr('≈ CEFR {cefr} · rough guide, not an exam score', { cefr: ins.ielts.cefr }) : tr('after placement')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Insights" className="lg:col-span-2">
+        <Card title={tr('Insights')} className="lg:col-span-2">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <h3 className="mb-2 text-sm font-bold text-rose-700 dark:text-rose-400">⚠ Repeatedly struggles with</h3>
+              <h3 className="mb-2 text-sm font-bold text-rose-700 dark:text-rose-400">{tr('⚠ Repeatedly struggles with')}</h3>
               {ins.struggles.length ? (
                 <ul className="space-y-1.5 text-sm">
                   {ins.struggles.map((s) => (
@@ -88,11 +99,11 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-500">Nothing stands out yet. Patterns appear after a few sessions.</p>
+                <p className="text-sm text-slate-500">{tr('Nothing stands out yet. Patterns appear after a few sessions.')}</p>
               )}
             </div>
             <div>
-              <h3 className="mb-2 text-sm font-bold text-emerald-700 dark:text-emerald-400">✓ Strongest areas</h3>
+              <h3 className="mb-2 text-sm font-bold text-emerald-700 dark:text-emerald-400">{tr('✓ Strongest areas')}</h3>
               {ins.strengths.length ? (
                 <ul className="space-y-1.5 text-sm">
                   {ins.strengths.map((s) => (
@@ -102,12 +113,12 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-500">Strengths appear once concepts reach 70+ mastery.</p>
+                <p className="text-sm text-slate-500">{tr('Strengths appear once concepts reach 70+ mastery.')}</p>
               )}
             </div>
           </div>
           <div className="mt-5 rounded-xl bg-brand-50 p-4 dark:bg-brand-700/15">
-            <h3 className="mb-2 text-sm font-bold text-brand-700 dark:text-brand-400">🎯 Recommended focus</h3>
+            <h3 className="mb-2 text-sm font-bold text-brand-700 dark:text-brand-400">{tr('🎯 Recommended focus')}</h3>
             <ul className="list-disc space-y-1 pl-5 text-sm">
               {ins.recommended.map((r) => (
                 <li key={r}>{r}</li>
@@ -116,43 +127,43 @@ export function Dashboard({ student }: { student: StudentProfile }) {
           </div>
         </Card>
 
-        <Card title="Today's plan (auto)" action={<button className="text-xs font-semibold text-brand-600 dark:text-brand-400" onClick={() => setTab('goals')}>Adjust goals</button>}>
+        <Card title={tr("Today's plan (auto)")} action={<button className="text-xs font-semibold text-brand-600 dark:text-brand-400" onClick={() => setTab('goals')}>{tr('Adjust goals')}</button>}>
           <ol className="space-y-2 text-sm">
             {plan.blocks.map((b, i) => (
               <li key={i} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-                <span className="w-12 font-bold tabular-nums">{b.minutes} min</span>
+                <span className="w-12 font-bold tabular-nums">{tr('{n} min', { n: b.minutes })}</span>
                 <span className="flex-1">
-                  {b.label}
+                  {b.kind === 'boss' && b.label === 'Boss Battle' ? tr('Boss Battle') : b.label}
                   <span className="block text-xs text-slate-500">
-                    {b.kind === 'boss' ? 'mixed review battle' : b.conceptIds.map((c) => getConcept(c)?.name).join(', ')}
+                    {b.kind === 'boss' ? tr('mixed review battle') : b.conceptIds.map((c) => getConcept(c)?.name).join(', ')}
                   </span>
                 </span>
-                {b.kind === 'review' && <span className="rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">review</span>}
+                {b.kind === 'review' && <span className="rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">{tr('review')}</span>}
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-xs text-slate-500">Built from mastery, recent mistakes, review schedule and your goals.</p>
+          <p className="mt-3 text-xs text-slate-500">{tr('Built from mastery, recent mistakes, review schedule and your goals.')}</p>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Weekly study time" className="lg:col-span-2">
+        <Card title={tr('Weekly study time')} className="lg:col-span-2">
           <WeeklyBars data={ins.weekly} goal={goal} />
         </Card>
-        <Card title="Subject progress">
+        <Card title={tr('Subject progress')}>
           <SubjectBars data={ins.subjectProgress} />
         </Card>
       </div>
 
-      <Card title="Concept heatmap" action={<button className="text-xs font-semibold text-brand-600 dark:text-brand-400" onClick={() => setTab('knowledge')}>Open knowledge map</button>}>
+      <Card title={tr('Concept heatmap')} action={<button className="text-xs font-semibold text-brand-600 dark:text-brand-400" onClick={() => setTab('knowledge')}>{tr('Open knowledge map')}</button>}>
         <MasteryHeatmap cells={ins.heatmap} onSelect={() => setTab('knowledge')} />
       </Card>
 
       <Card
-        title="Mistake Book"
+        title={tr('Mistake Book')}
         action={
           <span className="text-xs text-slate-500">
-            {openMistakes.length} open · {fixedMistakes.length} fixed (30 days)
+            {tr('{open} open · {fixed} fixed (30 days)', { open: openMistakes.length, fixed: fixedMistakes.length })}
           </span>
         }
       >
@@ -161,10 +172,10 @@ export function Dashboard({ student }: { student: StudentProfile }) {
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-white text-xs uppercase text-slate-500 dark:bg-slate-900">
                 <tr>
-                  <th className="py-2 pr-3">Question</th>
-                  <th className="pr-3">{student.name} answered</th>
-                  <th className="pr-3">Correct answer</th>
-                  <th className="text-right">Missed</th>
+                  <th className="py-2 pr-3">{tr('Question')}</th>
+                  <th className="pr-3">{tr('{name} answered', { name: student.name })}</th>
+                  <th className="pr-3">{tr('Correct answer')}</th>
+                  <th className="text-right">{tr('Missed')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,13 +208,13 @@ export function Dashboard({ student }: { student: StudentProfile }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">No open mistakes. Questions answered wrongly in battle appear here until {student.name} fixes them.</p>
+          <p className="text-sm text-slate-500">{tr('No open mistakes. Questions answered wrongly in battle appear here until {name} fixes them.', { name: student.name })}</p>
         )}
-        <p className="mt-3 text-xs text-slate-500">After each battle {student.name} reviews these with explanations; a mistake is fixed when answered correctly on a later retry in the Mistake Book.</p>
+        <p className="mt-3 text-xs text-slate-500">{tr('After each battle {name} reviews these with explanations; a mistake is fixed when answered correctly on a later retry in the Mistake Book.', { name: student.name })}</p>
       </Card>
 
 
-      <Card title="Writing (Ngữ văn)">
+      <Card title={tr('Writing (Ngữ văn)')}>
         {data.writing.length ? (
           <div className="space-y-2">
             {data.writing.map((w) => {
@@ -211,7 +222,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
               return (
                 <details key={w.promptId} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
                   <summary className="cursor-pointer text-sm">
-                    <b>{p?.title ?? w.promptId}</b> · {w.words} words · self-check {w.checked.length}/{p?.checklist.length ?? 0} · {new Date(w.updatedAt).toLocaleDateString()}
+                    <b>{p?.title ?? w.promptId}</b> · {tr('{n} words · self-check {done}/{total}', { n: w.words, done: w.checked.length, total: p?.checklist.length ?? 0 })} · {new Date(w.updatedAt).toLocaleDateString()}
                   </summary>
                   {p && <p className="mt-2 text-xs text-slate-500">{p.task}</p>}
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{w.text || '—'}</p>
@@ -220,22 +231,22 @@ export function Dashboard({ student }: { student: StudentProfile }) {
             })}
           </div>
         ) : (
-          <p className="text-sm text-slate-500">Nothing written yet. {student.name} can practise the exam's writing tasks in the Story Library → Writing studio.</p>
+          <p className="text-sm text-slate-500">{tr("Nothing written yet. {name} can practise the exam's writing tasks in the Story Library → Writing studio.", { name: student.name })}</p>
         )}
       </Card>
 
-      <Card title="Exam Hall results">
+      <Card title={tr('Exam Hall results')}>
         {data.exams.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="py-2">Date</th>
-                  <th>Paper</th>
-                  <th className="text-right">Score</th>
-                  <th className="text-right">Correct</th>
-                  <th className="pl-4">Weakest part</th>
-                  <th className="text-right">Time</th>
+                  <th className="py-2">{tr('Date')}</th>
+                  <th>{tr('Paper')}</th>
+                  <th className="text-right">{tr('Score')}</th>
+                  <th className="text-right">{tr('Correct')}</th>
+                  <th className="pl-4">{tr('Weakest part')}</th>
+                  <th className="text-right">{tr('Time')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -244,13 +255,13 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                   return (
                     <tr key={r.id} className="border-t border-slate-200 dark:border-slate-800">
                       <td className="py-2">{new Date(r.finishedAt).toLocaleDateString()}</td>
-                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? data.realPapers.find((e) => e.id === r.examId)?.name ?? 'Removed paper'}</td>
-                      <td className="text-right font-bold tabular-nums">{r.score != null ? `${r.score.toFixed(2)} / 10` : r.band != null ? `Band ${r.band.toFixed(1)}` : '—'}</td>
+                      <td>{EXAMS.find((e) => e.id === r.examId)?.name ?? data.realPapers.find((e) => e.id === r.examId)?.name ?? tr('Removed paper')}</td>
+                      <td className="text-right font-bold tabular-nums">{r.score != null ? `${r.score.toFixed(2)} / 10` : r.band != null ? tr('Band {band}', { band: r.band.toFixed(1) }) : '—'}</td>
                       <td className="text-right tabular-nums">
                         {r.correct}/{r.total}
                       </td>
                       <td className="pl-4">{weakest ? `${weakest.title} (${weakest.correct}/${weakest.total})` : '—'}</td>
-                      <td className="text-right tabular-nums">{Math.round(r.durationMs / 60000)} min</td>
+                      <td className="text-right tabular-nums">{tr('{n} min', { n: Math.round(r.durationMs / 60000) })}</td>
                     </tr>
                   );
                 })}
@@ -258,33 +269,33 @@ export function Dashboard({ student }: { student: StudentProfile }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">No mock papers yet. {student.name} can take timed Hà Nội grade-10 and IELTS mini papers in the Exam Hall.</p>
+          <p className="text-sm text-slate-500">{tr('No mock papers yet. {name} can take timed Hà Nội grade-10 and IELTS mini papers in the Exam Hall.', { name: student.name })}</p>
         )}
-        <p className="mt-3 text-xs text-slate-500">IELTS bands are estimates from a mini paper scaled to a full test.</p>
+        <p className="mt-3 text-xs text-slate-500">{tr('IELTS bands are estimates from a mini paper scaled to a full test.')}</p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {placement && (
-          <Card title={`Placement result · ${new Date(placement.createdAt).toLocaleDateString()}`}>
+          <Card title={tr('Placement result · {date}', { date: new Date(placement.createdAt).toLocaleDateString() })}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-              <h4 className="col-span-1 font-bold">English</h4>
-              <h4 className="col-span-1 font-bold">Math</h4>
+              <h4 className="col-span-1 font-bold">{tr('English')}</h4>
+              <h4 className="col-span-1 font-bold">{tr('Math')}</h4>
               {(['vocabulary', 'grammar', 'listening', 'reading'] as const).map((k, i) => {
                 const mk = (['number', 'algebra', 'geometry', 'logic'] as const)[i];
                 return [
-                  <Row key={k} label={k} value={placement.scores.english[k]} />,
-                  <Row key={mk} label={mk} value={placement.scores.math[mk]} />,
+                  <Row key={k} label={PLACEMENT_LABELS()[k]} value={placement.scores.english[k]} />,
+                  <Row key={mk} label={PLACEMENT_LABELS()[mk]} value={placement.scores.math[mk]} />,
                 ];
               })}
             </div>
           </Card>
         )}
-        <Card title="Recent activity">
+        <Card title={tr('Recent activity')}>
           {recent.length ? (
             <ul className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
               {recent.map((a) => (
                 <li key={a.id} className="flex items-center gap-3 py-1.5">
-                  <span aria-label={a.correct ? 'correct' : 'incorrect'}>{a.correct ? '✅' : '❌'}</span>
+                  <span aria-label={a.correct ? tr('correct') : tr('incorrect')}>{a.correct ? '✅' : '❌'}</span>
                   <span className="flex-1 truncate">{getConcept(a.conceptId)?.name ?? a.conceptId}</span>
                   <span className="text-xs text-slate-500">{a.context}</span>
                   <span className="w-16 text-right text-xs tabular-nums text-slate-500">{new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -292,7 +303,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">No activity yet.</p>
+            <p className="text-sm text-slate-500">{tr('No activity yet.')}</p>
           )}
         </Card>
       </div>
