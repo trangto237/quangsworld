@@ -152,4 +152,59 @@ const HEAT_ISLANDS: IeltsPassage = {
   },
 };
 
-export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS];
+const HABITS: IeltsPassage = {
+  id: 'psychology-of-habits',
+  title: 'Creatures of habit',
+  level: 4,
+  paragraphs: [
+    'Think about the first hour of your day. You probably woke up, reached for your phone, brushed your teeth and followed the same route to school or work, all without making many real decisions. Psychologists have long suspected that a large part of human behaviour runs on this kind of automatic pilot, and a study by a research team at the fictional Northgate University tried to measure how large. The team asked several hundred volunteers to write down what they were doing, thinking and feeling every hour for two weeks. Around 40 per cent of the recorded actions were performed almost every day, in the same place, while the volunteers were thinking about something else entirely.',
+    'Such automatic behaviour is not a sign of laziness; it is an efficient use of the brain. When an action is first learnt, it requires careful attention from the front part of the brain, which is responsible for planning. As the action is repeated, however, control gradually passes to a group of structures deep inside the brain known as the basal ganglia. This leaves the planning areas free to deal with new problems. Professor Elena Marsh, an invented psychologist whose work on this subject is widely quoted, describes every habit as a loop with three parts: a cue that triggers the behaviour, the routine itself, and a reward that makes the brain more likely to repeat the loop next time. A phone that buzzes is a cue; checking it is the routine; the small pleasure of a new message is the reward.',
+    'How long does it take for a new habit to form? A popular claim, repeated in many self-help books, says that twenty-one days is enough. To test this, Dr Kenji Arata, another fictional researcher, asked ninety volunteers to choose one healthy behaviour, such as drinking a glass of water with breakfast or going for a run before dinner, and to report each day how automatic it felt. On average, it took about ten weeks before the behaviour reached its peak level of automaticity, and the range was enormous, from under three weeks to more than eight months. Simple actions became automatic far sooner than demanding ones. Encouragingly, missing a single day had almost no effect on the final result.',
+    'Many people believe that those who keep good habits simply have more willpower than the rest of us. Research by Dr Sofia Lindqvist, also invented for this passage, suggests otherwise. When she followed volunteers with high scores on self-control tests, she discovered that they did not resist temptation more often than others. Instead, they met it less often, because they had organised their lives so that temptation rarely appeared. A student who leaves her phone in another room while studying, for instance, does not need to fight the urge to check it, because the cue is no longer there.',
+    'Breaking a bad habit is notoriously difficult, partly because the cue usually stays the same. The office worker who buys a cake every afternoon still feels tired at three o’clock, and the tiredness still calls up the old routine. For this reason, Marsh recommends keeping the cue and the reward but changing the routine: the worker might take a short walk instead, which also brings a pleasant break. Her research also indicates that habits are most fragile when a person’s surroundings change. Moving house, changing jobs or starting university removes many familiar cues at once, which creates an unusual opportunity to drop old patterns and build better ones.',
+    'These findings have implications beyond personal self-improvement. If behaviour depends so heavily on surroundings, then organisations can encourage healthy habits by changing the environment rather than by lecturing people. Some school canteens, for example, now place fruit at eye level near the till and move sweets to less convenient shelves, and pupils choose fruit more often as a result. The lesson for individuals is similar. Instead of relying on motivation, which rises and falls from day to day, people who want to change may do better to redesign the small details of their daily lives.',
+  ],
+  glossary: ['automaticity: how far an action is done without thinking about it', 'basal ganglia: a group of structures deep in the brain'],
+  features: {
+    instruction: 'Matching features — Which researcher or group is this finding linked to? A: the Northgate University team, B: Professor Elena Marsh, C: Dr Kenji Arata, D: Dr Sofia Lindqvist',
+    options: ['the Northgate University team', 'Professor Elena Marsh', 'Dr Kenji Arata', 'Dr Sofia Lindqvist'],
+    items: [
+      { item: 'People with strong self-control tend to avoid tempting situations rather than resist them.', answer: 'Dr Sofia Lindqvist', why: 'They "did not resist temptation more often than others. Instead, they met it less often".' },
+      { item: 'A large proportion of everyday actions are repeated in the same setting.', answer: 'the Northgate University team', why: '"Around 40 per cent of the recorded actions were performed almost every day, in the same place".' },
+      { item: 'Skipping a day now and then does not stop a habit from forming.', answer: 'Dr Kenji Arata', why: '"missing a single day had almost no effect on the final result".' },
+      { item: 'Every habit is made up of a trigger, an action and something pleasant.', answer: 'Professor Elena Marsh', why: 'Her habit loop has "a cue… the routine itself, and a reward". Trigger = cue, action = routine, something pleasant = reward.', d: 3 },
+      { item: 'A major change in someone’s life is a good moment to replace old habits.', answer: 'Professor Elena Marsh', why: '"Her research also indicates that habits are most fragile when a person’s surroundings change… an unusual opportunity". The trap is Lindqvist, who wrote about removing cues, not about life changes.', d: 5 },
+    ],
+  },
+  chooseTwo: [
+    {
+      question: 'Which TWO statements about Dr Arata’s study are true?',
+      answers: ['The volunteers decided for themselves which behaviour to practise.', 'Easy behaviours became automatic more quickly than difficult ones.'],
+      wrong: ['Most of the habits were fully formed after twenty-one days.', 'Volunteers who missed a day had to start again.', 'The volunteers were all trying to give up unhealthy food.'],
+      why: 'Volunteers were asked "to choose one healthy behaviour", and "Simple actions became automatic far sooner than demanding ones." The average was about ten weeks, not 21 days, and missing a day had "almost no effect".',
+    },
+  ],
+  completion: [
+    {
+      kind: 'note',
+      title: 'Breaking a bad habit',
+      limit: 3,
+      gaps: [
+        { text: 'Problem: the ___ normally remains, so it keeps calling up the old behaviour.', answer: 'cue', why: '"partly because the cue usually stays the same… the tiredness still calls up the old routine".' },
+        { text: 'Marsh’s advice: keep the trigger and the reward, but replace the ___.', answer: 'routine', why: '"keeping the cue and the reward but changing the routine". The cake-buyer takes a walk instead.' },
+        { text: 'Best time to change: when a person’s ___ are different, e.g. after moving house.', answer: 'surroundings', why: '"habits are most fragile when a person’s surroundings change". "Cues" is a trap: the passage says a change of surroundings REMOVES cues; the thing that is different is the surroundings.', d: 5 },
+        { text: 'Example for organisations: canteens put fruit at ___ to encourage healthier choices.', answer: 'eye level', why: '"place fruit at eye level near the till". Do not write "the till": that is where the fruit is near, not the level.' },
+      ],
+    },
+  ],
+  endings: {
+    items: [
+      { start: 'When control of a repeated action passes to the basal ganglia, this', ending: 'leaves the planning parts of the brain free for new problems.', why: '"This leaves the planning areas free to deal with new problems."' },
+      { start: 'The popular idea that a habit forms in twenty-one days', ending: 'was not supported by Dr Arata’s results.', why: 'The average was "about ten weeks", with a range from under three weeks to over eight months.' },
+      { start: 'A student who keeps her phone in another room while studying', ending: 'is avoiding temptation instead of fighting it.', why: '"does not need to fight the urge to check it, because the cue is no longer there."' },
+    ],
+    distractors: ['makes the reward of each habit more satisfying.', 'was first suggested by the Northgate University team.'],
+  },
+};
+
+export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS, HABITS];
