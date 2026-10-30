@@ -5,6 +5,7 @@ import { ACCEPT, extractFile, mergePhotos, type Extracted } from '../lib/extract
 import { BusyError, aiStatus, diagnoseAI, generateWithAI, providerName, transcribeWithAI, type AiStatus, type Check } from '../lib/ai';
 import type { OcrProgress } from '../lib/ocr';
 import { useCloud } from './Cloud';
+import { tr } from '../i18n';
 
 const QUICK_SAMPLE = `1. She ___ to school every day.
 A. go
@@ -56,8 +57,8 @@ const keepDraft = (d: Draft | null) => {
 type Item = DraftQuestion & { key: number; on: boolean; unitId?: string };
 type Step = 'source' | 'review' | 'done';
 
-const FORMAT_LABEL = { quick: 'Quick Import questions', vocab: 'a word list', text: 'a reading text' } as const;
-const TYPE_LABEL: Record<DraftQuestion['type'], string> = { mcq: 'Choice', order: 'Word order', input: 'Typed' };
+const FORMAT_LABEL = { quick: () => tr('Looks like Quick Import questions'), vocab: () => tr('Looks like a word list'), text: () => tr('Looks like a reading text') } as const;
+const TYPE_LABEL: Record<DraftQuestion['type'], () => string> = { mcq: () => tr('Choice'), order: () => tr('Word order'), input: () => tr('Typed') };
 
 /**
  * "Add textbook / document": a page, a worksheet or a word list becomes game missions.
@@ -98,7 +99,7 @@ export function ImportWizard() {
   }, []);
 
   const bookMode = unitId === 'book';
-  const unit = unitId === 'other' ? customUnit(customName) : bookMode ? { id: 'book', title: 'Whole book', vi: 'Cả cuốn sách' } : GLOBAL_SUCCESS_9.find((u) => u.id === unitId)!;
+  const unit = unitId === 'other' ? customUnit(customName) : bookMode ? { id: 'book', title: tr('Whole book'), vi: 'Cả cuốn sách' } : GLOBAL_SUCCESS_9.find((u) => u.id === unitId)!;
   /** Whole-book mode: the book cut into units, each with its own questions. */
   const book = useMemo(
     () =>
@@ -127,7 +128,7 @@ export function ImportWizard() {
     if (!files?.length) return;
     setError(null);
     setSaved(null);
-    setBusy('Reading the file…');
+    setBusy(tr('Reading the file…'));
     try {
       const list = await Promise.all(Array.from(files).map(extractFile));
       const photos = list.filter((e) => e.kind === 'image');
@@ -156,7 +157,7 @@ export function ImportWizard() {
         src.kind === 'pdf' && src.bytes
           ? await ocrPdf(src.bytes, setOcr, stop.signal)
           : await ocrImages((src.images ?? []).map((i) => `data:${i.mediaType};base64,${i.data}`), setOcr, stop.signal);
-      if (!res.text.trim()) throw new Error('No text could be read from these pages. Try clearer scans, or the AI option.');
+      if (!res.text.trim()) throw new Error(tr('No text could be read from these pages. Try clearer scans, or the AI option.'));
       setText(res.text);
       setReadDone(res.pages.length);
       keepDraft({ name: src.name, text: res.text, at: Date.now() });
@@ -183,7 +184,7 @@ export function ImportWizard() {
     const pages: string[] = [];
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
       const { openPdf, pageJpeg, photoJpeg } = await import('../lib/ocr');
       const pdf = src.kind === 'pdf' && src.bytes ? await openPdf(src.bytes) : null;
       const total = pdf ? pdf.numPages : (src.images ?? []).length;
@@ -203,7 +204,7 @@ export function ImportWizard() {
             if (!(e instanceof BusyError) || attempt >= 5 || stop.signal.aborted) throw e;
             // Free tier: a few requests a minute. Wait, then carry on.
             for (let s = 20; s > 0 && !stop.signal.aborted; s--) {
-              setOcrNote(`The AI's free tier needs a short break — carrying on in ${s} s…`);
+              setOcrNote(tr("The AI's free tier needs a short break — carrying on in {s} s…", { s }));
               await new Promise((r) => setTimeout(r, 1000));
             }
             setOcrNote(null);
@@ -212,9 +213,9 @@ export function ImportWizard() {
         pages.push(...got);
         setOcr({ done: pages.length, total });
       }
-      if (!pages.join('').trim()) throw new Error('No text came back from these pages.');
+      if (!pages.join('').trim()) throw new Error(tr('No text came back from these pages.'));
     } catch (e) {
-      setError(pages.length ? `Stopped after ${pages.length} pages: ${(e as Error).message} The pages read so far are below — you can carry on with them.` : (e as Error).message);
+      setError(pages.length ? tr('Stopped after {n} pages: {error} The pages read so far are below — you can carry on with them.', { n: pages.length, error: (e as Error).message }) : (e as Error).message);
     } finally {
       if (pages.length) {
         const all = pages.map((p) => p.trim()).join(PAGE_BREAK);
@@ -238,33 +239,33 @@ export function ImportWizard() {
     const notes: ImportIssue[] = [];
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
       for (const [i, b] of book.entries()) {
         if (stop.signal.aborted) break;
         const name = b.unit.title.split(' · ')[0];
         let got: { drafts: DraftQuestion[]; dropped: number } | null = null;
         for (let attempt = 0; !got && !stop.signal.aborted; attempt++) {
-          setBusy(`✨ The AI is writing questions for ${name} (${i + 1} of ${book.length})…`);
+          setBusy(tr('✨ The AI is writing questions for {name} ({n} of {total})…', { name, n: i + 1, total: book.length }));
           try {
             got = await generateWithAI(token, { name: b.unit.title, kind: 'text', size: b.text.length, text: b.text.slice(0, 59_000) }, { unitTitle: b.unit.title, focus, count: perUnit });
           } catch (e) {
             if (e instanceof BusyError && attempt < 5) {
               for (let s = 20; s > 0 && !stop.signal.aborted; s--) {
-                setBusy(`The AI's free tier needs a short break — carrying on with ${name} in ${s} s…`);
+                setBusy(tr("The AI's free tier needs a short break — carrying on with {name} in {s} s…", { name, s }));
                 await new Promise((r) => setTimeout(r, 1000));
               }
               continue;
             }
-            notes.push({ line: 0, message: `${name}: skipped — ${(e as Error).message}` });
+            notes.push({ line: 0, message: tr('{name}: skipped — {error}', { name, error: (e as Error).message }) });
             break;
           }
         }
         if (got) {
           all.push(...got.drafts.map((d) => ({ ...d, unitId: b.unit.id })));
-          if (got.dropped) notes.push({ line: 0, message: `${name}: ${got.dropped} question(s) were not usable and were left out.` });
+          if (got.dropped) notes.push({ line: 0, message: tr('{name}: {n} question(s) were not usable and were left out.', { name, n: got.dropped }) });
         }
       }
-      if (!all.length) throw new Error(notes[0]?.message ?? 'No questions came back.');
+      if (!all.length) throw new Error(notes[0]?.message ?? tr('No questions came back.'));
       review(all, 'ai', notes);
     } catch (e) {
       setError((e as Error).message);
@@ -278,10 +279,10 @@ export function ImportWizard() {
   const testAi = async () => {
     setError(null);
     setChecks(null);
-    setBusy('Testing the AI connection…');
+    setBusy(tr('Testing the AI connection…'));
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
       setChecks(await diagnoseAI(token));
     } catch (e) {
       setError((e as Error).message);
@@ -300,23 +301,23 @@ export function ImportWizard() {
   const makeOffline = () => {
     if (bookMode) {
       const drafts = book.flatMap((b) => b.made.drafts.map((d) => ({ ...d, unitId: b.unit.id })));
-      if (!drafts.length) return setError('No units with usable text were found. Pick a single unit instead, or check the PDF has selectable text.');
+      if (!drafts.length) return setError(tr('No units with usable text were found. Pick a single unit instead, or check the PDF has selectable text.'));
       return review(drafts, 'offline', book.flatMap((b) => b.made.issues.map((i) => ({ ...i, message: `${b.unit.title.split(' · ')[0]}: ${i.message}` }))));
     }
     if (!detected) return;
-    if (!detected.drafts.length) return setError(detected.issues[0]?.message ?? 'No questions could be made from this text.');
+    if (!detected.drafts.length) return setError(detected.issues[0]?.message ?? tr('No questions could be made from this text.'));
     review(detected.drafts, 'offline', detected.issues);
   };
 
   const makeWithAi = async () => {
     setError(null);
-    setBusy(`${providerName(ai?.provider)} is reading the material and writing questions… (this can take a minute)`);
+    setBusy(tr('{ai} is reading the material and writing questions… (this can take a minute)', { ai: providerName(ai?.provider) }));
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
-      const source: Extracted = src ? { ...src, text: text.trim() } : { name: 'Pasted text', kind: 'text', size: text.length, text: text.trim() };
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
+      const source: Extracted = src ? { ...src, text: text.trim() } : { name: tr('Pasted text'), kind: 'text', size: text.length, text: text.trim() };
       const { drafts, dropped } = await generateWithAI(token, source, { unitTitle: unit.title, focus, count });
-      review(drafts, 'ai', dropped ? [{ line: 0, message: `${dropped} question(s) from ${providerName(ai?.provider)} were not usable and were left out.` }] : []);
+      review(drafts, 'ai', dropped ? [{ line: 0, message: tr('{n} question(s) from {ai} were not usable and were left out.', { n: dropped, ai: providerName(ai?.provider) }) }] : []);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -330,9 +331,9 @@ export function ImportWizard() {
     const groups = bookMode ? GLOBAL_SUCCESS_9.map((u) => ({ unit: u, list: chosen.filter((i) => i.unitId === u.id) })).filter((g) => g.list.length) : [{ unit, list: chosen }];
     for (const g of groups) {
       const { dropped } = validateDrafts(g.list.map(({ key: _k, on: _o, unitId: _u, ...d }) => d));
-      if (dropped.length) return setError(`Fix ${dropped.length} question(s) in ${g.unit.title} first: ${dropped.map((d) => `#${d.index + 1} ${d.reason}`).join('; ')}.`);
+      if (dropped.length) return setError(tr('Fix {n} question(s) in {unit} first: {list}.', { n: dropped.length, unit: g.unit.title, list: dropped.map((d) => `#${d.index + 1} ${d.reason}`).join('; ') }));
     }
-    setBusy('Saving…');
+    setBusy(tr('Saving…'));
     try {
       let added = 0;
       let skipped = 0;
@@ -341,7 +342,7 @@ export function ImportWizard() {
         const { drafts } = validateDrafts(g.list.map(({ key: _k, on: _o, unitId: _u, ...d }) => d));
         const res = await repo.importQuestions({
           unit: g.unit,
-          materialName: bookMode ? `${src?.name ?? 'Book'} — ${g.unit.title}` : (src?.name ?? `${unit.title} (pasted text)`),
+          materialName: bookMode ? `${src?.name ?? tr('Book')} — ${g.unit.title}` : (src?.name ?? tr('{unit} (pasted text)', { unit: unit.title })),
           kind: src?.kind ?? 'text',
           drafts,
           via,
@@ -356,8 +357,12 @@ export function ImportWizard() {
       }
       setSaved(
         bookMode
-          ? `Saved ${added} questions across ${groups.length} units${skipped ? ` (${skipped} were already there)` : ''}. They're in 📘 My Textbook in the kid app.`
-          : `Saved ${added} question${added === 1 ? '' : 's'}${skipped ? ` (${skipped} were already there)` : ''} to ${missions.join(', ')}. They're in 📘 My Textbook in the kid app.`,
+          ? skipped
+            ? tr("Saved {n} questions across {units} units ({skipped} were already there). They're in 📘 My Textbook in the kid app.", { n: added, units: groups.length, skipped })
+            : tr("Saved {n} questions across {units} units. They're in 📘 My Textbook in the kid app.", { n: added, units: groups.length })
+          : skipped
+            ? tr("Saved {n} question(s) ({skipped} were already there) to {missions}. They're in 📘 My Textbook in the kid app.", { n: added, skipped, missions: missions.join(', ') })
+            : tr("Saved {n} question(s) to {missions}. They're in 📘 My Textbook in the kid app.", { n: added, missions: missions.join(', ') }),
       );
       setStep('done');
       keepDraft(null);
@@ -375,13 +380,13 @@ export function ImportWizard() {
   const selected = items.filter((i) => i.on).length;
 
   return (
-    <Card title="📘 Add textbook or document" className="lg:col-span-2">
-      <ol className="mb-4 flex flex-wrap gap-2 text-sm" aria-label="Steps">
+    <Card title={tr('📘 Add textbook or document')} className="lg:col-span-2">
+      <ol className="mb-4 flex flex-wrap gap-2 text-sm" aria-label={tr('Steps')}>
         {(
           [
-            ['source', '1. Add the book'],
-            ['make', '2. Make questions'],
-            ['review', '3. Check & save'],
+            ['source', tr('1. Add the book')],
+            ['make', tr('2. Make questions')],
+            ['review', tr('3. Check & save')],
           ] as const
         ).map(([id, label]) => {
           const current = id === 'review' ? step === 'review' : id === 'make' ? step === 'source' && !!text.trim() : step === 'source' && !text.trim();
@@ -403,7 +408,7 @@ export function ImportWizard() {
       {step === 'done' && (
         <div className="space-y-3">
           <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{saved}</p>
-          <Button onClick={reset}>Add more pages</Button>
+          <Button onClick={reset}>{tr('Add more pages')}</Button>
         </div>
       )}
 
@@ -411,12 +416,12 @@ export function ImportWizard() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Upload pages from the school book (PDF, Word, photos) or paste text. The app turns them into missions: word quizzes, sentence building and gap-fills.
+              {tr('Upload pages from the school book (PDF, Word, photos) or paste text. The app turns them into missions: word quizzes, sentence building and gap-fills.')}
             </p>
             {draft && !text.trim() && (
               <div className="rounded-xl bg-amber-50 p-3 text-sm dark:bg-amber-950/40">
                 <p>
-                  The text read from <b>{draft.name}</b> on {new Date(draft.at).toLocaleString()} is still saved on this device ({draft.text.length.toLocaleString()} characters).
+                  {tr('The text read from {name} on {date} is still saved on this device ({n} characters).', { name: draft.name, date: new Date(draft.at).toLocaleString(), n: draft.text.length.toLocaleString() })}
                 </p>
                 <div className="mt-2 flex gap-2">
                   <Button
@@ -425,20 +430,26 @@ export function ImportWizard() {
                       if (splitByUnit(draft.text).length > 1) setUnitId('book');
                     }}
                   >
-                    Use it
+                    {tr('Use it')}
                   </Button>
                   <Button variant="ghost" onClick={() => (keepDraft(null), setDraft(null))}>
-                    Throw away
+                    {tr('Throw away')}
                   </Button>
                 </div>
               </div>
             )}
             {readDone !== null && text.trim() && (
               <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" role="status">
-                <p className="font-semibold">✅ Read {readDone} page{readDone === 1 ? '' : 's'}. The text is below (and kept on this device until you save).</p>
+                <p className="font-semibold">
+                  {readDone === 1
+                    ? tr('✅ Read 1 page. The text is below (and kept on this device until you save).')
+                    : tr('✅ Read {n} pages. The text is below (and kept on this device until you save).', { n: readDone })}
+                </p>
                 <p className="mt-1">
-                  <b>Next:</b> check “Which unit is it?” on the right{splitByUnit(text).length > 1 ? ' (📚 Whole book is already selected)' : ''}, then tap <b>Make questions</b>. You'll see every question
-                  to check, and a <b>Save</b> button at the end.
+                  <b>{tr('Next:')}</b>{' '}
+                  {splitByUnit(text).length > 1
+                    ? tr("check “Which unit is it?” on the right (📚 Whole book is already selected), then tap “Make questions”. You'll see every question to check, and a “Save” button at the end.")
+                    : tr("check “Which unit is it?” on the right, then tap “Make questions”. You'll see every question to check, and a “Save” button at the end.")}
                 </p>
               </div>
             )}
@@ -451,17 +462,23 @@ export function ImportWizard() {
               className="rounded-2xl border-2 border-dashed border-slate-300 p-5 text-center dark:border-slate-700"
             >
               <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={!!busy}>
-                Choose file or photos
+                {tr('Choose file or photos')}
               </Button>
-              <input ref={fileRef} type="file" multiple hidden accept={ACCEPT} onChange={(e) => void onFiles(e.target.files)} aria-label="Textbook file" />
-              <p className="mt-2 text-xs text-slate-500">PDF · DOCX · TXT · photos of pages</p>
+              <input ref={fileRef} type="file" multiple hidden accept={ACCEPT} onChange={(e) => void onFiles(e.target.files)} aria-label={tr('Textbook file')} />
+              <p className="mt-2 text-xs text-slate-500">{tr('PDF · DOCX · TXT · photos of pages')}</p>
             </div>
             {src && (
               <p className="text-sm">
                 <b>{src.name}</b>
-                {src.pages ? ` · ${src.pages} page${src.pages === 1 ? '' : 's'}` : ''}
-                {src.text ? ` · ${src.text.length.toLocaleString()} characters` : ''}
-                {needsAi && !ocr && <span className="block text-amber-700 dark:text-amber-400">{src.kind === 'image' ? 'Photos of pages' : 'This PDF is a scan (pictures of pages, no text)'}: read it on this device first, or use “Make questions with AI”.</span>}
+                {src.pages ? ` · ${src.pages === 1 ? tr('1 page') : tr('{n} pages', { n: src.pages })}` : ''}
+                {src.text ? ` · ${tr('{n} characters', { n: src.text.length.toLocaleString() })}` : ''}
+                {needsAi && !ocr && (
+                  <span className="block text-amber-700 dark:text-amber-400">
+                    {src.kind === 'image'
+                      ? tr('Photos of pages: read them on this device first, or use “Make questions with AI”.')
+                      : tr('This PDF is a scan (pictures of pages, no text): read it on this device first, or use “Make questions with AI”.')}
+                  </span>
+                )}
               </p>
             )}
             {needsAi && !ocr && (
@@ -469,19 +486,28 @@ export function ImportWizard() {
                 {aiReads && (
                   <div>
                     <Button onClick={() => void readScanWithAI()} disabled={!!busy}>
-                      ✨ Read the scanned pages with AI (recommended)
+                      {tr('✨ Read the scanned pages with AI (recommended)')}
                     </Button>
                     <p className="mt-1 text-slate-600 dark:text-slate-300">
-                      Much more accurate on textbook pages (columns, coloured boxes, small print). Uses {providerName(ai?.provider)}{ai?.backup ? ' (OpenRouter as backup)' : ''}: about {src?.pages ? `${Math.max(1, Math.round(src.pages / 3 / 8))}–${Math.max(2, Math.round(src.pages / 3 / 4))} min for ${src.pages} pages` : 'a few seconds per page'}, and the pages are sent to Google.
+                      {tr('Much more accurate on textbook pages (columns, coloured boxes, small print).')}{' '}
+                      {tr('Uses {ai}: about {time}, and the pages are sent to Google.', {
+                        ai: providerName(ai?.provider) + (ai?.backup ? tr(' (OpenRouter as backup)') : ''),
+                        time: src?.pages
+                          ? tr('{from}–{to} min for {n} pages', { from: Math.max(1, Math.round(src.pages / 3 / 8)), to: Math.max(2, Math.round(src.pages / 3 / 4)), n: src.pages })
+                          : tr('a few seconds per page'),
+                      })}
                     </p>
                   </div>
                 )}
                 <div>
                   <Button variant={aiReads ? 'secondary' : 'primary'} onClick={() => void readScan()} disabled={!!busy}>
-                    🔍 Read the scanned pages on this device
+                    {tr('🔍 Read the scanned pages on this device')}
                   </Button>
                   <p className="mt-1 text-slate-600 dark:text-slate-300">
-                    Free, and the book never leaves this device{aiReads ? ', but it makes more mistakes on busy pages' : ''}. About 3–8 seconds per page{src?.pages ? ` (≈ ${Math.max(1, Math.round((src.pages * 5) / 60))} min for ${src.pages} pages)` : ''} — keep this tab open. Works best on a laptop.
+                    {aiReads ? tr('Free, and the book never leaves this device, but it makes more mistakes on busy pages.') : tr('Free, and the book never leaves this device.')}{' '}
+                    {src?.pages
+                      ? tr('About 3–8 seconds per page (≈ {min} min for {n} pages) — keep this tab open. Works best on a laptop.', { min: Math.max(1, Math.round((src.pages * 5) / 60)), n: src.pages })
+                      : tr('About 3–8 seconds per page — keep this tab open. Works best on a laptop.')}
                   </p>
                 </div>
               </div>
@@ -489,151 +515,152 @@ export function ImportWizard() {
             {ocr && (
               <div className="rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/40" aria-live="polite">
                 <p className="font-semibold">
-                  {ocrBy === 'ai' ? 'The AI is reading' : 'Reading'} page {Math.min(ocr.done + 1, ocr.total)} of {ocr.total}…
+                  {ocrBy === 'ai'
+                    ? tr('The AI is reading page {n} of {total}…', { n: Math.min(ocr.done + 1, ocr.total), total: ocr.total })
+                    : tr('Reading page {n} of {total}…', { n: Math.min(ocr.done + 1, ocr.total), total: ocr.total })}
                 </p>
                 {ocrNote && <p className="text-slate-600 dark:text-slate-300">{ocrNote}</p>}
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-sky-100 dark:bg-sky-900">
                   <div className="h-full bg-sky-500 transition-all" style={{ width: `${(ocr.done / Math.max(1, ocr.total)) * 100}%` }} />
                 </div>
                 <button className="mt-2 text-xs font-semibold text-slate-500 hover:underline" onClick={() => ocrStop.current?.abort()}>
-                  Stop
+                  {tr('Stop')}
                 </button>
               </div>
             )}
-            <Field label="…or paste / edit the text" hint="Quick Import (numbered questions, * marks the right answer), a word list (word (n): meaning), or a reading passage.">
-              <textarea className={`${inputClass} h-44 font-mono text-xs`} value={text} onChange={(e) => setText(e.target.value)} placeholder={QUICK_SAMPLE} aria-label="Document text" />
+            <Field label={tr('…or paste / edit the text')} hint={tr('Quick Import (numbered questions, * marks the right answer), a word list (word (n): meaning), or a reading passage.')}>
+              <textarea className={`${inputClass} h-44 font-mono text-xs`} value={text} onChange={(e) => setText(e.target.value)} placeholder={QUICK_SAMPLE} aria-label={tr('Document text')} />
             </Field>
             <div className="flex flex-wrap gap-2 text-xs">
               <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => (setSrc(null), setText(QUICK_SAMPLE))}>
-                Quick Import example
+                {tr('Quick Import example')}
               </button>
               <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => (setSrc(null), setText(VOCAB_SAMPLE))}>
-                Word list example
+                {tr('Word list example')}
               </button>
             </div>
           </div>
 
           <div className="space-y-4">
-            <Field label="Which unit is it?">
-              <select className={inputClass} value={unitId} onChange={(e) => setUnitId(e.target.value)} aria-label="Unit">
+            <Field label={tr('Which unit is it?')}>
+              <select className={inputClass} value={unitId} onChange={(e) => setUnitId(e.target.value)} aria-label={tr('Unit')}>
                 <optgroup label="Tiếng Anh 9 Global Success">
-                  <option value="book">📚 Whole book — split by unit automatically</option>
+                  <option value="book">{tr('📚 Whole book — split by unit automatically')}</option>
                   {GLOBAL_SUCCESS_9.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.title}
                     </option>
                   ))}
                 </optgroup>
-                <option value="other">Other book or worksheet…</option>
+                <option value="other">{tr('Other book or worksheet…')}</option>
               </select>
             </Field>
             {unitId === 'other' && (
-              <Field label="Name">
-                <input className={inputClass} value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. Đề cương giữa kỳ 1" />
+              <Field label={tr('Name')}>
+                <input className={inputClass} value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder={tr('e.g. Đề cương giữa kỳ 1')} />
               </Field>
             )}
 
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
-              <p className="font-semibold">Make questions on this device (no AI)</p>
+              <p className="font-semibold">{tr('Make questions on this device (no AI)')}</p>
               <p className="mt-1 text-sm text-slate-500">
                 {bookMode ? (
                   !text.trim() ? (
-                    'Add the book (PDF or Word) first.'
+                    tr('Add the book (PDF or Word) first.')
                   ) : book.length ? (
                     <>
-                      Found <b>{book.length} units</b> → <b>{book.reduce((n, b) => n + b.made.drafts.length, 0)} questions</b>
+                      {tr('Found {units} units', { units: book.length })} → <b>{tr('{n} questions', { n: book.reduce((n, b) => n + b.made.drafts.length, 0) })}</b>
                       <span className="mt-1 block text-xs">
                         {book.map((b) => `${b.unit.title.split(' · ')[0]}${b.pages?.length ? ` (p. ${b.pages[0]}–${b.pages.at(-1)})` : ''}: ${b.made.drafts.length}`).join(' · ')}
                       </span>
                     </>
                   ) : (
-                    <span className="text-amber-700 dark:text-amber-400">No “UNIT 1 … UNIT 12” headings found in this text. Pick a single unit instead.</span>
+                    <span className="text-amber-700 dark:text-amber-400">{tr('No “UNIT 1 … UNIT 12” headings found in this text. Pick a single unit instead.')}</span>
                   )
                 ) : detected ? (
                   <>
-                    Looks like {FORMAT_LABEL[detected.format]} → <b>{detected.drafts.length} questions</b>
-                    {detected.issues.length > 0 && <span className="text-amber-700 dark:text-amber-400"> · {detected.issues.length} line(s) need a look</span>}
+                    {FORMAT_LABEL[detected.format]()} → <b>{tr('{n} questions', { n: detected.drafts.length })}</b>
+                    {detected.issues.length > 0 && <span className="text-amber-700 dark:text-amber-400"> · {tr('{n} line(s) need a look', { n: detected.issues.length })}</span>}
                   </>
                 ) : (
-                  'Add a file or text first.'
+                  tr('Add a file or text first.')
                 )}
               </p>
               <Button className="mt-3" disabled={(bookMode ? !book.length : !detected?.drafts.length) || !!busy || (unitId === 'other' && !customName.trim())} onClick={makeOffline}>
-                Make questions
+                {tr('Make questions')}
               </Button>
             </div>
 
             <div className="rounded-xl bg-violet-50 p-4 dark:bg-violet-950/30">
               <p className="font-semibold">
-                ✨ Make questions with AI ({providerName(ai?.provider)}
-                {ai?.backup ? ', OpenRouter as backup' : ''})
+                {ai?.backup
+                  ? tr('✨ Make questions with AI ({ai}, OpenRouter as backup)', { ai: providerName(ai?.provider) })
+                  : tr('✨ Make questions with AI ({ai})', { ai: providerName(ai?.provider) })}
               </p>
               {bookMode && ai?.ai && signedInParent ? (
                 book.length ? (
                   <>
                     <p className="mt-1 text-sm text-slate-500">
-                      Goes through all <b>{book.length} units</b> one by one: answers the book's exercises and writes new questions, with explanations in English and Vietnamese. About a minute per unit
-                      — keep this tab open. You check everything before saving.
+                      {tr("Goes through all {n} units one by one: answers the book's exercises and writes new questions, with explanations in English and Vietnamese. About a minute per unit — keep this tab open. You check everything before saving.", { n: book.length })}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-3 text-sm">
                       {(['vocabulary', 'grammar', 'reading'] as const).map((f) => (
                         <label key={f} className="flex items-center gap-1.5">
                           <input type="checkbox" checked={focus.includes(f)} onChange={(e) => setFocus(e.target.checked ? [...focus, f] : focus.filter((x) => x !== f))} />
-                          {PART_LABEL[f].en}
+                          {tr(PART_LABEL[f].en)}
                         </label>
                       ))}
                     </div>
                     <label className="mt-2 flex items-center gap-2 text-sm">
-                      About <input type="number" min={5} max={40} value={perUnit} onChange={(e) => setPerUnit(Number(e.target.value))} className={`${inputClass} w-20`} /> questions per unit
+                      {tr('About')} <input type="number" min={5} max={40} value={perUnit} onChange={(e) => setPerUnit(Number(e.target.value))} className={`${inputClass} w-20`} /> {tr('questions per unit')}
                     </label>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button disabled={!focus.length || !!busy} onClick={() => void makeBookWithAi()}>
-                        ✨ Make AI questions for all {book.length} units
+                        {tr('✨ Make AI questions for all {n} units', { n: book.length })}
                       </Button>
                       {aiStop.current && busy && (
                         <Button variant="ghost" onClick={() => aiStop.current?.abort()}>
-                          Stop (keep what's done)
+                          {tr("Stop (keep what's done)")}
                         </Button>
                       )}
                     </div>
                   </>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-500">Add the book first — the units are found from its “UNIT 1 … UNIT 12” headings.</p>
+                  <p className="mt-1 text-sm text-slate-500">{tr('Add the book first — the units are found from its “UNIT 1 … UNIT 12” headings.')}</p>
                 )
               ) : bookMode && !ai?.ai ? (
-                <p className="mt-1 text-sm text-slate-500">AI isn't set up on the server yet (see the README).</p>
+                <p className="mt-1 text-sm text-slate-500">{tr("AI isn't set up on the server yet (see the README).")}</p>
               ) : bookMode ? (
-                <p className="mt-1 text-sm text-slate-500">Sign in to your family cloud account (Settings → Cloud sync) to use it.</p>
+                <p className="mt-1 text-sm text-slate-500">{tr('Sign in to your family cloud account (Settings → Cloud sync) to use it.')}</p>
               ) : ai?.ai ? (
                 signedInParent ? (
                   <>
                     <p className="mt-1 text-sm text-slate-500">
-                      Reads photos and scanned pages too, and writes explanations in English and Vietnamese.
-                      {ai.provider === 'gemini' && ' Uses the free Gemini tier: a daily limit applies, and Google may use the pages you send (not your child’s data) to improve its products.'}
+                      {tr('Reads photos and scanned pages too, and writes explanations in English and Vietnamese.')}
+                      {ai.provider === 'gemini' && ` ${tr('Uses the free Gemini tier: a daily limit applies, and Google may use the pages you send (not your child’s data) to improve its products.')}`}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-3 text-sm">
                       {(['vocabulary', 'grammar', 'reading'] as const).map((f) => (
                         <label key={f} className="flex items-center gap-1.5">
                           <input type="checkbox" checked={focus.includes(f)} onChange={(e) => setFocus(e.target.checked ? [...focus, f] : focus.filter((x) => x !== f))} />
-                          {PART_LABEL[f].en}
+                          {tr(PART_LABEL[f].en)}
                         </label>
                       ))}
                     </div>
                     <label className="mt-2 flex items-center gap-2 text-sm">
-                      About <input type="number" min={5} max={40} value={count} onChange={(e) => setCount(Number(e.target.value))} className={`${inputClass} w-20`} /> questions
+                      {tr('About')} <input type="number" min={5} max={40} value={count} onChange={(e) => setCount(Number(e.target.value))} className={`${inputClass} w-20`} /> {tr('questions')}
                     </label>
                     <Button className="mt-3" disabled={(!text.trim() && !needsAi) || !focus.length || !!busy || (unitId === 'other' && !customName.trim())} onClick={() => void makeWithAi()}>
-                      Make questions with AI
+                      {tr('Make questions with AI')}
                     </Button>
                   </>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-500">Sign in to your family cloud account (Settings → Cloud sync) to use it.</p>
+                  <p className="mt-1 text-sm text-slate-500">{tr('Sign in to your family cloud account (Settings → Cloud sync) to use it.')}</p>
                 )
               ) : (
                 <p className="mt-1 text-sm text-slate-500">
-                  Not set up. To turn it on for free: get a key at <b>aistudio.google.com</b> (Get API key), add it as a <b>GEMINI_API_KEY</b> secret in Cloudflare Pages (Settings → Variables and
-                  Secrets), redeploy, and set up cloud sync — see the README.
-                  {ai?.missing.length ? ` Missing on the server: ${ai.missing.join(', ')}.` : ''}
+                  {tr('Not set up. To turn it on for free: get a key at aistudio.google.com (Get API key), add it as a GEMINI_API_KEY secret in Cloudflare Pages (Settings → Variables and Secrets), redeploy, and set up cloud sync — see the README.')}
+                  {ai?.missing.length ? ` ${tr('Missing on the server: {list}.', { list: ai.missing.join(', ') })}` : ''}
                 </p>
               )}
             </div>
@@ -645,14 +672,15 @@ export function ImportWizard() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm">
-              <b>{bookMode ? `${new Set(items.map((i) => i.unitId)).size} units` : unit.title}</b> · {selected} of {items.length} questions selected {via === 'ai' && <span className="rounded bg-violet-100 px-1.5 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-300">made with {providerName(ai?.provider)}</span>}
+              <b>{bookMode ? tr('{n} units', { n: new Set(items.map((i) => i.unitId)).size }) : unit.title}</b> · {tr('{n} of {total} questions selected', { n: selected, total: items.length })}{' '}
+              {via === 'ai' && <span className="rounded bg-violet-100 px-1.5 text-xs text-violet-800 dark:bg-violet-950 dark:text-violet-300">{tr('made with {ai}', { ai: providerName(ai?.provider) })}</span>}
             </p>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setItems(items.map((i) => ({ ...i, on: true })))}>
-                All
+                {tr('All')}
               </Button>
               <Button variant="ghost" onClick={() => setItems(items.map((i) => ({ ...i, on: false })))}>
-                None
+                {tr('None')}
               </Button>
             </div>
           </div>
@@ -660,7 +688,7 @@ export function ImportWizard() {
             <ul className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
               {issues.map((i, k) => (
                 <li key={k}>
-                  {i.line > 0 && <b>Line {i.line}: </b>}
+                  {i.line > 0 && <b>{tr('Line {n}:', { n: i.line })} </b>}
                   {i.message}
                 </li>
               ))}
@@ -674,14 +702,14 @@ export function ImportWizard() {
                 <details key={u.id} open={ui === 0} className="rounded-xl ring-1 ring-slate-200 dark:ring-slate-700">
                   <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 font-semibold">
                     <span>
-                      {u.title} <span className="font-normal text-slate-500">· {on} of {list.length}</span>
+                      {u.title} <span className="font-normal text-slate-500">· {tr('{n} of {total}', { n: on, total: list.length })}</span>
                     </span>
                     <span className="flex gap-3 text-xs">
                       <button type="button" className="text-brand-600 hover:underline" onClick={(e) => (e.preventDefault(), setItems(items.map((i) => (i.unitId === u.id ? { ...i, on: true } : i))))}>
-                        All
+                        {tr('All')}
                       </button>
                       <button type="button" className="text-brand-600 hover:underline" onClick={(e) => (e.preventDefault(), setItems(items.map((i) => (i.unitId === u.id ? { ...i, on: false } : i))))}>
-                        None
+                        {tr('None')}
                       </button>
                     </span>
                   </summary>
@@ -696,12 +724,12 @@ export function ImportWizard() {
           {!bookMode && parts.map((part) => <ReviewPart key={part} part={part} list={items.filter((i) => i.part === part)} update={update} />)}
           <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-2 border-t border-slate-200 bg-white/95 px-1 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
             <Button disabled={!selected || !!busy} onClick={() => void save()}>
-              Save {selected} questions{bookMode ? ' to their units' : ` to ${unit.title.split(' · ')[0]}`}
+              {bookMode ? tr('Save {n} questions to their units', { n: selected }) : tr('Save {n} questions to {unit}', { n: selected, unit: unit.title.split(' · ')[0] })}
             </Button>
             <Button variant="secondary" onClick={() => setStep('source')}>
-              Back
+              {tr('Back')}
             </Button>
-            <span className="text-xs text-slate-500">Saved questions appear in 📘 My Textbook in the kid app.</span>
+            <span className="text-xs text-slate-500">{tr('Saved questions appear in 📘 My Textbook in the kid app.')}</span>
           </div>
         </div>
       )}
@@ -709,10 +737,10 @@ export function ImportWizard() {
       {ai?.reachable && signedInParent && step === 'source' && (
         <div className="mt-4 text-sm">
           <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => void testAi()} disabled={!!busy}>
-            🩺 Test the AI connection
+            {tr('🩺 Test the AI connection')}
           </button>
           {checks && (
-            <ul className="mt-2 space-y-1 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50" aria-label="AI connection checks">
+            <ul className="mt-2 space-y-1 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50" aria-label={tr('AI connection checks')}>
               {checks.map((c) => (
                 <li key={c.step}>
                   {c.ok ? '✅' : '❌'} <b>{c.step}:</b> <span className="break-words">{c.detail}</span>
@@ -733,36 +761,36 @@ function ReviewPart({ part, list, update }: { part: DraftPart; list: Item[]; upd
   return (
     <section>
       <h3 className="mb-2 font-semibold">
-        {PART_LABEL[part].emoji} {PART_LABEL[part].en}
+        {PART_LABEL[part].emoji} {tr(PART_LABEL[part].en)}
       </h3>
       <ol className="space-y-2">
         {list.map((q) => (
         <li key={q.key} className={cx('rounded-xl p-3 ring-1', q.on ? 'ring-slate-200 dark:ring-slate-700' : 'opacity-50 ring-slate-100 dark:ring-slate-800')}>
           <div className="flex items-start gap-3">
-            <input type="checkbox" className="mt-2" checked={q.on} onChange={(e) => update(q.key, { on: e.target.checked } as Partial<Item>)} aria-label="Include question" />
+            <input type="checkbox" className="mt-2" checked={q.on} onChange={(e) => update(q.key, { on: e.target.checked } as Partial<Item>)} aria-label={tr('Include question')} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded bg-slate-100 px-1.5 text-xs font-semibold dark:bg-slate-800">{TYPE_LABEL[q.type]}</span>
-                <input className={`${inputClass} py-1 text-sm`} value={q.prompt} onChange={(e) => update(q.key, { prompt: e.target.value })} aria-label="Question" />
+                <span className="shrink-0 rounded bg-slate-100 px-1.5 text-xs font-semibold dark:bg-slate-800">{TYPE_LABEL[q.type]()}</span>
+                <input className={`${inputClass} py-1 text-sm`} value={q.prompt} onChange={(e) => update(q.key, { prompt: e.target.value })} aria-label={tr('Question')} />
               </div>
               {q.type === 'mcq' ? (
                 <div className="grid gap-1 sm:grid-cols-2">
                   {q.options.map((o, k) => (
                     <label key={k} className="flex items-center gap-2 text-sm">
-                      <input type="radio" name={`a-${q.key}`} checked={q.answer === k} onChange={() => update(q.key, { answer: k })} aria-label={`Right answer ${k + 1}`} />
+                      <input type="radio" name={`a-${q.key}`} checked={q.answer === k} onChange={() => update(q.key, { answer: k })} aria-label={tr('Right answer {n}', { n: k + 1 })} />
                       <input
                         className={cx(inputClass, 'py-1 text-sm', q.answer === k && 'ring-emerald-400')}
                         value={o}
                         onChange={(e) => update(q.key, { options: q.options.map((x, j) => (j === k ? e.target.value : x)) })}
-                        aria-label={`Option ${k + 1}`}
+                        aria-label={tr('Option {n}', { n: k + 1 })}
                       />
                     </label>
                   ))}
                 </div>
               ) : (
                 <label className="flex items-center gap-2 text-sm">
-                  <span className="shrink-0 text-slate-500">{q.type === 'order' ? 'Sentence' : 'Answer'}</span>
-                  <input className={`${inputClass} py-1 text-sm`} value={q.options[0]} onChange={(e) => update(q.key, { options: [e.target.value] })} aria-label="Answer" />
+                  <span className="shrink-0 text-slate-500">{q.type === 'order' ? tr('Sentence') : tr('Answer')}</span>
+                  <input className={`${inputClass} py-1 text-sm`} value={q.options[0]} onChange={(e) => update(q.key, { options: [e.target.value] })} aria-label={tr('Answer')} />
                 </label>
               )}
               {q.explanation && <p className="text-xs text-slate-500">💡 {q.explanation}</p>}

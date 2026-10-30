@@ -1,5 +1,6 @@
 import { validateDrafts, type DraftQuestion } from '@atlas/knowledge';
 import type { Extracted } from './extract';
+import { tr } from '../i18n';
 
 /** Thrown when the AI's free tier asks us to slow down (try again in a moment). */
 export class BusyError extends Error {}
@@ -43,7 +44,7 @@ export async function generateWithAI(
   });
   const body = (await res.json().catch(() => ({}))) as { drafts?: unknown; dropped?: number; error?: string };
   if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
-  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  if (!res.ok) throw new Error(body.error ?? tr('The server answered {status}.', { status: res.status }));
   const { drafts, dropped } = validateDrafts(body.drafts);
   return { drafts, dropped: (body.dropped ?? 0) + dropped.length };
 }
@@ -57,7 +58,7 @@ export async function transcribeWithAI(token: string, images: { mediaType: strin
   });
   const body = (await res.json().catch(() => ({}))) as { pages?: unknown; error?: string };
   if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
-  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  if (!res.ok) throw new Error(body.error ?? tr('The server answered {status}.', { status: res.status }));
   return Array.isArray(body.pages) ? body.pages.map((p) => (typeof p === 'string' ? p : '')) : [];
 }
 
@@ -71,7 +72,7 @@ export interface Check {
 export async function diagnoseAI(token: string): Promise<Check[]> {
   const res = await fetch('/api/diagnose', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
   const body = (await res.json().catch(() => ({}))) as { checks?: Check[]; error?: string };
-  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  if (!res.ok) throw new Error(body.error ?? tr('The server answered {status}.', { status: res.status }));
   return body.checks ?? [];
 }
 
@@ -85,7 +86,7 @@ export async function generateIeltsWithAI(token: string, generate: { topic: stri
   });
   const body = (await res.json().catch(() => ({}))) as { exam?: unknown; error?: string };
   if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
-  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  if (!res.ok) throw new Error(body.error ?? tr('The server answered {status}.', { status: res.status }));
   return body.exam;
 }
 
@@ -97,6 +98,6 @@ export async function readExamWithAI(token: string, kind: 'hn10' | 'ielts-readin
   });
   const body = (await res.json().catch(() => ({}))) as { exam?: unknown; error?: string };
   if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
-  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  if (!res.ok) throw new Error(body.error ?? tr('The server answered {status}.', { status: res.status }));
   return body.exam;
 }

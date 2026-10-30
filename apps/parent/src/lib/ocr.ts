@@ -18,6 +18,7 @@ export interface OcrResult {
 }
 
 import { PAGE_BREAK } from '@atlas/knowledge';
+import { tr } from '../i18n';
 
 const base = () => `${import.meta.env.BASE_URL}ocr/`;
 
@@ -134,7 +135,7 @@ export async function ocrPdf(bytes: Uint8Array, onProgress: (p: OcrProgress) => 
     await scheduler.terminate();
     await pdf.cleanup();
   }
-  if (signal?.aborted) throw new Error('Stopped.');
+  if (signal?.aborted) throw new Error(tr('Stopped.'));
   return { text: pages.map((p) => p.trim()).join(PAGE_BREAK), pages };
 }
 
@@ -152,7 +153,7 @@ export async function ocrImages(images: (string | Blob)[], onProgress: (p: OcrPr
         return r.data.text;
       }),
     );
-    if (signal?.aborted) throw new Error('Stopped.');
+    if (signal?.aborted) throw new Error(tr('Stopped.'));
     return { text: pages.map((p) => p.trim()).join(PAGE_BREAK), pages };
   } finally {
     await scheduler.terminate();

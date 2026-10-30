@@ -1,5 +1,6 @@
 import './polyfills';
 import { PAGE_BREAK } from '@atlas/knowledge';
+import { tr } from '../i18n';
 /**
  * Reading text out of uploaded textbook pages, in the browser. The PDF and DOCX readers are
  * downloaded only when such a file is opened, so the dashboard's first load stays small.
@@ -36,7 +37,7 @@ export async function docxText(bytes: Uint8Array): Promise<string> {
   const { unzipSync, strFromU8 } = await import('fflate');
   const files = unzipSync(bytes, { filter: (f) => f.name === 'word/document.xml' });
   const xml = files['word/document.xml'];
-  if (!xml) throw new Error('This .docx has no document text.');
+  if (!xml) throw new Error(tr('This .docx has no document text.'));
   const doc = new DOMParser().parseFromString(strFromU8(xml), 'application/xml');
   const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
   const paragraphs: string[] = [];
@@ -97,7 +98,7 @@ const kindOf = (f: File): MaterialKind | null => {
 /** Reads one uploaded file. Throws a friendly error for unsupported or unreadable files. */
 export async function extractFile(file: File): Promise<Extracted> {
   const kind = kindOf(file);
-  if (!kind) throw new Error(`${file.name}: this file type isn't supported. Use PDF, DOCX, TXT or photos (JPEG/PNG).`);
+  if (!kind) throw new Error(tr("{name}: this file type isn't supported. Use PDF, DOCX, TXT or photos (JPEG/PNG).", { name: file.name }));
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = { name: file.name, kind, size: file.size, bytes };
   if (kind === 'text') return { ...base, text: new TextDecoder().decode(bytes), bytes: undefined };
@@ -129,7 +130,7 @@ async function shrinkPhoto(file: File): Promise<{ mediaType: string; data: strin
 /** Several photos of pages become one source for the AI. */
 export function mergePhotos(list: Extracted[]): Extracted {
   return {
-    name: list.length === 1 ? list[0].name : `${list.length} photos`,
+    name: list.length === 1 ? list[0].name : tr('{n} photos', { n: list.length }),
     kind: 'image',
     size: list.reduce((s, e) => s + e.size, 0),
     text: '',
