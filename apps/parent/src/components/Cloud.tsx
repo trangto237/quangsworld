@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { confirmSignOut, getCloud, type CloudStatus } from '@atlas/db/cloud';
 import { Button, Field, Modal, cx, inputClass, useRepo } from '@atlas/ui';
+import { tr } from '../i18n';
 
 /** The cloud-sync controller and its live status. */
 export function useCloud() {
@@ -11,14 +12,15 @@ export function useCloud() {
 }
 
 const ago = (t: number | null) => {
-  if (!t) return 'never';
+  if (!t) return tr('never');
   const s = Math.round((Date.now() - t) / 1000);
-  if (s < 10) return 'just now';
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 10) return tr('just now');
+  if (s < 60) return tr('{n}s ago', { n: s });
+  if (s < 3600) return tr('{n} min ago', { n: Math.round(s / 60) });
   return new Date(t).toLocaleString();
 };
 
+/** English keys, shown with tr(). */
 const LABEL: Record<CloudStatus['state'], string> = {
   unconfigured: 'Not set up',
   'signed-out': 'Signed out',
@@ -37,8 +39,8 @@ export function CloudBadge({ onClick }: { onClick: () => void }) {
   const tone =
     status.state === 'error' ? 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : status.state === 'synced' || status.state === 'syncing' ? 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
   return (
-    <button onClick={onClick} className={cx('hidden items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex', tone)} title={`Cloud sync: ${LABEL[status.state]}. Last synced ${ago(status.lastSyncedAt)}.`}>
-      ☁️ {status.state === 'synced' ? 'Synced' : status.state === 'syncing' ? 'Syncing…' : status.state === 'error' ? 'Sync error' : status.state === 'offline' ? 'Offline' : 'Sync off'}
+    <button onClick={onClick} className={cx('hidden items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex', tone)} title={tr('Cloud sync: {state}. Last synced {ago}.', { state: tr(LABEL[status.state]), ago: ago(status.lastSyncedAt) })}>
+      ☁️ {status.state === 'synced' ? tr('Synced') : status.state === 'syncing' ? tr('Syncing…') : status.state === 'error' ? tr('Sync error') : status.state === 'offline' ? tr('Offline') : tr('Sync off')}
       {status.pending > 0 && status.state !== 'syncing' && <span className="tabular-nums">· {status.pending}</span>}
     </button>
   );
@@ -62,15 +64,15 @@ function ConfigForm({ onDone }: { onDone?: () => void }) {
         onDone?.();
       }}
     >
-      <Field label="Supabase project URL" hint="Supabase → Project Settings → API → Project URL">
+      <Field label={tr('Supabase project URL')} hint={tr('Supabase → Project Settings → API → Project URL')}>
         <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://abcd1234.supabase.co" type="url" required />
       </Field>
-      <Field label="Anon (public) key" hint="The 'anon public' key — never the service_role key.">
+      <Field label={tr('Anon (public) key')} hint={tr('The ‘anon public’ key — never the service_role key.')}>
         <input className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} placeholder="eyJhbGciOi…" required autoComplete="off" spellCheck={false} />
       </Field>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={busy || !url || !key}>
-          Save
+          {tr('Save')}
         </Button>
         {cloud.defaultConfig() && (
           <Button
@@ -81,7 +83,7 @@ function ConfigForm({ onDone }: { onDone?: () => void }) {
               onDone?.();
             }}
           >
-            Use the app's built-in settings
+            {tr('Use the app’s built-in settings')}
           </Button>
         )}
       </div>
@@ -105,7 +107,7 @@ function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
       if (kind === 'up') {
         const r = await cloud.signUp(email.trim(), pw);
         if (r === 'confirm-email') {
-          setMsg({ ok: true, text: 'Account created. Open the confirmation email, then sign in here.' });
+          setMsg({ ok: true, text: tr('Account created. Open the confirmation email, then sign in here.') });
           return;
         }
       } else await cloud.signIn(email.trim(), pw);
@@ -115,26 +117,26 @@ function SignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
       onSignedIn?.();
     } catch (err) {
       const m = (err as Error).message;
-      setMsg({ ok: false, text: /failed to fetch|network/i.test(m) ? "Can't reach Supabase. Check the project URL and your internet connection." : m });
+      setMsg({ ok: false, text: /failed to fetch|network/i.test(m) ? tr('Can’t reach Supabase. Check the project URL and your internet connection.') : m });
     } finally {
       setBusy(false);
     }
   };
   return (
     <form className="space-y-3" onSubmit={(e) => run(e, 'in')}>
-      <Field label="Parent email">
+      <Field label={tr('Parent email')}>
         <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
       </Field>
-      <Field label="Password" hint="At least 6 characters. It becomes your dashboard password too — one login for everything.">
+      <Field label={tr('Password')} hint={tr('At least 6 characters. It becomes your dashboard password too — one login for everything.')}>
         <input className={inputClass} type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required autoComplete="current-password" />
       </Field>
       {msg && <p className={`text-sm font-semibold ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={busy || !email || pw.length < 6}>
-          Sign in
+          {tr('Sign in')}
         </Button>
         <Button type="button" variant="secondary" disabled={busy || !email || pw.length < 6} onClick={(e) => run(e, 'up')}>
-          Create parent account
+          {tr('Create parent account')}
         </Button>
       </div>
     </form>
@@ -154,19 +156,19 @@ export function LinkChoice() {
     }
   };
   return (
-    <Modal open={status.state === 'needs-choice'} onClose={() => void cloud.unlink()} title="This device and the cloud both have data">
+    <Modal open={status.state === 'needs-choice'} onClose={() => void cloud.unlink()} title={tr('This device and the cloud both have data')}>
       <div className="space-y-3 text-sm">
-        <p>Choose what to keep on this device:</p>
+        <p>{tr('Choose what to keep on this device:')}</p>
         <button disabled={busy} onClick={() => choose('cloud')} className="w-full rounded-xl p-3 text-left ring-1 ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800">
-          <b>Use the cloud data (recommended for a new device)</b>
-          <span className="block text-slate-500">This device's data is replaced by your family's cloud data.</span>
+          <b>{tr('Use the cloud data (recommended for a new device)')}</b>
+          <span className="block text-slate-500">{tr('This device’s data is replaced by your family’s cloud data.')}</span>
         </button>
         <button disabled={busy} onClick={() => choose('merge')} className="w-full rounded-xl p-3 text-left ring-1 ring-slate-200 hover:bg-slate-50 dark:ring-slate-700 dark:hover:bg-slate-800">
-          <b>Merge both</b>
-          <span className="block text-slate-500">Keep the children and progress from both. The cloud's parent password is kept.</span>
+          <b>{tr('Merge both')}</b>
+          <span className="block text-slate-500">{tr('Keep the children and progress from both. The cloud’s parent password is kept.')}</span>
         </button>
         <button disabled={busy} onClick={() => void cloud.unlink()} className="text-sm font-semibold text-slate-500 hover:underline">
-          Cancel — don't sync this device
+          {tr('Cancel — don’t sync this device')}
         </button>
       </div>
     </Modal>
@@ -197,7 +199,7 @@ function FamilyCode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const make = async () => {
-    if (code && !confirm('Make a new code? The old code stops working (devices already connected stay connected).')) return;
+    if (code && !confirm(tr('Make a new code? The old code stops working (devices already connected stay connected).'))) return;
     setBusy(true);
     try {
       setCode(await cloud.newFamilyCode());
@@ -211,48 +213,50 @@ function FamilyCode() {
   return (
     <div className="space-y-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
       <div>
-        <p className="font-semibold">Family code</p>
+        <p className="font-semibold">{tr('Family code')}</p>
         <p className="text-slate-500">
-          Your child uses this once to join the family: in the kid app, <b>New account</b> (their own email, for 12+) or <b>Code only</b> (no email). After that they just sign in.
+          {tr('Your child uses this once to join the family: in the kid app, {newAccount} (their own email, for 12+) or {codeOnly} (no email). After that they just sign in.')
+            .split(/(\{newAccount\}|\{codeOnly\})/)
+            .map((part, i) => (part === '{newAccount}' ? <b key={i}>{tr('New account')}</b> : part === '{codeOnly}' ? <b key={i}>{tr('Code only')}</b> : part))}
         </p>
       </div>
-      {code === undefined && !err && <p className="text-slate-500">Loading…</p>}
+      {code === undefined && !err && <p className="text-slate-500">{tr('Loading…')}</p>}
       {code && (
         <div className="flex flex-wrap items-center gap-3">
           <code className="rounded-lg bg-white px-4 py-2 font-mono text-2xl font-bold tracking-widest ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">{code}</code>
           <Button variant="secondary" onClick={() => void navigator.clipboard?.writeText(code)}>
-            Copy
+            {tr('Copy')}
           </Button>
         </div>
       )}
       {code !== undefined && (
         <Button variant={code ? 'ghost' : 'primary'} disabled={busy} onClick={make}>
-          {code ? 'Make a new code' : 'Make a family code'}
+          {code ? tr('Make a new code') : tr('Make a family code')}
         </Button>
       )}
       {err && <p className="text-rose-600">{err}</p>}
       {devices.length > 0 && (
         <div>
-          <p className="font-semibold">Family logins</p>
-          <p className="text-xs text-slate-500">Your children’s own accounts and the devices that joined with the code. Only these and your account can see your family’s data.</p>
+          <p className="font-semibold">{tr('Family logins')}</p>
+          <p className="text-xs text-slate-500">{tr('Your children’s own accounts and the devices that joined with the code. Only these and your account can see your family’s data.')}</p>
           <ul className="mt-1 divide-y divide-slate-200 dark:divide-slate-700">
             {devices.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 py-1.5">
                 <span>
-                  {d.email ? `👤 ${d.email}` : `📱 ${d.label || 'Device'} (family code)`}{' '}
+                  {d.email ? `👤 ${d.email}` : tr('📱 {name} (family code)', { name: d.label || tr('Device') })}{' '}
                   <span className="text-slate-500">
-                    {d.email && d.label ? `· ${d.label} ` : ''}· since {new Date(d.joinedAt).toLocaleDateString()}
+                    {d.email && d.label ? `· ${d.label} ` : ''}{tr('· since {date}', { date: new Date(d.joinedAt).toLocaleDateString() })}
                   </span>
                 </span>
                 <button
                   className="text-sm font-semibold text-rose-600 hover:underline"
                   onClick={async () => {
-                    if (!confirm(`Remove "${d.email || d.label || 'this device'}" from the family? It stops syncing and can't see your family's data any more.`)) return;
+                    if (!confirm(tr('Remove “{name}” from the family? It stops syncing and can’t see your family’s data any more.', { name: d.email || d.label || tr('this device') }))) return;
                     await cloud.removeDevice(d.id);
                     void load();
                   }}
                 >
-                  Disconnect
+                  {tr('Disconnect')}
                 </button>
               </li>
             ))}
@@ -283,7 +287,9 @@ export function CloudCardBody() {
     return (
       <div className="space-y-3">
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Sync your child's progress between devices (for example their laptop and your phone) through your own free Supabase project. Follow <b>supabase/README.md</b> in the project to create it and run <b>supabase/setup.sql</b>, then paste the two values here.
+          {tr('Sync your child’s progress between devices (for example their laptop and your phone) through your own free Supabase project. Follow {readme} in the project to create it and run {sql}, then paste the two values here.')
+            .split(/(\{readme\}|\{sql\})/)
+            .map((part, i) => (part === '{readme}' ? <b key={i}>supabase/README.md</b> : part === '{sql}' ? <b key={i}>supabase/setup.sql</b> : part))}
         </p>
         <ConfigForm onDone={() => setEditConfig(false)} />
       </div>
@@ -300,27 +306,27 @@ export function CloudCardBody() {
   return (
     <div className="space-y-4 text-sm">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="text-slate-500">Project</dt>
+        <dt className="text-slate-500">{tr('Project')}</dt>
         <dd className="truncate">
           {cfgHost}{' '}
           <button className="font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => setEditConfig(true)}>
-            Change
+            {tr('Change')}
           </button>
         </dd>
-        <dt className="text-slate-500">Status</dt>
-        <dd className={cx('font-semibold', status.state === 'error' && 'text-rose-600')}>{LABEL[status.state]}</dd>
+        <dt className="text-slate-500">{tr('Status')}</dt>
+        <dd className={cx('font-semibold', status.state === 'error' && 'text-rose-600')}>{tr(LABEL[status.state])}</dd>
         {(status.email || status.viaCode) && (
           <>
-            <dt className="text-slate-500">Account</dt>
-            <dd>{status.viaCode ? 'Connected with the family code' : status.email}</dd>
+            <dt className="text-slate-500">{tr('Account')}</dt>
+            <dd>{status.viaCode ? tr('Connected with the family code') : status.email}</dd>
           </>
         )}
         {status.state !== 'signed-out' && status.state !== 'needs-link' && (
           <>
-            <dt className="text-slate-500">Last synced</dt>
+            <dt className="text-slate-500">{tr('Last synced')}</dt>
             <dd>{ago(status.lastSyncedAt)}</dd>
-            <dt className="text-slate-500">Waiting to upload</dt>
-            <dd className="tabular-nums">{status.pending} changes</dd>
+            <dt className="text-slate-500">{tr('Waiting to upload')}</dt>
+            <dd className="tabular-nums">{tr('{n} changes', { n: status.pending })}</dd>
           </>
         )}
       </dl>
@@ -329,19 +335,19 @@ export function CloudCardBody() {
       {status.state === 'signed-out' && <SignInForm />}
       {status.state === 'needs-link' && (
         <div className="space-y-2">
-          <p>You're signed in, but this device isn't syncing yet.</p>
+          <p>{tr('You’re signed in, but this device isn’t syncing yet.')}</p>
           <Button disabled={busy} onClick={() => act(() => cloud.link('auto'))}>
-            Start syncing this device
+            {tr('Start syncing this device')}
           </Button>
         </div>
       )}
       {status.state !== 'signed-out' && status.state !== 'needs-link' && (
         <div className="flex flex-wrap gap-2">
           <Button disabled={busy || status.state === 'syncing'} onClick={() => act(() => cloud.syncNow())}>
-            Sync now
+            {tr('Sync now')}
           </Button>
           <Button variant="secondary" disabled={busy} onClick={() => act(() => cloud.unlink())}>
-            Stop syncing this device
+            {tr('Stop syncing this device')}
           </Button>
           <Button
             variant="secondary"
@@ -349,19 +355,19 @@ export function CloudCardBody() {
             onClick={() =>
               act(() =>
                 confirmSignOut(cloud, {
-                  ask: 'Sign out of Atlas on this device?\n\nYour family’s data stays safe in the cloud and is removed from this device. Sign in again any time to get it back.',
-                  unsynced: 'Sign out anyway? Progress made on this device since the last sync will be lost.',
+                  ask: tr('Sign out of Atlas on this device?\n\nYour family’s data stays safe in the cloud and is removed from this device. Sign in again any time to get it back.'),
+                  unsynced: tr('Sign out anyway? Progress made on this device since the last sync will be lost.'),
                 }),
               )
             }
           >
-            Sign out
+            {tr('Sign out')}
           </Button>
         </div>
       )}
       {status.state !== 'signed-out' && status.state !== 'needs-link' && status.role === 'parent' && <FamilyCode />}
       <p className="text-xs text-slate-500">
-        Your phone or computer: sign in here once. Your child's devices: they type the family code in the kid app — you don't need to touch them. Uploaded files (PDFs, images) stay on the device where they were added; flashcards imported from CSV do sync.
+        {tr('Your phone or computer: sign in here once. Your child’s devices: they type the family code in the kid app — you don’t need to touch them. Uploaded files (PDFs, images) stay on the device where they were added; flashcards imported from CSV do sync.')}
       </p>
       <LinkChoice />
     </div>
@@ -380,12 +386,12 @@ export function CloudRestore({ onCancel }: { onCancel: () => void }) {
         <SignInForm />
       ) : (
         <p className="text-sm">
-          {status.state === 'syncing' ? 'Downloading your family data…' : status.state === 'error' ? status.error : LABEL[status.state]}
+          {status.state === 'syncing' ? tr('Downloading your family’s data…') : status.state === 'error' ? status.error : tr(LABEL[status.state])}
         </p>
       )}
       <LinkChoice />
       <button onClick={onCancel} className="text-sm font-semibold text-slate-500 hover:underline">
-        ← Set up a new family instead
+        {tr('← Set up a new family instead')}
       </button>
     </div>
   );

@@ -1,10 +1,34 @@
 import type { StudentProfile } from '@atlas/db';
 import { EXAMS, computeInsights, dailyMinutes, levelFromXp, planDay } from '@atlas/engine';
-import { WRITING_PROMPTS, getConcept } from '@atlas/knowledge';
+import { LESSONS_VI, WRITING_PROMPTS, getConcept } from '@atlas/knowledge';
 import { DAY_MS } from '@atlas/shared';
 import { Button, Card, Marked, Stat, useQuery } from '@atlas/ui';
 import { MasteryHeatmap, SubjectBars, WeeklyBars } from '../components/charts';
-import { tr } from '../i18n';
+import { tr, useParentLang } from '../i18n';
+
+/** The engine writes its notes in English; show them in the parent's language. */
+function trDetail(d: string): string {
+  let m = d.match(/^(\d+)% correct in the last 2 weeks$/);
+  if (m) return tr('{n}% correct in the last 2 weeks', { n: m[1] });
+  m = d.match(/^mastery (\d+)\/100$/);
+  if (m) return tr('mastery {n}/100', { n: m[1] });
+  return d;
+}
+function trRecommendation(r: string, struggle?: { name: string; conceptId: string }): string {
+  if (struggle && r.startsWith(`Focus on ${struggle.name}`)) {
+    const vi = useParentLang.getState().lang === 'vi';
+    const tip = (vi && LESSONS_VI[struggle.conceptId]) || getConcept(struggle.conceptId)?.lesson;
+    return tip ? tr('Focus on {name} — tip: {tip}', { name: struggle.name, tip }) : tr('Focus on {name}', { name: struggle.name });
+  }
+  let m = r.match(/^Average daily study is (\d+) min — the target is 20\+\. Short daily sessions beat long weekend ones\.$/);
+  if (m) return tr('Average daily study is {n} min — the target is 20+. Short daily sessions beat long weekend ones.', { n: m[1] });
+  m = r.match(/^(.+) is the weakest subject \(avg mastery (\d+)\)\. Consider setting it as a focus goal\.$/);
+  if (m) return tr('{subject} is the weakest subject (avg mastery {n}). Consider setting it as a focus goal.', { subject: tr(m[1]), n: m[2] });
+  m = r.match(/^(\d+) concepts are due for review — today's missions will prioritise them\.$/);
+  if (m) return tr("{n} concepts are due for review — today's missions will prioritise them.", { n: m[1] });
+  if (r === 'Great balance this week. Keep the streak going!') return tr('Great balance this week. Keep the streak going!');
+  return r;
+}
 import { useParent } from '../store';
 
 const PLACEMENT_LABELS = (): Record<string, string> => ({
@@ -94,7 +118,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                 <ul className="space-y-1.5 text-sm">
                   {ins.struggles.map((s) => (
                     <li key={s.conceptId}>
-                      <b>{s.name}</b> <span className="text-slate-500">— {s.detail}</span>
+                      <b>{s.name}</b> <span className="text-slate-500">— {trDetail(s.detail)}</span>
                     </li>
                   ))}
                 </ul>
@@ -108,7 +132,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
                 <ul className="space-y-1.5 text-sm">
                   {ins.strengths.map((s) => (
                     <li key={s.conceptId}>
-                      <b>{s.name}</b> <span className="text-slate-500">— {s.detail}</span>
+                      <b>{s.name}</b> <span className="text-slate-500">— {trDetail(s.detail)}</span>
                     </li>
                   ))}
                 </ul>
@@ -121,7 +145,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
             <h3 className="mb-2 text-sm font-bold text-brand-700 dark:text-brand-400">{tr('🎯 Recommended focus')}</h3>
             <ul className="list-disc space-y-1 pl-5 text-sm">
               {ins.recommended.map((r) => (
-                <li key={r}>{r}</li>
+                <li key={r}>{trRecommendation(r, ins.struggles[0])}</li>
               ))}
             </ul>
           </div>
@@ -133,7 +157,7 @@ export function Dashboard({ student }: { student: StudentProfile }) {
               <li key={i} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
                 <span className="w-12 font-bold tabular-nums">{tr('{n} min', { n: b.minutes })}</span>
                 <span className="flex-1">
-                  {b.kind === 'boss' && b.label === 'Boss Battle' ? tr('Boss Battle') : b.label}
+                  {b.kind === 'boss' && b.label === 'Boss Battle' ? tr('Boss Battle') : tr(b.label)}
                   <span className="block text-xs text-slate-500">
                     {b.kind === 'boss' ? tr('mixed review battle') : b.conceptIds.map((c) => getConcept(c)?.name).join(', ')}
                   </span>

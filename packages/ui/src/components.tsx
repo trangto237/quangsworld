@@ -95,11 +95,11 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 export const inputClass =
   'w-full rounded-xl border-0 bg-white px-3 py-2.5 text-sm ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none dark:bg-slate-800 dark:ring-slate-700';
 
-export function ThemeToggle({ mode, onCycle, className }: { mode: ThemeMode; onCycle: () => void; className?: string }) {
+export function ThemeToggle({ mode, onCycle, className, label }: { mode: ThemeMode; onCycle: () => void; className?: string; /** The mode's name in the app's language. */ label?: string }) {
   const icon = mode === 'dark' ? '🌙' : mode === 'light' ? '☀️' : '🖥️';
   return (
-    <button onClick={onCycle} className={cx('rounded-xl px-3 py-2 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10', className)} title={`Theme: ${mode}`} aria-label={`Theme: ${mode}. Click to change.`}>
-      {icon} <span className="hidden sm:inline capitalize">{mode}</span>
+    <button onClick={onCycle} className={cx('rounded-xl px-3 py-2 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10', className)} title={`Theme: ${label ?? mode}`} aria-label={`Theme: ${label ?? mode}. Click to change.`}>
+      {icon} <span className="hidden sm:inline capitalize">{label ?? mode}</span>
     </button>
   );
 }

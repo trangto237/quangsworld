@@ -84,7 +84,7 @@ export function App() {
             )}
             <InstallButton labels={installLabels()} className="rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:bg-slate-100 dark:text-brand-400 dark:hover:bg-slate-800" />
             <LangToggle />
-            <ThemeToggle mode={mode} onCycle={cycle} />
+            <ThemeToggle mode={mode} onCycle={cycle} label={mode === 'dark' ? tr('Dark') : mode === 'light' ? tr('Light') : tr('System')} />
             <a href={`/?play=${student.id}`} title={tr('Open {name}’s app on this device', { name: student.name })} className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">
               ▶ {tr('{name}’s app', { name: student.name })}
             </a>

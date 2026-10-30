@@ -5,6 +5,7 @@ import { BusyError, generateWithAI, transcribeWithAI } from '../lib/ai';
 import { docxText, pdfText } from '../lib/extract';
 import { openPdf, pageJpeg, photoJpeg } from '../lib/ocr';
 import { useCloud } from './Cloud';
+import { tr } from '../i18n';
 
 type Focus = 'reading' | 'grammar' | 'vocabulary';
 const FOCUS: { id: Focus; label: string }[] = [
@@ -74,12 +75,12 @@ export function LitImport() {
         setFile({ name: f.name, kind: 'text', size: f.size, pages: 1, text: await f.text() });
       } else {
         const photos = list.filter((x) => /^image\//.test(x.type));
-        if (!photos.length) return setError('Choose a PDF, a Word file, or photos of the pages.');
-        if (photos.length > MAX_PAGES) return setError(`At most ${MAX_PAGES} photos at a time.`);
-        setFile({ name: photos.length === 1 ? photos[0].name : `${photos.length} photos`, kind: 'image', size: photos.reduce((s, x) => s + x.size, 0), pages: photos.length, photos });
+        if (!photos.length) return setError(tr('Choose a PDF, a Word file, or photos of the pages.'));
+        if (photos.length > MAX_PAGES) return setError(tr('At most {n} photos at a time.', { n: MAX_PAGES }));
+        setFile({ name: photos.length === 1 ? photos[0].name : tr('{n} photos', { n: photos.length }), kind: 'image', size: photos.reduce((s, x) => s + x.size, 0), pages: photos.length, photos });
       }
     } catch {
-      setError("This file couldn't be opened.");
+      setError(tr("This file couldn't be opened."));
     }
   };
 
@@ -87,13 +88,13 @@ export function LitImport() {
   const readImages = async (token: string, images: { mediaType: string; data: string }[]) => {
     const out: string[] = [];
     for (let i = 0; i < images.length; i += 6) {
-      setBusy(`Reading pages ${i + 1}–${Math.min(images.length, i + 6)} of ${images.length} with AI…`);
+      setBusy(tr('Reading pages {from}–{to} of {total} with AI…', { from: i + 1, to: Math.min(images.length, i + 6), total: images.length }));
       let pages: string[];
       try {
         pages = await transcribeWithAI(token, images.slice(i, i + 6));
       } catch (e) {
         if (!(e instanceof BusyError)) throw e;
-        setBusy('The AI is busy — trying again in 20 seconds…');
+        setBusy(tr('The AI is busy — trying again in 20 seconds…'));
         await new Promise((r) => setTimeout(r, 20_000));
         pages = await transcribeWithAI(token, images.slice(i, i + 6));
       }
@@ -109,7 +110,7 @@ export function LitImport() {
     setDone(null);
     try {
       const token = await cloud.parentAccessToken();
-      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      if (!token) throw new Error(tr('Sign in to your family cloud account first (Settings → Cloud sync).'));
       let text = file.text ?? '';
       if (file.kind === 'pdf') {
         const layer = await pdfText(file.bytes!).catch(() => null);
@@ -118,7 +119,7 @@ export function LitImport() {
           const pdf = await openPdf(file.bytes!);
           const images = [];
           for (let n = from; n <= to; n++) {
-            setBusy(`Preparing page ${n - from + 1} of ${to - from + 1}…`);
+            setBusy(tr('Preparing page {n} of {total}…', { n: n - from + 1, total: to - from + 1 }));
             images.push(await pageJpeg(pdf, n, 1500));
           }
           text = await readImages(token, images);
@@ -126,7 +127,7 @@ export function LitImport() {
       } else if (file.kind === 'image') {
         const images = [];
         for (const [i, f] of file.photos!.entries()) {
-          setBusy(`Preparing photo ${i + 1} of ${file.photos!.length}…`);
+          setBusy(tr('Preparing photo {n} of {total}…', { n: i + 1, total: file.photos!.length }));
           const url = URL.createObjectURL(f);
           try {
             images.push(await photoJpeg(url, 1500));
@@ -137,19 +138,19 @@ export function LitImport() {
         text = await readImages(token, images);
       }
       text = text.trim();
-      if (text.replace(/\s/g, '').length < 200) throw new Error('Too little text was found on these pages. Check the page numbers, or use clearer photos.');
+      if (text.replace(/\s/g, '').length < 200) throw new Error(tr('Too little text was found on these pages. Check the page numbers, or use clearer photos.'));
       setExcerpt(text.slice(0, 600));
-      setBusy(`Writing about ${count} questions with AI… (about a minute)`);
+      setBusy(tr('Writing about {n} questions with AI… (about a minute)', { n: count }));
       let res;
       try {
         res = await generateWithAI(token, { name: unit.title, kind: 'text', size: text.length, text: text.slice(0, 59_000) }, { unitTitle: `Ngữ văn 9 — ${unit.title}`, focus, count, subject: 'literature' });
       } catch (e) {
         if (!(e instanceof BusyError)) throw e;
-        setBusy('The AI is busy — trying again in 20 seconds…');
+        setBusy(tr('The AI is busy — trying again in 20 seconds…'));
         await new Promise((r) => setTimeout(r, 20_000));
         res = await generateWithAI(token, { name: unit.title, kind: 'text', size: text.length, text: text.slice(0, 59_000) }, { unitTitle: `Ngữ văn 9 — ${unit.title}`, focus, count, subject: 'literature' });
       }
-      if (!res.drafts.length) throw new Error('No usable questions came back. Try clearer pages.');
+      if (!res.drafts.length) throw new Error(tr('No usable questions came back. Try clearer pages.'));
       setDrafts(res.drafts.filter((d) => d.type !== 'order').map((d) => ({ ...d, keep: true })));
     } catch (e) {
       setError((e as Error).message);
@@ -173,7 +174,11 @@ export function LitImport() {
         excerpt,
         subject: 'literature',
       });
-      setDone(`${res.added} questions saved as missions in the Story Library (${unit.title})${res.skipped ? `; ${res.skipped} were already there` : ''}.`);
+      setDone(
+        res.skipped
+          ? tr('{n} questions saved as missions in the Story Library ({unit}); {skipped} were already there.', { n: res.added, unit: unit.title, skipped: res.skipped })
+          : tr('{n} questions saved as missions in the Story Library ({unit}).', { n: res.added, unit: unit.title }),
+      );
       setDrafts(null);
       setFile(null);
     } catch (e) {
@@ -184,37 +189,36 @@ export function LitImport() {
   const kept = drafts?.filter((d) => d.keep).length ?? 0;
 
   return (
-    <Card title="Ngữ văn textbook → questions (Vietnamese)" className="lg:col-span-2">
+    <Card title={tr('Ngữ văn textbook → questions (Vietnamese)')} className="lg:col-span-2">
       <div className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Upload the pages of one bài from Quang's Ngữ văn 9 book (the texts, Thực hành tiếng Việt and the exercises). AI writes questions in Vietnamese about those exact texts, you tick
-          the ones to keep, and they become missions in his Story Library. The pages stay private to your family.
+          {tr("Upload the pages of one bài from Quang's Ngữ văn 9 book (the texts, Thực hành tiếng Việt and the exercises). AI writes questions in Vietnamese about those exact texts, you tick the ones to keep, and they become missions in his Story Library. The pages stay private to your family.")}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Which bài?">
+          <Field label={tr('Which bài?')}>
             <select className={inputClass} value={bai} onChange={(e) => setBai(e.target.value)}>
               {NGU_VAN_9.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.title}
                 </option>
               ))}
-              <option value="other">Something else (type a name)</option>
+              <option value="other">{tr('Something else (type a name)')}</option>
             </select>
           </Field>
-          <Field label={bai === 'other' ? 'Name' : "Bài's title (optional)"} hint="e.g. Thế giới kì ảo">
+          <Field label={bai === 'other' ? tr('Name') : tr("Bài's title (optional)")} hint={tr('e.g. Thế giới kì ảo')}>
             <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="Pages: PDF, Word, or photos">
+          <Field label={tr('Pages: PDF, Word, or photos')}>
             <input type="file" accept=".pdf,.docx,.txt,image/jpeg,image/png,image/webp" multiple className={inputClass} onChange={(e) => void pick(e.target.files)} />
           </Field>
         </div>
         {file?.kind === 'pdf' && (
           <div className="flex flex-wrap items-end gap-3 text-sm">
-            <span className="pb-2">{file.pages} pages — use pages</span>
-            <input type="number" min={1} max={file.pages} value={from} onChange={(e) => setFrom(Math.max(1, Math.min(file.pages, Number(e.target.value) || 1)))} className={cx(inputClass, 'w-20')} aria-label="From page" />
-            <span className="pb-2">to</span>
-            <input type="number" min={from} max={file.pages} value={to} onChange={(e) => setTo(Math.max(from, Math.min(file.pages, Number(e.target.value) || from)))} className={cx(inputClass, 'w-20')} aria-label="To page" />
-            {to - from + 1 > MAX_PAGES && <span className="pb-2 text-rose-600">At most {MAX_PAGES} pages — one bài at a time.</span>}
+            <span className="pb-2">{tr('{n} pages — use pages', { n: file.pages })}</span>
+            <input type="number" min={1} max={file.pages} value={from} onChange={(e) => setFrom(Math.max(1, Math.min(file.pages, Number(e.target.value) || 1)))} className={cx(inputClass, 'w-20')} aria-label={tr('From page')} />
+            <span className="pb-2">{tr('to')}</span>
+            <input type="number" min={from} max={file.pages} value={to} onChange={(e) => setTo(Math.max(from, Math.min(file.pages, Number(e.target.value) || from)))} className={cx(inputClass, 'w-20')} aria-label={tr('To page')} />
+            {to - from + 1 > MAX_PAGES && <span className="pb-2 text-rose-600">{tr('At most {n} pages — one bài at a time.', { n: MAX_PAGES })}</span>}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -225,12 +229,12 @@ export function LitImport() {
             </label>
           ))}
           <label className="flex items-center gap-1.5">
-            About <input type="number" min={5} max={40} value={count} onChange={(e) => setCount(Math.max(5, Math.min(40, Number(e.target.value) || 20)))} className={cx(inputClass, 'w-20')} /> questions
+            {tr('About')} <input type="number" min={5} max={40} value={count} onChange={(e) => setCount(Math.max(5, Math.min(40, Number(e.target.value) || 20)))} className={cx(inputClass, 'w-20')} /> {tr('questions')}
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!file || !!busy || !focus.length || to - from + 1 > MAX_PAGES} onClick={() => void make()}>
-            ✨ Make questions with AI
+            {tr('✨ Make questions with AI')}
           </Button>
           {busy && <span className="text-sm text-slate-500">{busy}</span>}
         </div>
@@ -241,13 +245,13 @@ export function LitImport() {
           <div className="space-y-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <b>
-                {kept} of {drafts.length} questions ticked
+                {tr('{n} of {total} questions ticked', { n: kept, total: drafts.length })}
               </b>
               <button className="underline" onClick={() => setDrafts(drafts.map((d) => ({ ...d, keep: true })))}>
-                tick all
+                {tr('tick all')}
               </button>
               <button className="underline" onClick={() => setDrafts(drafts.map((d) => ({ ...d, keep: false })))}>
-                untick all
+                {tr('untick all')}
               </button>
             </div>
             <ol className="space-y-2">
@@ -276,10 +280,10 @@ export function LitImport() {
             </ol>
             <div className="flex gap-2">
               <Button disabled={!kept} onClick={() => void save()}>
-                Save {kept} questions to the Story Library
+                {tr('Save {n} questions to the Story Library', { n: kept })}
               </Button>
               <Button variant="ghost" onClick={() => setDrafts(null)}>
-                Cancel
+                {tr('Cancel')}
               </Button>
             </div>
           </div>
