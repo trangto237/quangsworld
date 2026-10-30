@@ -182,6 +182,17 @@ export function mixMission(conceptIds: string[], title: string, states: Record<s
   };
 }
 
+/**
+ * A mix across several islands, like a real exam paper: the islands take turns (number, algebra,
+ * geometry, number, …) and inside each island the weakest and due topics come first.
+ */
+export function realmMixMission(groups: string[][], title: string, states: Record<string, ConceptState> = {}, minutes = 10): Mission {
+  const sorted = groups.filter((g) => g.length).map((g) => mixMission(g, title, states).concepts);
+  const concepts: string[] = [];
+  for (let i = 0; sorted.some((g) => i < g.length); i++) for (const g of sorted) if (i < g.length) concepts.push(g[i]);
+  return { ...mixMission(concepts, title, states, minutes), id: `mix-realm-${Date.now()}`, concepts };
+}
+
 export function conceptMission(conceptId: string, minutes = 5): Mission {
   const c = getConcept(conceptId);
   return {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { playScreen } from '../lib/islands';
 import type { StudentProfile } from '@atlas/db';
-import { isDue, levelFromXp, stars, studyStreak } from '@atlas/engine';
+import { isDue, levelFromXp, realmMixMission, stars, studyStreak } from '@atlas/engine';
 import { DAY_MS } from '@atlas/shared';
-import { conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
+import { WORLDS, conceptsInWorld, visibleWorlds } from '@atlas/knowledge';
 import { useQuery, useRepo } from '@atlas/ui';
 import { todayPlan } from '../lib/plan';
 import { getSlots, inSlot } from '../lib/equipped';
@@ -232,6 +232,17 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
   }, [grew?.id]);
   const enter = (i: number) => go({ name: 'realm', realmId: (slides[i].realm ?? 'home') as RealmId | 'home' });
   const inside = realm ? slides[slideOf(realm)] : null;
+  // Inside a realm: a mix of all its islands, like an exam paper (the Olympiad Spire stays separate: much harder).
+  const realmDef = inside?.realm ? REALMS.find((r) => r.id === inside.realm) : undefined;
+  const mixGroups = realmDef
+    ? realmDef.places
+        .filter((id) => id !== 'olympiad-spire')
+        .map((id) => WORLDS.find((w) => w.id === id))
+        .map((w) => (w ? conceptsInWorld(w).map((c) => c.id) : []))
+        .filter((g) => g.length)
+    : [];
+  const canMix = mixGroups.flat().length > 1;
+  const playRealmMix = () => realmDef && go({ name: 'battle', mission: realmMixMission(mixGroups, `🎲 ${tr(lang, realmDef.name)}`, states), fromPlan: false });
   // Evening colours for the sky and the map together (a filter, so the map has no visible edge).
   const nightRealm = !!inside?.realm && !!layoutFor(inside.realm as LayoutId).night;
   const tint = nightRealm || phase === 'day' ? undefined : phase === 'night' ? 'brightness(0.66) saturate(0.85)' : 'sepia(0.12) saturate(1.08) brightness(0.98)';
@@ -393,9 +404,11 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
           // Today's quest: tap the card for the list, or Play to start it. (The bottom bar has no Play here.)
           <div className="town-panel mx-auto flex w-full max-w-xl items-center gap-3 px-3 py-1.5">
             <button onClick={() => go({ name: 'quests' })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-              <Ribbon>
-                <T en="Today's quest" />
-              </Ribbon>
+              <span className={cx('shrink-0', canMix && 'hidden sm:block')}>
+                <Ribbon>
+                  <T en="Today's quest" />
+                </Ribbon>
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-display text-sm font-bold leading-tight">{next ? next.title : <T en="All done for today! 🏆" />}</span>
                 <Meter value={doneCount} max={plan.missions.length} className="mt-0.5 h-2" />
@@ -404,6 +417,11 @@ export function Town({ student, realm }: { student: StudentProfile; realm?: Real
                 {doneCount}/{plan.missions.length}
               </span>
             </button>
+            {canMix && (
+              <TownButton tone="amber" onClick={playRealmMix} title={tr(lang, 'Mix every topic of this realm, like an exam')}>
+                <TB en="🎲 Mix" />
+              </TownButton>
+            )}
             {next && (
               <TownButton tone="green" onClick={() => go(playScreen(next, true))}>
                 <TB en="▶ Play" />

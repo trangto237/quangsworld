@@ -802,6 +802,8 @@ const VI: Record<string, string> = {
   'Create my account →': 'Tạo tài khoản →',
   'Sign in →': 'Đăng nhập →',
   'Connect to my family': 'Kết nối với gia đình',
+  'Mix every topic of this realm, like an exam': 'Trộn tất cả chủ đề của vùng này, giống bài thi',
+  '🎲 Mix': '🎲 Trộn',
   'Signing in…': 'Đang đăng nhập…',
   'Username or email': 'Tên đăng nhập hoặc email',
   'Children: use the username your parent made for you. Parents: use your email.': 'Con: dùng tên đăng nhập bố mẹ tạo cho con. Bố mẹ: dùng email của mình.',
