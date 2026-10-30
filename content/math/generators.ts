@@ -22,7 +22,7 @@ export interface Generated {
 
 export type Generator = (difficulty: number, r: () => number) => Generated;
 
-import { frac, int, nz, numeric, pick, signed } from './util';
+import { frac, int, num, nz, numeric, pick, pn, signed } from './util';
 import { grade9Generators } from './grade9';
 import { geometry9Generators } from './geometry9';
 import { number9Generators } from './number9';
@@ -132,15 +132,30 @@ const raw: Record<string, Generator> = {
     const x = nz(r, d <= 2 ? 1 : -9, 12);
     if (d <= 1) {
       const b = int(r, 1, 20);
-      return { prompt: `Solve: x + ${b} = ${x + b}`, ...numeric(x, [x + 2 * b, b, -x], r) };
+      return {
+        prompt: `Solve: x + ${b} = ${x + b}`,
+        ...numeric(x, [x + 2 * b, b, -x], r),
+        explanation: `Get x on its own: undo "+ ${b}" by subtracting ${b} from both sides.\nx = ${x + b} − ${b} = ${x}.\nCareful: subtract ${b}, don't add it.`,
+        explanationVi: `Đưa x về một mình một vế: bỏ "+ ${b}" bằng cách trừ cả hai vế cho ${b}.\nx = ${x + b} − ${b} = ${x}.\nChú ý: phải trừ ${b}, không phải cộng.`,
+      };
     }
     if (d === 2) {
       const a = int(r, 2, 9), b = int(r, 1, 15);
-      return { prompt: `Solve: ${a}x + ${b} = ${a * x + b}`, ...numeric(x, [(a * x + b + b) / a, a * x, x + 1], r) };
+      return {
+        prompt: `Solve: ${a}x + ${b} = ${a * x + b}`,
+        ...numeric(x, [(a * x + b + b) / a, a * x, x + 1], r),
+        explanation: `Undo the steps in reverse order. First subtract ${b} from both sides: ${a}x = ${a * x + b} − ${b} = ${a * x}.\nThen ${a}x means ${a} × x, so divide both sides by ${a}: x = ${a * x} ÷ ${a} = ${x}.\nCheck: ${a}·${x} + ${b} = ${a * x + b} ✓.`,
+        explanationVi: `Làm ngược lại từng bước. Trước hết trừ cả hai vế cho ${b}: ${a}x = ${a * x + b} − ${b} = ${a * x}.\n${a}x là ${a} nhân x, nên chia cả hai vế cho ${a}: x = ${a * x} : ${a} = ${x}.\nThử lại: ${a}·${x} + ${b} = ${a * x + b} ✓.`,
+      };
     }
     if (d === 3) {
       const a = int(r, 2, 9), b = nz(r, -15, 15);
-      return { prompt: `Solve: ${a}x ${signed(b)} = ${a * x + b}`, ...numeric(x, [(a * x + 2 * b) / a, -x, x + b], r) };
+      return {
+        prompt: `Solve: ${a}x ${signed(b)} = ${a * x + b}`,
+        ...numeric(x, [(a * x + 2 * b) / a, -x, x + b], r),
+        explanation: `Move ${num(b)} to the right side; a term changes its sign when it crosses "=": ${a}x = ${num(a * x + b)} ${signed(-b)} = ${num(a * x)}.\nDivide both sides by ${a}: x = ${num(a * x)} ÷ ${a} = ${num(x)}.\nCheck: ${a}·${pn(x)} ${signed(b)} = ${num(a * x + b)} ✓.`,
+        explanationVi: `Chuyển ${num(b)} sang vế phải; chuyển vế thì đổi dấu: ${a}x = ${num(a * x + b)} ${signed(-b)} = ${num(a * x)}.\nChia cả hai vế cho ${a}: x = ${num(a * x)} : ${a} = ${num(x)}.\nThử lại: ${a}·${pn(x)} ${signed(b)} = ${num(a * x + b)} ✓.`,
+      };
     }
     const a = int(r, 3, 9), c = int(r, 1, a - 1), b = nz(r, -10, 10);
     const rhsConst = a * x + b - c * x;
@@ -148,7 +163,8 @@ const raw: Record<string, Generator> = {
     return {
       prompt: `Solve: ${a}x ${signed(b)} = ${c}x ${signed(rhsConst)}`,
       ...numeric(ans, [(rhsConst - b) / (a + c), -ans, (rhsConst + b) / (a - c)], r, (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2))),
-      explanation: 'Collect the x terms on one side and the numbers on the other.',
+      explanation: `Collect the x terms on the left and the numbers on the right (a term changes sign when it crosses "="): ${a}x − ${c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nDivide both sides by ${a - c}: x = ${num(rhsConst - b)} ÷ ${a - c} = ${num(x)}.`}\nCareful: ${c}x moves to the left as −${c}x, so the x terms are subtracted, not added.`,
+      explanationVi: `Chuyển các hạng tử chứa x sang vế trái, các số sang vế phải (chuyển vế thì đổi dấu): ${a}x − ${c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nChia cả hai vế cho ${a - c}: x = ${num(rhsConst - b)} : ${a - c} = ${num(x)}.`}\nChú ý: ${c}x chuyển sang trái thành −${c}x, nên trừ chứ không cộng.`,
     };
   },
 
@@ -265,18 +281,38 @@ const raw: Record<string, Generator> = {
   'math.reasoning.word-problems': (d, r) => {
     if (d <= 2) {
       const pens = int(r, 2, 9), price = int(r, 3, 15) * 1000;
-      return { prompt: `Lan buys ${pens} pens at ${price.toLocaleString('en')} VND each. How much does she pay (VND)?`, ...numeric(pens * price, [pens + price, pens * price + price, (pens - 1) * price], r, (v) => v.toLocaleString('en')) };
+      return {
+        prompt: `Lan buys ${pens} pens at ${price.toLocaleString('en')} VND each. How much does she pay (VND)?`,
+        ...numeric(pens * price, [pens + price, pens * price + price, (pens - 1) * price], r, (v) => v.toLocaleString('en')),
+        explanation: `Total cost = number of pens × price of one pen.\n${pens} × ${price.toLocaleString('en')} = ${(pens * price).toLocaleString('en')} VND.`,
+        explanationVi: `Số tiền = số bút × giá một cây bút.\n${pens} × ${price.toLocaleString('en').replace(/,/g, '.')} = ${(pens * price).toLocaleString('en').replace(/,/g, '.')} đồng.`,
+      };
     }
     if (d <= 3) {
       const x = int(r, 3, 20), k = int(r, 2, 4);
-      return { prompt: `Minh is ${k} times as old as his sister. Together they are ${x * (k + 1)} years old. How old is the sister?`, ...numeric(x, [x * k, (x * (k + 1)) / k, x + k], r) };
+      return {
+        prompt: `Minh is ${k} times as old as his sister. Together they are ${x * (k + 1)} years old. How old is the sister?`,
+        ...numeric(x, [x * k, (x * (k + 1)) / k, x + k], r),
+        explanation: `Let the sister's age be x. Minh is ${k} times as old, so he is ${k}x.\nTogether: x + ${k}x = ${k + 1}x = ${x * (k + 1)}.\nx = ${x * (k + 1)} ÷ ${k + 1} = ${x}. The sister is ${x} (and Minh ${x * k}).\nCareful: divide by ${k + 1} (the sister counts as 1 part, Minh as ${k} parts), not by ${k}.`,
+        explanationVi: `Gọi tuổi em gái là x. Minh gấp ${k} lần tuổi em nên Minh ${k}x tuổi.\nCả hai: x + ${k}x = ${k + 1}x = ${x * (k + 1)}.\nx = ${x * (k + 1)} : ${k + 1} = ${x}. Em gái ${x} tuổi (Minh ${x * k} tuổi).\nChú ý: chia cho ${k + 1} (em là 1 phần, Minh là ${k} phần), không chia cho ${k}.`,
+      };
     }
     if (d <= 4) {
       const speed = int(r, 4, 12) * 5, t = int(r, 2, 5);
-      return { prompt: `A train travels at ${speed} km/h for ${t} hours and then ${speed + 10} km/h for 1 hour. Total distance (km)?`, ...numeric(speed * t + speed + 10, [speed * (t + 1), speed * t, (speed + 10) * (t + 1)], r) };
+      return {
+        prompt: `A train travels at ${speed} km/h for ${t} hours and then ${speed + 10} km/h for 1 hour. Total distance (km)?`,
+        ...numeric(speed * t + speed + 10, [speed * (t + 1), speed * t, (speed + 10) * (t + 1)], r),
+        explanation: `Distance = speed × time, worked out for each part of the trip.\nPart 1: ${speed} × ${t} = ${speed * t} km. Part 2: ${speed + 10} × 1 = ${speed + 10} km.\nTotal: ${speed * t} + ${speed + 10} = ${speed * t + speed + 10} km.`,
+        explanationVi: `Quãng đường = vận tốc × thời gian, tính cho từng đoạn.\nĐoạn 1: ${speed} × ${t} = ${speed * t} km. Đoạn 2: ${speed + 10} × 1 = ${speed + 10} km.\nTổng: ${speed * t} + ${speed + 10} = ${speed * t + speed + 10} km.`,
+      };
     }
     const w = int(r, 3, 10), l = w + int(r, 2, 6);
-    return { prompt: `A rectangle's length is ${l - w} cm more than its width. Its perimeter is ${2 * (l + w)} cm. Find the width (cm).`, ...numeric(w, [l, (l + w) / 2, w + 1], r) };
+    return {
+      prompt: `A rectangle's length is ${l - w} cm more than its width. Its perimeter is ${2 * (l + w)} cm. Find the width (cm).`,
+      ...numeric(w, [l, (l + w) / 2, w + 1], r),
+      explanation: `Perimeter = 2 × (length + width), so length + width = ${2 * (l + w)} ÷ 2 = ${l + w}.\nLet the width be x; the length is x + ${l - w}: x + x + ${l - w} = ${l + w}.\n2x = ${l + w} − ${l - w} = ${2 * w}, so x = ${2 * w} ÷ 2 = ${w} cm.`,
+      explanationVi: `Chu vi = 2 × (dài + rộng), nên dài + rộng = ${2 * (l + w)} : 2 = ${l + w}.\nGọi chiều rộng là x; chiều dài là x + ${l - w}: x + x + ${l - w} = ${l + w}.\n2x = ${l + w} − ${l - w} = ${2 * w}, nên x = ${2 * w} : 2 = ${w} cm.`,
+    };
   },
 };
 
