@@ -47,4 +47,68 @@ const TIMEKEEPING: IeltsPassage = {
   ],
 };
 
-export const passagesA: IeltsPassage[] = [TIMEKEEPING];
+const BEES: IeltsPassage = {
+  id: 'bee-dance',
+  title: 'The language of the hive',
+  level: 4,
+  paragraphs: [
+    'A healthy honeybee colony may contain fifty thousand insects, and every day thousands of them leave the hive to collect nectar and pollen. Flowers, however, are scattered across the landscape, and they open and close at different times. A colony that waited for each forager to find food by chance would soon go hungry. Bees therefore need a way of telling one another where the best flowers are, and they must do so inside a dark, crowded hive, without words and largely without sight.',
+    'The first person to explain how they manage this was the Austrian biologist Karl von Frisch. Over several decades in the first half of the twentieth century, he marked individual bees with small spots of paint, placed dishes of sugar water at measured distances from the hive and watched what happened through a glass-walled observation hive. He noticed that returning foragers often performed a lively circling movement on the honeycomb, which he called the round dance. This told other bees that food was close to the hive, but it did not seem to tell them in which direction to fly. When the food was farther away, the foragers performed a quite different movement, the waggle dance. For this work, von Frisch shared the Nobel Prize in 1973 with two other scientists who studied animal behaviour.',
+    'In the waggle dance, the forager walks forward in a straight line on the vertical surface of the comb, shaking its body rapidly from side to side. It then loops back to its starting point, alternately to the left and to the right, and repeats the movement many times. The angle between this straight run and the vertical represents the angle between the food and the sun, so a run pointing straight up means "fly towards the sun". The length of time that the bee spends waggling indicates the distance: the longer the waggle, the farther the flowers. Because the sun moves across the sky, a bee that keeps dancing for an hour gradually changes its angle to keep the message correct.',
+    'Not everyone was convinced. In the 1960s, a group of critics argued that the dance might be nothing more than a display of excitement. In their view, new foragers found the food simply by following the scent of the flowers that clung to the dancer’s body. The debate continued for years, because it was hard to separate the two kinds of information. A clever answer came from Dr Ingrid Solberg, a fictional engineer whose laboratory built a small robotic bee controlled by a computer. When the robot performed a waggle dance without any scent, bees still flew in the direction it indicated. Interestingly, the robot only succeeded when its tiny wings vibrated to produce a buzzing sound, suggesting that the dance is heard and felt as well as seen.',
+    'The final piece of evidence came from tracking the flights themselves. A team led by Dr Pavel Novak, also fictional, glued tiny radar tags to the backs of bees that had just watched a dance and followed them across open fields. Most of the recruits flew almost directly to the area the dance described, which supported von Frisch. Yet very few landed on the food straight away. Instead, they covered the final few metres by searching in zigzags, probably following the scent of the flowers. The dance, in other words, brings bees to the right neighbourhood, while smell guides them to the right address.',
+    'More recent studies have shown that the waggle dance is only one part of a wider system of signals. A forager that has been attacked at a flower, for example, may butt its head against dancers advertising the same place and give a short, high-pitched buzz. This so-called stop signal makes the dancers give up sooner, so that fewer bees are sent into danger. No single bee, not even the queen, directs this activity. Instead, thousands of small exchanges between individual workers allow the colony to shift its effort from poor flowers to rich ones within a few hours, behaving almost as if it were a single thinking animal.',
+  ],
+  glossary: ['nectar: the sweet liquid inside flowers that bees turn into honey', 'forager: a bee that leaves the hive to collect food'],
+  features: {
+    instruction: 'Matching features — Which person or group is this? A: Karl von Frisch, B: the critics of the 1960s, C: Dr Ingrid Solberg, D: Dr Pavel Novak’s team',
+    options: ['Karl von Frisch', 'the critics of the 1960s', 'Dr Ingrid Solberg', 'Dr Pavel Novak’s team'],
+    items: [
+      { item: 'used a machine to imitate a dancing bee', answer: 'Dr Ingrid Solberg', why: 'Her laboratory "built a small robotic bee controlled by a computer". "Machine" paraphrases "robotic bee".' },
+      { item: 'followed the routes taken by individual insects', answer: 'Dr Pavel Novak’s team', why: 'They "glued tiny radar tags" to bees and "followed them across open fields". Von Frisch also watched bees, but only inside the hive and at the dishes.' },
+      { item: 'claimed that the dance might only show that a bee was excited', answer: 'the critics of the 1960s', why: 'They argued the dance "might be nothing more than a display of excitement".' },
+      { item: 'identified two different dances for different distances', answer: 'Karl von Frisch', why: 'He named the round dance (food "close to the hive") and the waggle dance (food "farther away").' },
+      { item: 'made individual insects easy to recognise', answer: 'Karl von Frisch', why: 'He "marked individual bees with small spots of paint". The trap is Novak’s radar tags: these were for tracking flights, not recognising bees in the hive.', d: 5 },
+    ],
+  },
+  mc: [
+    {
+      question: 'According to von Frisch, what did the round dance tell other bees?',
+      answer: 'that food could be found near the hive',
+      wrong: ['the exact direction in which to fly', 'that the food was a long way from the hive', 'which kind of flower had produced the nectar'],
+      why: 'The round dance "told other bees that food was close to the hive, but it did not seem to tell them in which direction". "A long way" describes the waggle dance.',
+    },
+    {
+      question: 'What does the writer say about bees that dance for a long period?',
+      answer: 'They alter their dance to allow for the movement of the sun.',
+      wrong: ['They waggle for longer to show that the food is better.', 'They always point straight up towards the sun.', 'They stop dancing when the sun goes behind clouds.'],
+      why: '"A bee that keeps dancing for an hour gradually changes its angle to keep the message correct." A longer waggle means a greater DISTANCE, not better food.',
+    },
+    {
+      question: 'What did the experiment with the robotic bee show?',
+      answer: 'Sound was a necessary part of the dance message.',
+      wrong: ['Recruits needed the scent of flowers to follow the robot.', 'Bees paid no attention to a dancer that was not alive.', 'The robot recruited more bees than a real forager did.'],
+      why: 'The robot "only succeeded when its tiny wings vibrated to produce a buzzing sound". It worked "without any scent", so the first option is the opposite. Real and robot bees are never compared.',
+      d: 5,
+    },
+  ],
+  completion: [
+    {
+      kind: 'flow-chart',
+      title: 'How a waggle dance leads recruits to food',
+      limit: 2,
+      gaps: [
+        { text: 'The dancer makes a straight run; its angle from ___ shows the direction of the food compared with the sun. →', answer: 'the vertical', accept: ['vertical'], why: '"The angle between this straight run and the vertical represents the angle between the food and the sun".' },
+        { text: 'The time spent waggling shows the ___ to the flowers. →', answer: 'distance', why: '"The length of time that the bee spends waggling indicates the distance". "Direction" is shown by the angle, not the time.' },
+        { text: 'Recruits fly to the general area, then find the food by searching ___.', answer: 'in zigzags', why: '"they covered the final few metres by searching in zigzags". The answer must fit after "searching", so "scent" does not work here.', d: 5 },
+      ],
+    },
+  ],
+  tfng: [
+    { statement: 'Von Frisch received the Nobel Prize together with other researchers.', answer: 'TRUE', why: 'He "shared the Nobel Prize in 1973 with two other scientists".', d: 3 },
+    { statement: 'The stop signal is mainly given by young worker bees.', answer: 'NOT GIVEN', why: 'The passage says a forager "that has been attacked" gives the signal, but says nothing about the age of the bees.' },
+    { statement: 'The queen decides which flowers the foragers should visit.', answer: 'FALSE', why: '"No single bee, not even the queen, directs this activity." The colony shifts its effort through many small exchanges between workers.' },
+  ],
+};
+
+export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES];
