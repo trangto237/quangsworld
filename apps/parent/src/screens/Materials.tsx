@@ -4,6 +4,7 @@ import { Button, Card, Field, inputClass, useQuery, useRepo } from '@atlas/ui';
 import { ImportWizard } from '../components/ImportWizard';
 import { ExamImport } from '../components/ExamImport';
 import { LitImport } from '../components/LitImport';
+import { tr } from '../i18n';
 
 const SAMPLE = 'term,meaning\nabundant,existing in large quantities\nbrief,lasting a short time\ncautious,careful to avoid risk\ndiligent,showing care and effort\neager,wanting to do something very much';
 
@@ -22,7 +23,7 @@ export function Materials() {
   let previewError: string | null = null;
   if (csv.trim()) {
     try {
-      preview = flashcardsToConcept(csv, deck || 'Deck');
+      preview = flashcardsToConcept(csv, deck || tr('Deck'));
     } catch (e) {
       previewError = (e as Error).message;
     }
@@ -34,18 +35,18 @@ export function Materials() {
       <LitImport />
       <ExamImport />
 
-      <Card title="Flashcard deck (CSV)">
+      <Card title={tr('Flashcard deck (CSV)')}>
         <div className="space-y-3">
-          <Field label="Deck name">
-            <input className={inputClass} value={deck} onChange={(e) => setDeck(e.target.value)} placeholder="e.g. Oxford Unit 3" />
+          <Field label={tr('Deck name')}>
+            <input className={inputClass} value={deck} onChange={(e) => setDeck(e.target.value)} placeholder={tr('e.g. Oxford Unit 3')} />
           </Field>
-          <Field label="Cards — one per line: term,meaning" hint="Comma, semicolon or tab separated. A header row is detected automatically.">
+          <Field label={tr('Cards — one per line: term,meaning')} hint={tr('Comma, semicolon or tab separated. A header row is detected automatically.')}>
             <textarea className={`${inputClass} h-36 font-mono text-xs`} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={SAMPLE} />
           </Field>
           {previewError && <p className="text-sm text-rose-600">{previewError}</p>}
           {preview && (
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              {preview.cards.length} cards → {preview.questions.length} game questions, e.g. <i>{preview.questions[0].prompt}</i>
+              {tr('{cards} cards → {questions} game questions, e.g.', { cards: preview.cards.length, questions: preview.questions.length })} <i>{preview.questions[0].prompt}</i>
             </p>
           )}
           <div className="flex gap-2">
@@ -53,22 +54,22 @@ export function Materials() {
               disabled={!preview || !deck.trim()}
               onClick={async () => {
                 const res = await repo.importFlashcards(deck.trim(), csv);
-                setMsg({ ok: true, text: `“${deck}” is now a mission in the Word Garden (${res.questions.length} questions).` });
+                setMsg({ ok: true, text: tr('“{deck}” is now a mission in the Word Garden ({n} questions).', { deck, n: res.questions.length }) });
                 setCsv('');
                 setDeck('');
               }}
             >
-              Import deck
+              {tr('Import deck')}
             </Button>
-            <Button variant="ghost" onClick={() => (setCsv(SAMPLE), setDeck('Sample deck'))}>
-              Use sample
+            <Button variant="ghost" onClick={() => (setCsv(SAMPLE), setDeck(tr('Sample deck')))}>
+              {tr('Use sample')}
             </Button>
           </div>
           {msg && <p className={`text-sm font-semibold ${msg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{msg.text}</p>}
         </div>
       </Card>
 
-      <Card title="Family library" className="lg:col-span-2">
+      <Card title={tr('Family library')} className="lg:col-span-2">
         {materials.length ? (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {materials.map((m) => (
@@ -81,16 +82,16 @@ export function Materials() {
                   </span>
                 </span>
                 <span className={`rounded px-2 py-0.5 text-xs font-semibold ${m.status === 'processed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                  {m.status}
+                  {{ processed: tr('processed'), stored: tr('stored'), failed: tr('failed') }[m.status] ?? m.status}
                 </span>
-                <Button variant="ghost" onClick={() => confirm(`Delete “${m.name}”?`) && void repo.deleteMaterial(m.id)}>
-                  Delete
+                <Button variant="ghost" onClick={() => confirm(tr('Delete “{name}”?', { name: m.name })) && void repo.deleteMaterial(m.id)}>
+                  {tr('Delete')}
                 </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500">No materials yet.</p>
+          <p className="text-sm text-slate-500">{tr('No materials yet.')}</p>
         )}
       </Card>
     </div>
