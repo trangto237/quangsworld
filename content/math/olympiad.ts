@@ -99,8 +99,8 @@ add(LOGIC, 4, 'Four islanders are knights (always truthful) or liars (always lyi
 });
 add(LOGIC, 3, 'A mother is 4 times as old as her son. In 20 years she will be twice as old as him. How old is the son now?', ['10', '20', '5', '15'], {
   promptVi: 'Tuổi mẹ gấp 4 lần tuổi con. Sau 20 năm nữa, tuổi mẹ gấp đôi tuổi con. Hiện nay con bao nhiêu tuổi?',
-  explanation: 'Let the son be s: 4s + 20 = 2(s + 20), so 2s = 20 and s = 10.',
-  explanationVi: 'Gọi tuổi con là s: 4s + 20 = 2(s + 20), nên 2s = 20, s = 10.',
+  explanation: 'Let the son be s years old now; the mother is 4s.\nIn 20 years: son s + 20, mother 4s + 20, and she is twice as old: 4s + 20 = 2(s + 20) = 2s + 40.\n4s − 2s = 40 − 20 ⇒ 2s = 20 ⇒ s = 10.',
+  explanationVi: 'Gọi tuổi con hiện nay là s; tuổi mẹ là 4s.\nSau 20 năm: con s + 20, mẹ 4s + 20, và mẹ gấp đôi con: 4s + 20 = 2(s + 20) = 2s + 40.\n4s − 2s = 40 − 20 ⇒ 2s = 20 ⇒ s = 10.',
 });
 add(LOGIC, 4, 'A clock strikes once at 1 o\'clock, twice at 2 o\'clock, …, 12 times at 12 o\'clock, and also strikes once at every half hour. How many strikes does it make in 24 hours?', ['180', '156', '204', '168'], {
   promptVi: 'Một chiếc đồng hồ đánh 1 tiếng lúc 1 giờ, 2 tiếng lúc 2 giờ, …, 12 tiếng lúc 12 giờ, và đánh thêm 1 tiếng vào mỗi lúc rưỡi. Trong 24 giờ đồng hồ đánh bao nhiêu tiếng?',
@@ -226,8 +226,8 @@ add(ARITH, 3, 'The average of five numbers is 18. When one number is removed, th
 });
 add(ARITH, 4, 'After 4 tests Quang\'s average mark is 7.5. What mark must he get in the 5th test to raise his average to 8?', ['10', '8.5', '9.5', '9'], {
   promptVi: 'Sau 4 bài kiểm tra, điểm trung bình của Quang là 7,5. Bài thứ 5 Quang phải được bao nhiêu điểm để điểm trung bình tăng lên 8?',
-  explanation: 'He needs a total of 5 × 8 = 40 and has 4 × 7.5 = 30, so he needs 10.',
-  explanationVi: 'Cần tổng 5 × 8 = 40 điểm, đã có 4 × 7,5 = 30, nên bài thứ 5 cần 10 điểm.',
+  explanation: 'Average = total ÷ number of tests, so total = average × number of tests.\nNow: 4 × 7.5 = 30. Needed: 5 × 8 = 40.\nThe 5th test must give 40 − 30 = 10.',
+  explanationVi: 'Trung bình = tổng điểm : số bài, nên tổng điểm = trung bình × số bài.\nHiện có: 4 × 7,5 = 30. Cần: 5 × 8 = 40.\nBài thứ 5 cần 40 − 30 = 10 điểm.',
 });
 add(ARITH, 4, 'Calculate: (1 − 1/4)(1 − 1/9)(1 − 1/16) … (1 − 1/100)', ['11/20', '1/10', '9/10', '11/100'], {
   promptVi: 'Tính: (1 − 1/4)(1 − 1/9)(1 − 1/16) … (1 − 1/100)',
@@ -246,8 +246,8 @@ add(ARITH, 5, 'Calculate: 1·2 + 2·3 + 3·4 + … + 20·21', ['3080', '2870', '
 });
 add(ARITH, 4, 'Given 1² + 2² + … + n² = n(n + 1)(2n + 1)/6, calculate 11² + 12² + 13² + … + 20².', ['2485', '2870', '385', '2255'], {
   promptVi: 'Biết 1² + 2² + … + n² = n(n + 1)(2n + 1)/6, tính 11² + 12² + 13² + … + 20².',
-  explanation: '(1² + … + 20²) − (1² + … + 10²) = 2870 − 385 = 2485.',
-  explanationVi: '(1² + … + 20²) − (1² + … + 10²) = 2870 − 385 = 2485.',
+  explanation: '11² + … + 20² = (1² + … + 20²) − (1² + … + 10²): take the sum up to 20 and remove the first ten squares.\nn = 20: 20·21·41/6 = 2870. n = 10: 10·11·21/6 = 385.\n2870 − 385 = 2485.',
+  explanationVi: '11² + … + 20² = (1² + … + 20²) − (1² + … + 10²): lấy tổng đến 20 rồi bỏ mười bình phương đầu.\nn = 20: 20·21·41/6 = 2870. n = 10: 10·11·21/6 = 385.\n2870 − 385 = 2485.',
 });
 add(ARITH, 5, 'Calculate: 1/(1 + 2) + 1/(1 + 2 + 3) + 1/(1 + 2 + 3 + 4) + … + 1/(1 + 2 + … + 20)', ['19/21', '20/21', '19/42', '10/21'], {
   promptVi: 'Tính: 1/(1 + 2) + 1/(1 + 2 + 3) + 1/(1 + 2 + 3 + 4) + … + 1/(1 + 2 + … + 20)',
@@ -276,8 +276,8 @@ add(ARITH, 4, 'What is the sum of the digits of 11111 × 11111?', ['25', '10', '
 });
 add(ARITH, 3, 'Calculate: 2025 × 2027 − 2026²', ['−1', '1', '0', '−2'], {
   promptVi: 'Tính: 2025 × 2027 − 2026²',
-  explanation: '2025 × 2027 = (2026 − 1)(2026 + 1) = 2026² − 1, so the answer is −1.',
-  explanationVi: '2025 × 2027 = (2026 − 1)(2026 + 1) = 2026² − 1, nên kết quả là −1.',
+  explanation: 'Write the numbers around 2026: 2025 = 2026 − 1 and 2027 = 2026 + 1.\nDifference of two squares (a − b)(a + b) = a² − b²: 2025 × 2027 = 2026² − 1.\nSo 2025 × 2027 − 2026² = 2026² − 1 − 2026² = −1.',
+  explanationVi: 'Viết theo 2026: 2025 = 2026 − 1, 2027 = 2026 + 1.\nHằng đẳng thức (a − b)(a + b) = a² − b²: 2025 × 2027 = 2026² − 1.\nVậy 2025 × 2027 − 2026² = 2026² − 1 − 2026² = −1.',
 });
 add(ARITH, 4, 'Calculate: 1 + 1/2 + 1/4 + 1/8 + … + 1/1024', ['2047/1024', '2', '1023/1024', '2049/1024'], {
   promptVi: 'Tính: 1 + 1/2 + 1/4 + 1/8 + … + 1/1024',
@@ -323,8 +323,8 @@ add(NT, 4, 'Find the smallest positive whole number that leaves remainder 1 when
 });
 add(NT, 3, 'How many positive divisors does 360 have?', ['24', '12', '18', '36'], {
   promptVi: 'Số 360 có bao nhiêu ước nguyên dương?',
-  explanation: '360 = 2³ × 3² × 5, so it has (3 + 1)(2 + 1)(1 + 1) = 24 divisors.',
-  explanationVi: '360 = 2³ × 3² × 5, nên có (3 + 1)(2 + 1)(1 + 1) = 24 ước.',
+  explanation: 'Write 360 as a product of primes: 360 = 2³ × 3² × 5.\nA divisor uses 2 to a power 0–3 (4 choices), 3 to a power 0–2 (3 choices) and 5 to a power 0–1 (2 choices).\nSo there are (3 + 1)(2 + 1)(1 + 1) = 4 × 3 × 2 = 24 divisors.',
+  explanationVi: 'Phân tích 360 ra thừa số nguyên tố: 360 = 2³ × 3² × 5.\nMột ước gồm 2 với số mũ 0–3 (4 cách), 3 với số mũ 0–2 (3 cách), 5 với số mũ 0–1 (2 cách).\nVậy có (3 + 1)(2 + 1)(1 + 1) = 4 × 3 × 2 = 24 ước.',
 });
 add(NT, 4, 'How many whole numbers from 1 to 1000 are divisible by 3 or by 5 (or both)?', ['467', '533', '400', '466'], {
   promptVi: 'Từ 1 đến 1000 có bao nhiêu số chia hết cho 3 hoặc cho 5 (hoặc cả hai)?',
@@ -348,8 +348,8 @@ add(NT, 4, 'How many zeros are at the end of 2026! = 1 × 2 × 3 × … × 2026?
 });
 add(NT, 3, 'Three lighthouses flash every 12, 18 and 30 seconds. They all flash together at exactly 8:00:00. When do they next all flash together?', ['8:03:00', '8:01:30', '8:06:00', '8:01:00'], {
   promptVi: 'Ba ngọn hải đăng chớp sáng cứ 12 giây, 18 giây và 30 giây một lần. Chúng cùng chớp lúc đúng 8:00:00. Lần tiếp theo cả ba cùng chớp là lúc mấy giờ?',
-  explanation: 'LCM(12, 18, 30) = 180 seconds = 3 minutes, so at 8:03:00.',
-  explanationVi: 'BCNN(12, 18, 30) = 180 giây = 3 phút, nên lúc 8:03:00.',
+  explanation: 'They flash together again after the lowest common multiple (LCM) of 12, 18 and 30 seconds.\n12 = 2²·3, 18 = 2·3², 30 = 2·3·5. LCM = take each prime with its highest power: 2²·3²·5 = 180.\n180 seconds = 3 minutes, so at 8:03:00.',
+  explanationVi: 'Chúng cùng chớp lại sau một khoảng bằng bội chung nhỏ nhất (BCNN) của 12, 18 và 30 giây.\n12 = 2²·3, 18 = 2·3², 30 = 2·3·5. BCNN = tích các thừa số nguyên tố với số mũ lớn nhất: 2²·3²·5 = 180.\n180 giây = 3 phút, nên lúc 8:03:00.',
 });
 add(NT, 3, 'A florist has 84 red roses and 126 white roses and makes identical bouquets using all of them (each bouquet has the same number of red and the same number of white roses). What is the largest number of bouquets?', ['42', '21', '14', '210'], {
   promptVi: 'Một cửa hàng hoa có 84 bông hồng đỏ và 126 bông hồng trắng, bó thành các bó giống hệt nhau và dùng hết số hoa (mỗi bó có số hồng đỏ như nhau, số hồng trắng như nhau). Có thể bó được nhiều nhất bao nhiêu bó?',
@@ -363,8 +363,8 @@ add(NT, 5, 'What is the sum of the digits of 10²⁵ − 25?', ['219', '225', '2
 });
 add(NT, 3, 'How many prime numbers are there between 50 and 100?', ['10', '9', '11', '12'], {
   promptVi: 'Có bao nhiêu số nguyên tố nằm giữa 50 và 100?',
-  explanation: '53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — ten primes.',
-  explanationVi: '53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — mười số nguyên tố.',
+  explanation: 'A prime has no divisors except 1 and itself. A number below 100 that is not prime has a prime factor 2, 3, 5 or 7 (because 11² = 121 > 100).\nCross out the multiples of 2, 3, 5 and 7 between 50 and 100. What is left: 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — ten primes.',
+  explanationVi: 'Số nguyên tố chỉ có hai ước là 1 và chính nó. Số nhỏ hơn 100 mà không nguyên tố thì có ước nguyên tố 2, 3, 5 hoặc 7 (vì 11² = 121 > 100).\nGạch bỏ các bội của 2, 3, 5, 7 từ 50 đến 100. Còn lại: 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 — mười số nguyên tố.',
 });
 add(NT, 4, 'p and q are prime numbers with p + q = 103. What is p × q?', ['202', '2650', '206', '101'], {
   promptVi: 'p và q là hai số nguyên tố có p + q = 103. Tính p × q.',
@@ -425,13 +425,13 @@ add(COMB, 4, 'Moving only one unit right or one unit up along grid lines, how ma
 });
 add(COMB, 3, 'At a party, each of 12 guests shakes hands once with every other guest. How many handshakes are there?', ['66', '132', '144', '78'], {
   promptVi: 'Trong một bữa tiệc, mỗi người trong 12 khách bắt tay đúng một lần với mỗi người khác. Có tất cả bao nhiêu cái bắt tay?',
-  explanation: 'Each handshake is a pair of guests: 12 × 11 ÷ 2 = 66.',
-  explanationVi: 'Mỗi cái bắt tay ứng với một cặp khách: 12 × 11 : 2 = 66.',
+  explanation: 'Each guest shakes hands with the 11 others: 12 × 11 = 132.\nBut every handshake involves two guests, so it was counted twice: 132 ÷ 2 = 66.',
+  explanationVi: 'Mỗi khách bắt tay 11 người còn lại: 12 × 11 = 132.\nNhưng mỗi cái bắt tay có hai người nên được đếm hai lần: 132 : 2 = 66.',
 });
 add(COMB, 4, 'In a chess tournament every two players met exactly once, and 45 games were played. How many players were there?', ['10', '9', '15', '45'], {
   promptVi: 'Trong một giải cờ vua, hai kì thủ bất kì gặp nhau đúng một lần, và có tất cả 45 ván đấu. Giải có bao nhiêu kì thủ?',
-  explanation: 'n players play n(n − 1)/2 games. n(n − 1) = 90 = 10 × 9, so n = 10.',
-  explanationVi: 'n kì thủ đấu n(n − 1)/2 ván. n(n − 1) = 90 = 10 × 9, nên n = 10.',
+  explanation: 'With n players, each plays n − 1 others, and each game has two players, so there are n(n − 1)/2 games.\nn(n − 1)/2 = 45 ⇒ n(n − 1) = 90.\n90 = 10 × 9 (two numbers next to each other), so n = 10.',
+  explanationVi: 'Có n kì thủ, mỗi người đấu với n − 1 người khác, mỗi ván có hai người, nên có n(n − 1)/2 ván.\nn(n − 1)/2 = 45 ⇒ n(n − 1) = 90.\n90 = 10 × 9 (hai số liên tiếp), nên n = 10.',
 });
 add(COMB, 3, 'How many diagonals does a convex 12-sided polygon have?', ['54', '66', '108', '48'], {
   promptVi: 'Một đa giác lồi 12 cạnh có bao nhiêu đường chéo?',
@@ -557,8 +557,8 @@ add(GEO, 5, 'Square ABCD and equilateral triangle ABE share the side AB, and E l
 });
 add(GEO, 3, 'A right triangle has legs of 20 cm and 21 cm. How long is its hypotenuse?', ['29 cm', '41 cm', '30 cm', '28 cm'], {
   promptVi: 'Một tam giác vuông có hai cạnh góc vuông dài 20 cm và 21 cm. Cạnh huyền dài bao nhiêu?',
-  explanation: '20² + 21² = 400 + 441 = 841 = 29², so the hypotenuse is 29 cm.',
-  explanationVi: '20² + 21² = 400 + 441 = 841 = 29², nên cạnh huyền dài 29 cm.',
+  explanation: 'Pythagoras: hypotenuse² = leg² + leg².\n20² + 21² = 400 + 441 = 841.\n841 = 29², so the hypotenuse is √841 = 29 cm.',
+  explanationVi: 'Định lí Pythagore: cạnh huyền² = tổng bình phương hai cạnh góc vuông.\n20² + 21² = 400 + 441 = 841.\n841 = 29², nên cạnh huyền dài √841 = 29 cm.',
 });
 add(GEO, 4, 'A rectangle has a diagonal of 25 cm and one side of 7 cm. What is its area?', ['168 cm²', '175 cm²', '84 cm²', '336 cm²'], {
   promptVi: 'Một hình chữ nhật có đường chéo dài 25 cm và một cạnh dài 7 cm. Tính diện tích hình chữ nhật.',
