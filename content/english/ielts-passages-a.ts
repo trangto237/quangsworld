@@ -111,4 +111,45 @@ const BEES: IeltsPassage = {
   ],
 };
 
-export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES];
+const HEAT_ISLANDS: IeltsPassage = {
+  id: 'urban-heat-islands',
+  title: 'Why cities run hot',
+  level: 3,
+  paragraphs: [
+    'Anyone who has left a city on a summer evening and driven into the countryside may have noticed the air becoming cooler. This is not imagination. Large towns and cities are usually warmer than the land around them, a pattern known as the urban heat island. The idea is not new. In the early nineteenth century, Luke Howard, a London chemist who studied the weather in his free time, compared his own records with those from villages outside the city and found that central London was regularly warmer. Today, measurements show that the difference is often one to three degrees Celsius during the day, but on calm, clear nights it can reach ten degrees or more in very large cities.',
+    'The main cause lies in the materials that cities are made of. Roads, car parks and pavements are covered in dark asphalt, and buildings are made of concrete, brick and stone. These surfaces absorb a great deal of sunlight and store its energy as heat. In the countryside, the ground cools quickly once the sun goes down, but in a city the stored heat is slowly released throughout the evening and night. For this reason, the gap between urban and rural temperatures is usually largest not in the afternoon but in the hours after dark.',
+    'A second cause is the lack of plants. Trees and grass cool the air around them by releasing water through their leaves, in much the same way as sweating cools the human body. In cities, much of the ground is sealed, and rainwater is carried away quickly through drains instead of soaking into the soil, so there is far less moisture available for cooling. Tall buildings make matters worse by blocking the wind that would otherwise carry warm air away. Finally, cities produce their own heat. Cars, factories and especially air conditioners throw out waste heat into the streets, so that the more people try to cool their homes, the warmer the outside air becomes.',
+    'These extra degrees can have serious effects. Heat waves are more dangerous in cities than in rural areas because temperatures remain high at night, and the human body has no chance to recover. Elderly people and those with heart problems are most at risk. Higher temperatures also increase the demand for electricity and speed up the chemical reactions that produce some kinds of air pollution. The effects are not shared equally. In a survey of a fictional city called Westhaven, researchers found that poorer neighbourhoods, where there were few trees and many tightly packed buildings, were up to four degrees hotter on summer afternoons than wealthy districts with large gardens and tree-lined streets.',
+    'Fortunately, there are several ways to cool a city. One of the simplest is to paint roofs white or cover them with light-coloured materials, which reflect sunlight instead of absorbing it. Another is to grow plants on roofs and walls. Above all, many experts recommend planting more trees, which provide shade as well as cooling the air. Dr Amara Osei, an invented scientist whose team placed temperature sensors across one city for a whole summer, found that a large park could lower the temperature not only inside the park itself but also in streets several hundred metres away. A number of small green spaces spread across a district, she found, could have a similar effect.',
+    'None of these solutions is perfect. Trees take many years to grow, and in dry cities they need large amounts of water to survive. White roofs work well in hot climates, but in places with cold winters they can increase heating costs, because the building loses the warmth it would have gained from the sun. City planners therefore have to choose the right mix of measures for their own climate. As the world’s population becomes increasingly urban and summers grow hotter, these decisions are likely to affect the health and comfort of billions of people.',
+  ],
+  glossary: ['asphalt: a black, sticky material used to cover roads', 'rural: connected with the countryside'],
+  tfng: [
+    { statement: 'Luke Howard studied the weather as part of his job.', answer: 'FALSE', why: 'He was "a London chemist who studied the weather in his free time". Weather was his hobby, not his job.' },
+    { statement: 'Cities are usually warmer than the countryside by the greatest amount after the sun has set.', answer: 'TRUE', why: '"the gap between urban and rural temperatures is usually largest not in the afternoon but in the hours after dark".' },
+    { statement: 'Asphalt is more expensive than other materials used to build roads.', answer: 'NOT GIVEN', why: 'Asphalt is mentioned only because it is dark and absorbs heat. Its cost is never discussed.', d: 4 },
+    { statement: 'In Westhaven, the richer areas had more trees than the poorer ones.', answer: 'TRUE', why: 'Poorer neighbourhoods had "few trees", while wealthy districts had "large gardens and tree-lined streets".', d: 4 },
+    { statement: 'White roofs bring benefits in every type of climate.', answer: 'FALSE', why: '"in places with cold winters they can increase heating costs". The word "every" makes the statement false.' },
+  ],
+  summaryList: {
+    title: 'Why cities stay warm',
+    gaps: [
+      { text: 'Hard surfaces such as roads take in sunlight and ___ its energy, releasing it slowly after dark.', answer: 'hold', why: '"These surfaces absorb a great deal of sunlight and store its energy as heat." "Hold" means "store". "Reflect" is the opposite: that is what white roofs do.' },
+      { text: 'In the countryside, plants cool the air by giving off ___ through their leaves.', answer: 'moisture', why: '"Trees and grass cool the air around them by releasing water through their leaves". "Rain" is wrong: the rain falls on the ground, it is not released by plants.' },
+      { text: 'Tall buildings also stop the ___ that would carry warm air away.', answer: 'breeze', why: '"Tall buildings… blocking the wind that would otherwise carry warm air away." "Breeze" is a synonym of "wind".' },
+      { text: 'Finally, machines such as air conditioners produce ___ heat that ends up in the streets.', answer: 'unwanted', why: '"air conditioners throw out waste heat into the streets". Waste heat is heat nobody wants. "Cooling" is a trap: the machines cool the inside, but the heat they throw out warms the street.', d: 4 },
+    ],
+    distractors: ['reflect', 'rain', 'shade', 'cooling'],
+  },
+  endings: {
+    items: [
+      { start: 'Heat waves are especially dangerous in cities because', ending: 'temperatures stay high at night and the body cannot recover.', why: '"temperatures remain high at night, and the human body has no chance to recover".' },
+      { start: 'Using more air conditioning can make the problem worse because', ending: 'the machines release heat into the streets outside.', why: '"the more people try to cool their homes, the warmer the outside air becomes". The machines throw "waste heat into the streets".' },
+      { start: 'Dr Osei’s research suggests that a large park', ending: 'can lower temperatures in streets some distance away.', why: 'It cooled "streets several hundred metres away". The trap "only if planted with trees" is not in the passage.', d: 4 },
+      { start: 'Planting trees in dry cities can be difficult because', ending: 'they need large amounts of water to survive.', why: '"in dry cities they need large amounts of water to survive". The other problem — they "take many years to grow" — is not in the list.' },
+    ],
+    distractors: ['they reflect most of the sunlight back into the sky.', 'is only effective if it is planted with trees.', 'the countryside around them is becoming warmer.'],
+  },
+};
+
+export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS];
