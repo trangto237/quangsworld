@@ -261,14 +261,20 @@ function formulaSteps(a: number, b: number, c: number, lang: 'en' | 'vi') {
   const D = b * b - 4 * a * c, q = Math.round(Math.sqrt(D));
   const en = lang === 'en';
   const lines = [
-    `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.`,
-    `Δ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}${D > 0 ? ` > 0, √Δ = ${q}` : ''}.`,
+    en
+      ? `① Every quadratic equation can be written as ax² + bx + c = 0. Read the three numbers off yours: a = ${num(a)} (the number in front of x²), b = ${num(b)} (in front of x), c = ${num(c)} (the number on its own).`
+      : `① Mọi phương trình bậc hai đều viết được dạng ax² + bx + c = 0. Đọc ba hệ số của phương trình này: a = ${num(a)} (số đứng trước x²), b = ${num(b)} (số đứng trước x), c = ${num(c)} (số đứng một mình).`,
+    en
+      ? `② Work out Δ ("delta", the discriminant). It is just a number, Δ = b² − 4ac, and it tells you how many solutions there are (Δ > 0: two, Δ = 0: one, Δ < 0: none):`
+      : `② Tính Δ (đọc là "đen-ta", biệt thức). Δ chỉ là một con số, Δ = b² − 4ac, cho biết phương trình có mấy nghiệm (Δ > 0: hai nghiệm, Δ = 0: nghiệm kép, Δ < 0: vô nghiệm):`,
+    `Δ = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}${D > 0 ? (en ? ` > 0, so two solutions. √Δ = √${D} = ${q}.` : ` > 0 nên có hai nghiệm. √Δ = √${D} = ${q}.`) : '.'}`,
   ];
-  if (D === 0) lines.push(en ? `Δ = 0, so there is one (double) solution: x = −b/(2a) = ${divide(-b, 2 * a)}.` : `Δ = 0 nên phương trình có nghiệm kép: x = −b/(2a) = ${divide(-b, 2 * a)}.`);
+  if (D === 0) lines.push(en ? `③ Δ = 0, so there is one (double) solution: x = −b/(2a) = ${divide(-b, 2 * a)}.` : `③ Δ = 0 nên phương trình có nghiệm kép: x = −b/(2a) = ${divide(-b, 2 * a)}.`);
   else {
-    lines.push(`x₁ = (−b + √Δ)/(2a) = (${num(-b)} + ${q})/(2·${pv(a)}) = ${divide(-b + q, 2 * a)}.`);
-    lines.push(`x₂ = (−b − √Δ)/(2a) = (${num(-b)} − ${q})/(2·${pv(a)}) = ${divide(-b - q, 2 * a)}.`);
-    lines.push(en ? `Careful: divide by 2a = ${2 * a}, not by a or 4a.` : `Chú ý: chia cho 2a = ${2 * a}, không phải chia cho a hay 4a.`);
+    lines.push(en ? `③ Put the numbers into the formula x = (−b ± √Δ)/(2a): once with + and once with −.` : `③ Thay số vào công thức nghiệm x = (−b ± √Δ)/(2a): một lần với dấu +, một lần với dấu −.`);
+    lines.push(`x₁ = (${num(-b)} + ${q})/(2·${pv(a)}) = ${divide(-b + q, 2 * a)}`);
+    lines.push(`x₂ = (${num(-b)} − ${q})/(2·${pv(a)}) = ${divide(-b - q, 2 * a)}`);
+    lines.push(en ? `Careful: the bottom is 2a = 2·${pv(a)} = ${2 * a}, not a or 4a.` : `Chú ý: mẫu là 2a = 2·${pv(a)} = ${2 * a}, không phải a hay 4a.`);
   }
   return lines.join('\n');
 }
@@ -315,10 +321,10 @@ const quadratics: Generator = (d, r) => {
         prompt: `Solve: ${e}`,
         answer: pm(-bp, rad(t, s)),
         distractors: [pm(bp, rad(t, s)), pm(-bp, rad(2 * t, s)), pm(-2 * bp, rad(t, s))],
-        explanation: `a = 1, b = ${num(2 * bp)}, c = ${num(c)}. b is even, so use b′ = b/2 = ${num(bp)}.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (not a whole number, so keep the root).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
+        explanation: `① Written as ax² + bx + c = 0: a = 1 (in front of x²), b = ${num(2 * bp)} (in front of x), c = ${num(c)} (on its own).\n② b is even, so use the shortcut with b′ ("b-prime") = half of b = ${num(bp)}, and Δ′ ("delta-prime") = b′² − ac instead of Δ.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (not a whole number, so keep the root).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
       },
       `Giải phương trình: ${e}`,
-      `a = 1, b = ${num(2 * bp)}, c = ${num(c)}. b chẵn nên dùng b′ = b/2 = ${num(bp)}.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (không phải số nguyên nên giữ dấu căn).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
+      `① Viết dạng ax² + bx + c = 0: a = 1 (trước x²), b = ${num(2 * bp)} (trước x), c = ${num(c)} (số đứng một mình).\n② b chẵn nên dùng công thức thu gọn: b′ ("b phẩy") = một nửa của b = ${num(bp)}, và Δ′ ("đen-ta phẩy") = b′² − ac thay cho Δ.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (không phải số nguyên nên giữ dấu căn).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
     );
   }
   if (d === 4) {
@@ -343,10 +349,10 @@ const quadratics: Generator = (d, r) => {
         prompt: `How many real solutions does ${e} have?`,
         answer: String(n),
         distractors: ['0', '1', '2', 'Infinitely many'].filter((x) => x !== String(n)),
-        explanation: `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.\nΔ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${why}.`,
+        explanation: `① Written as ax² + bx + c = 0: a = ${num(a)} (in front of x²), b = ${num(b)} (in front of x), c = ${num(c)} (on its own).\n② The number of solutions depends only on Δ ("delta", the discriminant) = b² − 4ac:\nΔ = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${why}.`,
       },
       `Phương trình ${e} có bao nhiêu nghiệm?`,
-      `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.\nΔ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${whyVi}.`,
+      `① Viết dạng ax² + bx + c = 0: a = ${num(a)} (trước x²), b = ${num(b)} (trước x), c = ${num(c)} (số đứng một mình).\n② Số nghiệm chỉ phụ thuộc vào Δ ("đen-ta", biệt thức) = b² − 4ac:\nΔ = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${whyVi}.`,
     );
   }
   // d5: a parameter m. x² − 2bx + m + k = 0, Δ′ = b² − m − k

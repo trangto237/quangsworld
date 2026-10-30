@@ -93,7 +93,7 @@ const baseConcepts: ConceptSeed[] = [
     missionName: 'Parabola Peaks',
     description: 'Solving ax² + bx + c = 0 by factorising and with Δ; parameters.',
     prerequisites: ['math.algebra.expressions'],
-    lesson: 'Δ = b² − 4ac. Δ > 0: two roots x = (−b ± √Δ)/(2a); Δ = 0: a double root; Δ < 0: no real roots. If b = 2b′, use Δ′ = b′² − ac and x = (−b′ ± √Δ′)/a.',
+    lesson: 'A quadratic equation has an x²: write it as ax² + bx + c = 0, where a is the number in front of x², b the number in front of x, and c the number on its own (e.g. 3x² + 8x + 4 = 0: a = 3, b = 8, c = 4). Then work out Δ ("delta", the discriminant) = b² − 4ac. Δ > 0: two solutions x = (−b + √Δ)/(2a) and x = (−b − √Δ)/(2a); Δ = 0: one (double) solution x = −b/(2a); Δ < 0: no real solution. Shortcut when b is even: b′ = b/2, Δ′ = b′² − ac, x = (−b′ ± √Δ′)/a. If you can spot two numbers with sum −b/a and product c/a, factorising is faster.',
     examRefs: ['Toán 9 · Phương trình bậc hai một ẩn'],
   },
   {
