@@ -207,4 +207,72 @@ const HABITS: IeltsPassage = {
   },
 };
 
-export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS, HABITS];
+const CONTAINERS: IeltsPassage = {
+  id: 'container-shipping',
+  title: 'The box that shrank the world',
+  level: 5,
+  paragraphs: [
+    'Until the middle of the twentieth century, loading a cargo ship was a slow, labour-intensive and unpredictable business. Goods arrived at the docks in sacks, barrels, crates and bales of every shape and size, and gangs of dockworkers carried them on board piece by piece, fitting them together in the hold as best they could. A single vessel might need a week or more to load and unload, so that ships frequently spent almost as long tied up in port as they did at sea. Breakages were common, and so was theft: dockworkers in many ports regarded a share of the cargo as an unofficial part of their wages. Transport costs were so high that, for many products, shipping them abroad was simply not worth the trouble.',
+    'The man most associated with changing this was Malcolm McLean, an American trucking businessman with no background in shipping. Frustrated by the hours his lorries spent waiting at the docks, he first considered driving whole trucks onto ships, but rejected the idea because the wheels and engines would waste valuable space. Instead, he proposed lifting only the metal body of the truck off its wheels and placing it on board, so that goods could travel from factory to customer by road and sea without ever being unpacked. In 1956, his converted tanker, the Ideal X, carried fifty-eight such containers from Newark, New Jersey, to Houston, Texas. McLean later calculated that loading the ship had cost around sixteen cents per ton, compared with almost six dollars per ton for conventional cargo.',
+    'Yet the container did not conquer the world overnight. For more than a decade, competing shipping and railway companies used boxes of different lengths, heights and fittings, so a container belonging to one firm could not easily be carried by the ships or trains of another. Port authorities hesitated to invest in expensive new equipment until it was clear which system would win. Dockworkers’ unions, understandably, saw the box as a threat to thousands of jobs, and in several ports they fought its introduction with strikes. Only in the late 1960s did international negotiators agree on standard sizes, of which the most familiar are twenty and forty feet long. Even today, a ship’s capacity is measured in “twenty-foot equivalent units”.',
+    'An unlikely accelerator was the Vietnam War. The American military struggled to supply its troops through crowded, poorly equipped Vietnamese ports, where cargo often sat for weeks before it could be unloaded. McLean persuaded the authorities that container ships could solve the problem, and his company soon had a lucrative contract. Rather than return across the Pacific with empty boxes, his ships stopped in Japan on the way home and filled them with Japanese goods destined for American shops. In this way, a solution to a military supply problem helped to open one of the most important trade routes of the late twentieth century.',
+    'The consequences for ports and the people who worked in them were profound. Containers require vast flat areas for storage, giant cranes and deep water for ever larger ships, none of which could be found in the narrow docks of old city centres. Traditional waterfronts in cities such as New York and London declined rapidly, while new deep-water terminals were built some distance away, often in places with little previous history of trade. The number of dockworkers fell dramatically, since a crane operator and a few assistants could now do the work of hundreds of men. For the businesses that sent goods, on the other hand, the benefits were enormous: lower costs, faster journeys and far less loss through damage and theft.',
+    'How much credit the container deserves for the growth of world trade remains a matter of debate. Dr Helena Brandt, a fictional economic historian, argues that the box did more to expand trade between wealthy nations than all the trade agreements of the period combined, because it reduced not only the cost of transport but also its uncertainty, allowing factories to depend on parts made on the other side of the world. Others are more cautious. The economist Ravi Menon, also an invented figure, points out that containers spread at the same time as computers, cheaper fuel and the lowering of tariffs, and warns that it is almost impossible to separate the effect of one innovation from the others. What is not in doubt is that the plain steel box, one of the least glamorous inventions of the modern age, changed what the world buys and where it is made.',
+  ],
+  glossary: ['tariff: a tax on goods coming into a country', 'hold: the space inside a ship where cargo is stored'],
+  headings: {
+    items: [
+      { para: 0, heading: 'A slow and costly way of moving goods', why: 'Paragraph A describes loading "piece by piece", ships waiting in port, breakages, theft and high costs. Theft is only one example, so "Why dockworkers stole cargo" is a detail trap.' },
+      { para: 2, heading: 'Obstacles to a common system', why: 'Paragraph C lists what slowed the container: different box sizes, hesitant port authorities, union strikes, until standard sizes were agreed.', d: 4 },
+      { para: 3, heading: 'An unexpected boost from a war', why: 'The Vietnam War is called "an unlikely accelerator": supplying troops led to a new trade route with Japan.' },
+      { para: 4, heading: 'Winners and losers on the waterfront', why: 'Old waterfronts and dockworkers lost; businesses that sent goods gained "enormous" benefits. The cranes are one detail, not the main idea.' },
+      { para: 5, heading: 'Disagreement over the container’s true impact', why: 'Brandt gives the box great credit; Menon says its effect cannot be separated from other changes. The paragraph is about this debate.' },
+    ],
+    distractors: ['The cost of a single historic voyage', 'Why dockworkers stole cargo', 'The design of the modern crane'],
+  },
+  mc: [
+    {
+      question: 'What was new about McLean’s proposal?',
+      answer: 'Goods could move between road and sea without being unpacked.',
+      wrong: ['Whole lorries, including their engines, would be carried on ships.', 'Oil tankers would be used to carry liquids in metal boxes.', 'Dockworkers would be paid for each box rather than each hour.'],
+      why: 'Goods "could travel from factory to customer by road and sea without ever being unpacked". He REJECTED carrying whole trucks because "the wheels and engines would waste valuable space". The Ideal X was a converted tanker, but it carried containers, not liquids.',
+      d: 4,
+    },
+    {
+      question: 'Why does the writer mention the figures of sixteen cents and six dollars?',
+      answer: 'to show how sharply containers reduced the cost of loading',
+      wrong: ['to compare the price of a container with the price of a truck', 'to explain why McLean’s first voyage made a loss', 'to show how much dockworkers were paid per ton'],
+      why: 'Loading the Ideal X cost "around sixteen cents per ton, compared with almost six dollars per ton for conventional cargo" — a huge fall in loading costs. Wages and the price of trucks are not given.',
+    },
+    {
+      question: 'According to paragraph D, how did McLean’s ships increase their earnings during the Vietnam War?',
+      answer: 'by carrying Japanese products on the journey back to America',
+      wrong: ['by delivering containers to Japan on the way to Vietnam', 'by being the only ships allowed into Vietnamese ports', 'by charging the military for unloading the cargo themselves'],
+      why: 'His ships "stopped in Japan on the way home and filled them with Japanese goods destined for American shops". Japan was on the way HOME, not on the way to Vietnam.',
+      d: 5,
+    },
+  ],
+  completion: [
+    {
+      kind: 'table',
+      title: 'Shipping before and after the container',
+      limit: 3,
+      gaps: [
+        { text: 'Before containers | Problems: breakages and ___ of cargo', answer: 'theft', why: '"Breakages were common, and so was theft". The table already has "breakages", so the missing problem is theft.' },
+        { text: 'After standardisation | Most common box lengths: twenty and ___', answer: 'forty feet', accept: ['forty', '40 feet', '40'], why: '"the most familiar are twenty and forty feet long".' },
+        { text: 'After containers | Equipment needed: storage areas and giant ___', answer: 'cranes', why: '"Containers require vast flat areas for storage, giant cranes and deep water".' },
+        { text: 'After containers | Location of new ports: ___ away from old city centres', answer: 'deep-water terminals', why: '"new deep-water terminals were built some distance away". "Waterfronts" is wrong: those were the OLD docks that declined.', d: 5 },
+      ],
+    },
+  ],
+  chooseTwo: [
+    {
+      question: 'Which TWO reasons does the writer give for the slow spread of containers?',
+      answers: ['Firms used boxes that did not fit each other’s equipment.', 'Workers’ organisations feared that jobs would disappear.'],
+      wrong: ['The early containers were too heavy for most ships.', 'Governments placed special taxes on containers.', 'Customers worried that their goods would be damaged.'],
+      why: 'Companies "used boxes of different lengths, heights and fittings", and unions "saw the box as a threat to thousands of jobs". Damage actually FELL with containers, and taxes (tariffs) appear only in paragraph F, about trade in general.',
+    },
+  ],
+};
+
+export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS, HABITS, CONTAINERS];
