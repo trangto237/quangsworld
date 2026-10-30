@@ -16,6 +16,7 @@ import { englishGrade9Bank } from './english/grade9-bank';
 import { logicGrade9Bank } from './logic/grade9-bank';
 import { literatureGrade9Bank } from './literature/grade9-bank';
 import { olympiadQuestions } from './math/olympiad';
+import { ieltsReadingConcepts, ieltsReadingQuestions } from './english/ielts-reading';
 
 const withSubject = (subject: SubjectId, seeds: ConceptSeed[]): ConceptDef[] => seeds.map((c) => ({ ...c, subject }));
 
@@ -26,6 +27,7 @@ export const concepts: ConceptDef[] = [
   ...withSubject('english', passageConcepts),
   ...withSubject('english', wordOrderConcepts),
   ...withSubject('english', ieltsTopicConcepts),
+  ...withSubject('english', ieltsReadingConcepts),
   ...withSubject('math', mathConcepts),
   ...withSubject('logic', logicConcepts),
   ...withSubject('literature', literatureConcepts),
@@ -37,6 +39,7 @@ export const questions: Question[] = [
   ...passageQuestions,
   ...wordOrderQuestions,
   ...ieltsTopicQuestions,
+  ...ieltsReadingQuestions,
   ...logicQuestions,
   ...literatureQuestions,
   ...englishGrade9Bank,
@@ -57,6 +60,7 @@ export { lookup as glossaryLookup, GLOSSARY, type Gloss } from './english/glossa
 export { stressOf, unmark, STRESS, SOUND_GROUPS, ED, S } from './english/pronunciation';
 export { PASSAGE_SETS } from './english/passages';
 export { IELTS_TOPICS } from './english/ielts-topics';
+export { buildIeltsQuestions, passageText as ieltsPassageText, IELTS_TASKS, type IeltsPassage } from './english/ielts-reading';
 export { coach, whyNot, mistakeNote, analyseStress, stressWord, wordsForRule, stressDrill, exceptionDrill, stressExceptions, exceptionNote, STRESS_MEMORY, endingDrill, soundDrill, pairsDrill, lastSound, STRESS_RULES, SOUND_TIPS, STRATEGIES } from './english/tutor';
 export type { Bi, CoachChip, CoachStep, CoachPlan, DrillItem, StressRule, StressAnalysis } from './english/tutor';
 export { WRITING_PROMPTS, type WritingPrompt } from './literature/writing';

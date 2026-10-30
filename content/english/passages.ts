@@ -8,6 +8,7 @@
  */
 import type { Question } from '@atlas/shared';
 import { makeBank, type ConceptSeed } from '../helpers';
+import { ieltsReadingSets } from './ielts-reading';
 
 export const passageConcepts: ConceptSeed[] = [
   {
@@ -252,7 +253,7 @@ export const passageQuestions: Question[] = list;
 export const PASSAGE_SETS = {
   'hn-reading': ['hn-sleep', 'hn-lantern', 'hn-ebikes', 'hn-chess'],
   cloze: ['cloze-volunteer', 'cloze-phones', 'cloze-hanoi', 'cloze-health', 'cloze-green'],
-  'ielts-reading': ['ielts-r-chess', 'ielts-r-farming'],
+  'ielts-reading': ['ielts-r-chess', 'ielts-r-farming', ...ieltsReadingSets],
   'ielts-listening': [
     ['ielts-l1-p1', 'ielts-l1-p2'],
     ['ielts-l2-p1', 'ielts-l2-p2'],

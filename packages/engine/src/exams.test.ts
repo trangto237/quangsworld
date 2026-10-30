@@ -7,7 +7,11 @@ describe('exam content', () => {
   it('passage sets have the right number of questions', () => {
     for (const id of PASSAGE_SETS.cloze) expect(questionsInSet(id), id).toHaveLength(6);
     for (const id of PASSAGE_SETS['hn-reading']) expect(questionsInSet(id), id).toHaveLength(6);
-    for (const id of PASSAGE_SETS['ielts-reading']) expect(questionsInSet(id), id).toHaveLength(13);
+    for (const id of PASSAGE_SETS['ielts-reading']) {
+      // Generated passages give 13 or 14 questions, like one real IELTS passage.
+      if (id.startsWith('ielts-g-')) expect(questionsInSet(id).length, id).toBeGreaterThanOrEqual(13), expect(questionsInSet(id).length, id).toBeLessThanOrEqual(14);
+      else expect(questionsInSet(id), id).toHaveLength(13);
+    }
     for (const [p1, p2] of PASSAGE_SETS['ielts-listening']) {
       expect(questionsInSet(p1)).toHaveLength(6);
       expect(questionsInSet(p2)).toHaveLength(4);
