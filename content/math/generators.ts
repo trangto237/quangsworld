@@ -163,8 +163,8 @@ const raw: Record<string, Generator> = {
     return {
       prompt: `Solve: ${a}x ${signed(b)} = ${c}x ${signed(rhsConst)}`,
       ...numeric(ans, [(rhsConst - b) / (a + c), -ans, (rhsConst + b) / (a - c)], r, (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2))),
-      explanation: `Collect the x terms on the left and the numbers on the right (a term changes sign when it crosses "="): ${a}x − ${c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nDivide both sides by ${a - c}: x = ${num(rhsConst - b)} ÷ ${a - c} = ${num(x)}.`}\nCareful: ${c}x moves to the left as −${c}x, so the x terms are subtracted, not added.`,
-      explanationVi: `Chuyển các hạng tử chứa x sang vế trái, các số sang vế phải (chuyển vế thì đổi dấu): ${a}x − ${c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nChia cả hai vế cho ${a - c}: x = ${num(rhsConst - b)} : ${a - c} = ${num(x)}.`}\nChú ý: ${c}x chuyển sang trái thành −${c}x, nên trừ chứ không cộng.`,
+      explanation: `Collect the x terms on the left and the numbers on the right (a term changes sign when it crosses "="): ${a}x − ${c === 1 ? '' : c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nDivide both sides by ${a - c}: x = ${num(rhsConst - b)} ÷ ${a - c} = ${num(x)}.`}\nCareful: ${c === 1 ? '' : c}x moves to the left as −${c === 1 ? '' : c}x, so the x terms are subtracted, not added.`,
+      explanationVi: `Chuyển các hạng tử chứa x sang vế trái, các số sang vế phải (chuyển vế thì đổi dấu): ${a}x − ${c === 1 ? '' : c}x = ${num(rhsConst)} ${signed(-b)}.\n${a - c === 1 ? 'x' : `${a - c}x`} = ${num(rhsConst - b)}.${a - c === 1 ? '' : `\nChia cả hai vế cho ${a - c}: x = ${num(rhsConst - b)} : ${a - c} = ${num(x)}.`}\nChú ý: ${c === 1 ? '' : c}x chuyển sang trái thành −${c === 1 ? '' : c}x, nên trừ chứ không cộng.`,
     };
   },
 
