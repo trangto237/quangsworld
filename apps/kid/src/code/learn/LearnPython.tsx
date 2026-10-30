@@ -165,7 +165,9 @@ export function CourseView({
   const nextIdx = ALL_LESSONS.findIndex((l) => !isDone(l));
   const [playing, setPlaying] = useState<{ unit: PyUnit; lesson: PyLesson } | null>(null);
   /** A "jump here" test for a unit: pass it to skip everything before. */
-  const [jumping, setJumping] = useState<number | null>(null);
+  // The test's questions are picked once when it starts (not on every redraw, or they would change mid-test).
+  const [jump, setJump] = useState<{ at: number; steps: Step[] } | null>(null);
+  const jumping = jump?.at ?? null;
   const finished = ALL_LESSONS.filter(isDone).length;
   const open = (l: PyLesson) => ALL_LESSONS.indexOf(l) <= Math.max(0, nextIdx < 0 ? ALL_LESSONS.length : nextIdx);
   const currentRef = useRef<HTMLButtonElement>(null);
@@ -178,8 +180,8 @@ export function CourseView({
       <Prose.Provider value={prose}>
         <JumpTest
           unit={COURSE[jumping]}
-          steps={jumpSteps(COURSE.slice(0, jumping))}
-          onExit={() => setJumping(null)}
+          steps={jump!.steps}
+          onExit={() => setJump(null)}
           onPass={() => {
             const ids = COURSE.slice(0, jumping)
               .flatMap((u) => u.lessons)
@@ -256,7 +258,7 @@ export function CourseView({
             {/* Already know this? A short test on everything before it unlocks the unit. */}
             {ui > 0 && !open(u.lessons[0]) && (
               <div className="mt-2 flex justify-center">
-                <TownButton tone="blue" onClick={() => setJumping(ui)}>
+                <TownButton tone="blue" onClick={() => setJump({ at: ui, steps: jumpSteps(COURSE.slice(0, ui)) })}>
                   ⏩ <TB en="Jump here" />
                 </TownButton>
               </div>
