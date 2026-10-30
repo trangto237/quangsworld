@@ -33,6 +33,8 @@ export interface CloudStatus {
   viaCode?: boolean;
   /** 'parent': the family's own account. 'member': a child's email account or a code-joined device. */
   role?: 'parent' | 'member';
+  /** A child login made by the parent: the profile it opens. */
+  studentId?: string;
   lastSyncedAt: number | null;
   pending: number;
   error?: string;
@@ -149,7 +151,10 @@ export class CloudSync {
     if (seq !== this.attachSeq || !this.client) return; // a newer sign-in won
     this.familyId = familyId;
     this.engine = new SyncEngine(this.repo.db, new SupabaseRemote(this.client, familyId));
-    this.set({ email: user.email || undefined, viaCode: !!user.is_anonymous, role: familyId === user.id ? 'parent' : 'member', error: undefined });
+    const role = familyId === user.id ? 'parent' : 'member';
+    const studentId = role === 'member' ? await this.childStudent(user.id) : undefined;
+    if (seq !== this.attachSeq || !this.client) return;
+    this.set({ email: user.email || undefined, viaCode: !!user.is_anonymous, role, studentId, error: undefined });
     this.refreshCounts();
     if (this.engine.isLinked()) this.beginAuto();
     else this.set({ state: 'needs-link' });
@@ -162,7 +167,7 @@ export class CloudSync {
     this.user = null;
     this.familyId = null;
     this.attachSeq++;
-    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, viaCode: undefined, role: undefined, pending: 0 });
+    if (this.status.state !== 'unconfigured') this.set({ state: 'signed-out', email: undefined, viaCode: undefined, role: undefined, studentId: undefined, pending: 0 });
   }
 
   private async ensureClient(): Promise<SupabaseClient> {
@@ -191,9 +196,9 @@ export class CloudSync {
     return this.status.role === 'parent' ? this.status.email : undefined;
   }
 
-  async signIn(email: string, password: string) {
+  async signIn(emailOrUsername: string, password: string) {
     const client = await this.ensureClient();
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email: loginEmail(emailOrUsername), password });
     if (error) throw new Error(authFriendly(error.message));
     await this.attach(data.user);
   }
@@ -323,6 +328,56 @@ export class CloudSync {
     if (this.status.role !== 'member') throw new Error('This account is not part of a family yet. Create it with the family code (“New account”).');
     const played = Number(this.repo.db.raw.exec('SELECT COUNT(*) FROM attempts')[0]?.values[0][0] ?? 0) > 0;
     if (!this.engine?.isLinked()) await this.link(played ? 'merge' : 'cloud');
+  }
+
+  /**
+   * The one sign-in screen: a child's username (made by the parent) or the parent's email.
+   * Links this device to the family and says where to go: the parent app, or the kid app
+   * (straight into the child's own profile when it is a child login).
+   */
+  async signInAnyone(emailOrUsername: string, password: string): Promise<'parent' | 'child' | 'member'> {
+    await this.signIn(emailOrUsername, password);
+    if (this.status.role === 'parent') {
+      if (!this.engine?.isLinked()) await this.link(this.repo.getFamily() ? 'auto' : 'cloud');
+      return 'parent';
+    }
+    const played = Number(this.repo.db.raw.exec('SELECT COUNT(*) FROM attempts')[0]?.values[0][0] ?? 0) > 0;
+    if (!this.engine?.isLinked()) await this.link(played ? 'merge' : 'cloud');
+    return this.status.studentId ? 'child' : 'member';
+  }
+
+  /** The profile a child login belongs to (null for code-joined devices and older member accounts). */
+  private async childStudent(userId: string): Promise<string | undefined> {
+    if (!this.client) return undefined;
+    const { data, error } = await this.client.from('atlas_members').select('student_id').eq('user_id', userId).maybeSingle();
+    return !error && data && typeof data.student_id === 'string' ? data.student_id : undefined;
+  }
+
+  // ── Child logins (parent) ──
+  async childLogins(): Promise<{ username: string; studentId: string }[]> {
+    const client = await this.ensureClient();
+    const { data, error } = await client.from('atlas_members').select('username, student_id').eq('family_id', this.familyId ?? '').not('username', 'is', null);
+    if (error) throw new Error(friendly(error.message));
+    return (data ?? []).map((r) => ({ username: r.username as string, studentId: r.student_id as string }));
+  }
+
+  /** Makes (or replaces) a child's username + password. */
+  async createChildLogin(username: string, password: string, studentId: string, label: string) {
+    const client = await this.ensureClient();
+    const { error } = await client.rpc('atlas_create_child_login', { p_username: username, p_password: password, p_student_id: studentId, p_label: label });
+    if (error) throw new Error(friendly(error.message));
+  }
+
+  async setChildPassword(username: string, password: string) {
+    const client = await this.ensureClient();
+    const { error } = await client.rpc('atlas_set_child_password', { p_username: username, p_password: password });
+    if (error) throw new Error(friendly(error.message));
+  }
+
+  async deleteChildLogin(username: string) {
+    const client = await this.ensureClient();
+    const { error } = await client.rpc('atlas_delete_child_login', { p_username: username });
+    if (error) throw new Error(friendly(error.message));
   }
 
   // ── Family code ──
@@ -457,11 +512,14 @@ export async function confirmSignOut(cloud: CloudSync, text: { ask: string; unsy
 }
 
 const PENDING_CODE = 'atlas-pending-family-code';
+/** Child logins are usernames; the cloud stores them as <username>@kids.atlas.app (no email is sent). */
+export const CHILD_LOGIN_DOMAIN = 'kids.atlas.app';
+export const loginEmail = (id: string) => (id.includes('@') ? id.trim() : `${id.trim().toLowerCase()}@${CHILD_LOGIN_DOMAIN}`);
 const formatCode = (c: string) => (c.length === 10 ? `${c.slice(0, 5)}-${c.slice(5)}` : c);
 /** Supabase sign-in/sign-up errors in plain words, with what to do. */
 const authFriendly = (m: string) =>
   /invalid login credentials/i.test(m)
-    ? 'Wrong email or password — or this account doesn’t exist yet. A password made before cloud sync was only for one device: create the account with the “Create account” tab.'
+    ? 'Wrong username, email or password. Children: ask your parent for your username and password.'
     : /email not confirmed/i.test(m)
       ? 'This email isn’t confirmed yet. Open the confirmation email from Supabase and tap the link, then sign in. (Or turn off “Confirm email” in Supabase → Authentication → Sign In / Providers → Email.)'
       : /already registered|already been registered|user already exists/i.test(m)
@@ -475,7 +533,9 @@ const authFriendly = (m: string) =>
               : friendly(m);
 
 const friendly = (m: string) =>
-  /atlas_(family_codes|members|join_family|new_family_code)|schema cache|does not exist/i.test(m)
+  /permission denied for (table|schema) (users|identities|auth)/i.test(m)
+    ? 'Supabase did not allow creating the login. Run supabase/setup.sql again in the SQL editor (as the project owner).'
+    : /atlas_(family_codes|members|join_family|new_family_code|create_child_login|set_child_password|delete_child_login)|column [^ ]*\.?(student_id|username)|schema cache|does not exist/i.test(m)
     ? 'Your Supabase project needs the latest setup script: run supabase/setup.sql again in the SQL editor.'
     : /failed to fetch|network/i.test(m)
       ? "Can't reach Supabase. Check the internet connection."

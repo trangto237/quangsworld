@@ -3,6 +3,7 @@ import type { StudentProfile } from '@atlas/db';
 import { Button, Card, Modal, useQuery, useRepo } from '@atlas/ui';
 import { StudentForm } from '../components/StudentForm';
 import { TimeLimitSetting } from '../components/ScreenTime';
+import { ChildLogin } from '../components/ChildLogin';
 
 type LangMode = 'help' | 'vi' | 'en';
 const LANG_OPTIONS: { value: LangMode; label: string }[] = [
@@ -74,6 +75,7 @@ export function Profiles() {
                 <LanguageSelect studentId={s.id} />
                 <CodeLabSwitch studentId={s.id} />
                 <TimeLimitSetting studentId={s.id} />
+                <ChildLogin studentId={s.id} name={s.name} />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

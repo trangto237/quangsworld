@@ -3,7 +3,8 @@ import { useEffect } from 'react';
 import { useQuery } from '@atlas/ui';
 import { useKid } from './store';
 import { LangContext, type LangMode } from './i18n';
-import { ProfilePicker } from './screens/ProfilePicker';
+import { PARENT_PLAY, ProfilePicker, setFlag } from './screens/ProfilePicker';
+import { useKidCloud } from './components/JoinFamily';
 import { Placement } from './screens/Placement';
 import { Town } from './screens/Town';
 import { Quests } from './screens/Quests';
@@ -50,6 +51,22 @@ export function App() {
 function Screens() {
   const { studentId, screen, go, logout } = useKid();
   const student = useQuery((r) => (studentId ? r.getStudent(studentId) : undefined), [studentId]);
+  const login = useKid((s) => s.login);
+  const { status: cloud } = useKidCloud();
+  const students = useQuery((r) => r.listStudents());
+
+  // The parent app's "▶ Quang's app" link (/?play=<id>): a signed-in parent opens that child's app.
+  useEffect(() => {
+    const play = new URLSearchParams(location.search).get('play');
+    if (!play || cloud.role !== 'parent' || !students.some((s) => s.id === play)) return;
+    setFlag(PARENT_PLAY);
+    history.replaceState(null, '', '/');
+    login(play);
+  }, [cloud.role, students, login]);
+  // Signed in with a child login: only that child's profile can be open.
+  useEffect(() => {
+    if (cloud.role === 'member' && cloud.studentId && studentId && studentId !== cloud.studentId) logout();
+  }, [cloud.role, cloud.studentId, studentId, logout]);
 
   // Profile removed by a parent while logged in → back to the picker.
   useEffect(() => {

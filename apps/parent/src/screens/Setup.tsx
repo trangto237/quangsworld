@@ -18,7 +18,8 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
   const online = !!cloud.config();
   const [step, setStep] = useState<'family' | 'kid'>(hasFamily ? 'kid' : 'family');
   /** create: new parent account · signin: existing account · finish: signed in, family not set up yet. */
-  const [mode, setMode] = useState<'create' | 'signin' | 'finish'>('signin');
+  // Signing in happens on the one Atlas sign-in screen (/); this page creates new parent accounts.
+  const [mode, setMode] = useState<'create' | 'signin' | 'finish'>('create');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
@@ -161,25 +162,12 @@ export function Setup({ hasFamily }: { hasFamily: boolean }) {
           ) : (
             <div className="space-y-4">
               {mode !== 'finish' && (
-                <div className="flex gap-1 rounded-xl bg-slate-100 p-1 text-sm font-semibold dark:bg-slate-800" role="tablist">
-                  {(
-                    [
-                      ['signin', 'Sign in'],
-                      ['create', 'Create account'],
-                    ] as const
-                  ).map(([m, label]) => (
-                    <button
-                      key={m}
-                      type="button"
-                      role="tab"
-                      aria-selected={mode === m}
-                      onClick={() => (setMode(m), setError(null), setNote(null))}
-                      className={`flex-1 rounded-lg py-2 ${mode === m ? 'bg-white shadow-sm dark:bg-slate-900' : 'text-slate-500'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Create the family's parent account. Already have one?{' '}
+                  <a href="/" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                    Sign in
+                  </a>
+                </p>
               )}
               <form className="space-y-4" onSubmit={mode === 'create' ? createOnline : mode === 'finish' ? finishOnline : signInOnline}>
                 {mode === 'finish' && (

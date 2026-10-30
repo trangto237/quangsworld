@@ -32,17 +32,18 @@ variables to check that the caller is the signed-in parent; it also needs a free
 
 ## 3. Connect your devices
 
-**One parent login.** Your email + password is the only login you need. It signs you in on any device and
-also unlocks the parent dashboard.
+**One sign-in screen.** Everyone signs in at the app's address (`/`): your email opens the parent
+dashboard, your child's username opens their own profile.
 
-1. **Your phone or computer:** open `/parent/` → **Create your parent account** (name, email, password), then
-   create your child's profile. On any other device: open `/parent/` → **Sign in**, and your family's data
-   downloads.
-2. **Settings → Cloud sync → Make a family code.** You get a code like `K7P2Q-X9MHT`. Your child uses it once.
-3. **Your child's devices**, in the kid app → **Connect to my family**:
-   - **New account** (12+): their own email + password + the family code. After that they just **Sign in**
-     with their email on any device.
-   - **Code only** (no email): the device joins with the code.
+1. **Your phone or computer:** open the app → **New family? Create a parent account** (name, email,
+   password), then create your child's profile. On any other device: open the app and **Sign in** with your
+   email; your family's data downloads.
+2. **Parent app → Profiles → your child → 🔑 Create login.** Choose a username (e.g. `quang`) and a
+   password. Your child signs in with it on their devices and goes straight to their profile — no email
+   needed. You can reset the password or remove the login there too.
+   *(Needs the latest `setup.sql`: run it again in the SQL editor if Profiles says so.)*
+3. Older ways still work: a child's own email account, or a device joined with a family code
+   (Settings → Cloud sync → Make a family code).
 
 You never need to touch your child's device. **Settings → Family logins** lists every login in your family
 (your child's email, code-only devices); **Remove** stops one from syncing. **Make a new code** stops the old

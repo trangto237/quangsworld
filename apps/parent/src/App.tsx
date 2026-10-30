@@ -36,6 +36,19 @@ export function App() {
     if (students.length && !students.some((s) => s.id === studentId)) setStudent(students[0].id);
   }, [students, studentId, setStudent]);
 
+  // One sign-in screen for everyone (/): a signed-out parent goes there, except to create a new family.
+  const newFamily = new URLSearchParams(location.search).has('new');
+  const noSignIn = (() => {
+    try {
+      return sessionStorage.getItem('atlas-no-signin') === '1';
+    } catch {
+      return false;
+    }
+  })();
+  if (cloud.config() && cloudStatus.state === 'signed-out' && !newFamily && !noSignIn) {
+    location.replace('/');
+    return null;
+  }
   if (!family || students.length === 0) return <Setup hasFamily={!!family} />;
   if (!authed) return <Login name={family.parentName} />;
 
@@ -69,8 +82,8 @@ export function App() {
             )}
             <InstallButton labels={INSTALL_LABELS} className="rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:bg-slate-100 dark:text-brand-400 dark:hover:bg-slate-800" />
             <ThemeToggle mode={mode} onCycle={cycle} />
-            <a href="/" className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">
-              ← Players
+            <a href={`/?play=${student.id}`} title={`Open ${student.name}'s app on this device`} className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">
+              ▶ {student.name}'s app
             </a>
             <button onClick={signOut} title="Lock the dashboard (stay signed in on this device)" className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
               Lock

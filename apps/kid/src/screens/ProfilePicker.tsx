@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { InstallButton, Modal, useQuery, useRepo } from '@atlas/ui';
 import { TownButton } from '../town/ui';
 import type { StudentProfile } from '@atlas/db';
@@ -6,6 +6,26 @@ import { useKid } from '../store';
 import { T, TB, tr } from '../i18n';
 import { JoinFamily, useKidCloud } from '../components/JoinFamily';
 import { confirmSignOut } from '@atlas/db/cloud';
+import { SignIn } from './SignIn';
+
+const OFFLINE = 'atlas-no-signin';
+export const PARENT_PLAY = 'atlas-parent-play';
+const flag = (k: string) => {
+  try {
+    return sessionStorage.getItem(k) === '1';
+  } catch {
+    return false;
+  }
+};
+export const setFlag = (k: string) => {
+  try {
+    sessionStorage.setItem(k, '1');
+  } catch {
+    /* ignore */
+  }
+};
+/** A child login opens its profile once per visit; after "switch profile" the picker stays. */
+let autoOpened = false;
 
 export function ProfilePicker() {
   const repo = useRepo();
@@ -19,6 +39,24 @@ export function ProfilePicker() {
   const connected = !!cloud.email || !!cloud.viaCode;
   const [joinOpen, setJoinOpen] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [offline, setOffline] = useState(() => flag(OFFLINE));
+  const configured = !!cloudSync.config();
+  /** Signed in with a child login: only that child's profile, no parent tile. */
+  const childId = cloud.role === 'member' ? cloud.studentId : undefined;
+  const shown = childId ? students.filter((s) => s.id === childId) : students;
+
+  // One sign-in screen: the parent's login belongs in the parent app.
+  useEffect(() => {
+    if (cloud.role === 'parent' && !flag(PARENT_PLAY) && !new URLSearchParams(location.search).get('play')) location.replace('/parent/');
+  }, [cloud.role]);
+  // A child login goes straight into the child's own profile (once it has downloaded).
+  useEffect(() => {
+    const s = childId && students.find((x) => x.id === childId);
+    if (s && !autoOpened) {
+      autoOpened = true;
+      login(s.id);
+    }
+  }, [childId, students, login]);
 
   const pick = (s: StudentProfile) => {
     if (s.hasPin) {
@@ -42,12 +80,17 @@ export function ProfilePicker() {
     }
   };
 
+  if (configured && cloud.state === 'unconfigured') return <div className="town-bg min-h-dvh" />;
+  if (configured && cloud.state === 'signed-out' && !offline)
+    return <SignIn onOffline={family && students.length ? () => (setFlag(OFFLINE), setOffline(true)) : undefined} />;
+  if (cloud.role === 'parent' && !flag(PARENT_PLAY)) return <div className="town-bg min-h-dvh" />;
+
   return (
     <div className="town-bg relative grid min-h-dvh place-items-center overflow-hidden p-6 text-ink-text">
       <div className="relative w-full max-w-2xl text-center">
         <div className="animate-float text-6xl">🧭</div>
         <h1 className="mt-3 font-display text-4xl font-bold [text-shadow:0_3px_0_var(--paper)] sm:text-5xl">Atlas</h1>
-        {(!family || students.length === 0) && !joining && cloud.viaCode && cloud.state === 'syncing' ? (
+        {(!family || students.length === 0) && !joining && (cloud.viaCode || cloud.role === 'member') && cloud.state === 'syncing' ? (
           <div className="town-panel mx-auto mt-8 max-w-md p-6">
             <p className="text-lg font-semibold">
               <T en="Downloading your family's adventure…" />
@@ -90,14 +133,15 @@ export function ProfilePicker() {
               <T en="Who's playing?" />
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-5">
-              {students.map((s) => (
+              {shown.map((s) => (
                 <button key={s.id} onClick={() => pick(s)} className="town-panel group flex w-32 flex-col items-center gap-2 p-3 transition hover:-translate-y-0.5">
                   <span className="grid size-24 place-items-center rounded-full border-[2.5px] border-ink bg-[#ffd98a] text-6xl transition group-hover:scale-105">{s.avatar}</span>
                   <span className="font-display text-lg font-bold">{s.name}</span>
                   {s.hasPin && <span className="text-xs text-ink-soft">🔒 PIN</span>}
                 </button>
               ))}
-              {/* The parent uses the same app: their pages open with the parent password. */}
+              {/* The parent uses the same app: their pages open with the parent password. Not on a child's own login. */}
+              {!childId && (
               <a href="/parent/" className="town-panel group flex w-32 flex-col items-center gap-2 p-3 transition hover:-translate-y-0.5">
                 <span className="grid size-24 place-items-center rounded-full border-[2.5px] border-ink bg-[#cfe2f7] text-5xl transition group-hover:scale-105">👤</span>
                 <span className="font-display text-lg font-bold">{family.parentName || tr('help', 'Parent')}</span>
@@ -105,6 +149,7 @@ export function ProfilePicker() {
                   🔒 <T en="Parent" />
                 </span>
               </a>
+              )}
             </div>
             <div className="mt-10 flex flex-wrap justify-center gap-6">
               <KidInstall />

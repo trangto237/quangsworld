@@ -182,3 +182,85 @@ begin
   end if;
 end;
 $$;
+
+-- ── Child logins ─────────────────────────────────────────────────────────────
+-- The parent makes a username + password for each child in the parent app (Profiles). Children
+-- sign in with it on the one sign-in screen and go straight to their own profile; the parent's
+-- email login opens the parent app. Usernames are stored as <username>@kids.atlas.app accounts that
+-- are confirmed at once (no email is ever sent).
+alter table public.atlas_members add column if not exists student_id text;
+alter table public.atlas_members add column if not exists username text;
+create unique index if not exists atlas_members_username on public.atlas_members (lower(username)) where username is not null;
+
+-- Parent only: the family the caller owns, or an error.
+create or replace function public.atlas_parent_family() returns uuid
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  me uuid := auth.uid();
+begin
+  if me is null then raise exception 'Sign in first.'; end if;
+  if coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) or exists (select 1 from public.atlas_members where user_id = me) then
+    raise exception 'Only the parent account can manage child logins.';
+  end if;
+  return me;
+end;
+$$;
+
+create or replace function public.atlas_create_child_login(p_username text, p_password text, p_student_id text, p_label text default null) returns uuid
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  fam uuid := public.atlas_parent_family();
+  u text := lower(trim(coalesce(p_username, '')));
+  mail text;
+  uid uuid := gen_random_uuid();
+begin
+  if u !~ '^[a-z0-9][a-z0-9._-]{2,29}$' then
+    raise exception 'Usernames are 3–30 letters or numbers (dots, dashes and underscores allowed), with no spaces.';
+  end if;
+  if length(coalesce(p_password, '')) < 6 then raise exception 'The password needs at least 6 characters.'; end if;
+  if coalesce(p_student_id, '') = '' then raise exception 'Choose which child this login is for.'; end if;
+  mail := u || '@kids.atlas.app';
+  if exists (select 1 from auth.users where lower(email) = mail) or exists (select 1 from public.atlas_members where lower(username) = u) then
+    raise exception 'That username is taken. Try another one.';
+  end if;
+  -- One login per child: replace an older one.
+  delete from auth.users where id in (select user_id from public.atlas_members where family_id = fam and student_id = p_student_id and username is not null);
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                          created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change)
+  values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', mail, extensions.crypt(p_password, extensions.gen_salt('bf')), now(),
+          '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('atlas_child', true, 'username', u), now(), now(), '', '', '', '');
+  insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), uid, uid::text, jsonb_build_object('sub', uid::text, 'email', mail, 'email_verified', true), 'email', now(), now(), now());
+  insert into public.atlas_members (user_id, family_id, label, email, student_id, username)
+  values (uid, fam, left(coalesce(p_label, u), 80), mail, p_student_id, u);
+  return uid;
+end;
+$$;
+
+create or replace function public.atlas_set_child_password(p_username text, p_password text) returns void
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  fam uuid := public.atlas_parent_family();
+  kid uuid;
+begin
+  if length(coalesce(p_password, '')) < 6 then raise exception 'The password needs at least 6 characters.'; end if;
+  select user_id into kid from public.atlas_members where family_id = fam and lower(username) = lower(trim(p_username));
+  if kid is null then raise exception 'No such child login in this family.'; end if;
+  update auth.users set encrypted_password = extensions.crypt(p_password, extensions.gen_salt('bf')), updated_at = now() where id = kid;
+end;
+$$;
+
+create or replace function public.atlas_delete_child_login(p_username text) returns void
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  fam uuid := public.atlas_parent_family();
+  kid uuid;
+begin
+  select user_id into kid from public.atlas_members where family_id = fam and lower(username) = lower(trim(p_username));
+  if kid is null then raise exception 'No such child login in this family.'; end if;
+  delete from auth.users where id = kid; -- the member row goes with it (on delete cascade)
+end;
+$$;
+
+revoke all on function public.atlas_parent_family(), public.atlas_create_child_login(text, text, text, text), public.atlas_set_child_password(text, text), public.atlas_delete_child_login(text) from public, anon;
+grant execute on function public.atlas_create_child_login(text, text, text, text), public.atlas_set_child_password(text, text), public.atlas_delete_child_login(text) to authenticated;
