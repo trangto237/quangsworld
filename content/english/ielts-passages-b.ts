@@ -268,4 +268,61 @@ const SLEEP: IeltsPassage = {
   ],
 };
 
-export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION, LANGUAGES, SLEEP];
+const CARFREE: IeltsPassage = {
+  id: 'car-free-centres',
+  title: 'Should cars be banned from city centres?',
+  level: 5,
+  paragraphs: [
+    'In the middle of the twentieth century, planners in many countries rebuilt their cities around the private car. Wide roads cut through old neighbourhoods, squares became car parks, and walking was treated as something people did only between a parked car and a front door. Today a growing number of cities are trying to reverse that decision by closing their central districts to private vehicles. The idea provokes fierce argument, but in my view the case for car-free centres is strong, provided that the change is made with care.',
+    'The most obvious argument concerns space. A car spends roughly 95 per cent of its life parked, and even when it is moving it typically carries one or two people while occupying an area that could hold a café table, a row of bicycles or a small tree. In the dense heart of a city, where land is extremely valuable, it is hard to defend giving so much of it to objects that are mostly standing still. When streets are designed chiefly for traffic, they effectively belong to whoever is fastest and heaviest, and children, elderly people and cyclists are pushed to the edges.',
+    'Supporters of the car often reply that electric vehicles will soon remove the problem. This seems to me a misunderstanding. Electric cars certainly reduce the exhaust fumes that damage the lungs of city residents, and that is a real gain. But an electric car takes up exactly as much road as a petrol one, causes the same traffic jams and is just as dangerous to a child stepping off the pavement. Cleaner engines are welcome; they do not answer the question of what a city centre is for.',
+    'The objection that deserves the most attention comes from shopkeepers, who fear that customers will simply drive to out-of-town shopping centres instead. Their anxiety is understandable, but the evidence suggests that it is usually exaggerated. In the fictional but typical case of Lindemark, a medium-sized city that closed its old town to cars over five years, local traders predicted ruin. A study carried out three years after the final stage found that the number of people visiting the centre on foot had risen by a third, that empty shops had become fewer, and that cafés and restaurants had done particularly well. Shopkeepers had overestimated how many of their customers actually arrived by car; most, it turned out, came on foot, by bicycle or by bus.',
+    'None of this means that a ban can simply be announced overnight. The neighbouring city of Castelmar tried exactly that, closing its centre within a few weeks of the decision. Buses were too few to cope with the extra passengers, delivery companies had no time to change their routes, and residents who relied on their cars for medical appointments felt abandoned. Within a year the scheme had been partly reversed, and the very idea of a car-free centre had become unpopular in the city. The lesson, I believe, is that change should be gradual, with public transport improved first and the closures introduced street by street.',
+    'Nor should a car-free centre mean a centre without any vehicles at all. Delivery vans need access, at least at certain hours, and people with disabilities must be able to reach the places they need by car or taxi. A ban that ignores these groups is not only unfair but likely to fail, because it hands its opponents an easy argument. It must also be admitted that few cities at present have buses and trains good enough to make a car unnecessary for most journeys; investment in public transport is therefore not an optional extra but a condition of success.',
+    'Cities have changed their shape many times in the past, and they will do so again. The question is not whether we can imagine a centre without cars, since many historic towns functioned perfectly well without them for centuries, but whether we are willing to plan the transition patiently. If we are, the reward is a centre that is quieter, safer and more pleasant for everyone who uses it.',
+  ],
+  glossary: ['exhaust fumes: the gases that come out of a vehicle’s engine', 'trader: a person who buys and sells goods, e.g. a shopkeeper'],
+  ynng: [
+    { statement: 'Electric cars will solve most of the problems caused by traffic in city centres.', answer: 'NO', why: 'Paragraph C: the writer calls this "a misunderstanding" — electric cars cause "the same traffic jams" and are "just as dangerous". They only reduce fumes.' },
+    { statement: 'Shopkeepers’ fears about car bans are usually greater than the facts justify.', answer: 'YES', why: 'Paragraph D: "the evidence suggests that it is usually exaggerated".' },
+    { statement: 'Cities with car-free centres tend to have less crime.', answer: 'NOT GIVEN', why: 'The writer says the centre becomes "quieter, safer and more pleasant", but "safer" refers to traffic; crime is never mentioned.', d: 5 },
+    { statement: 'A car ban should be introduced quickly so that opponents have no time to organise.', answer: 'NO', why: 'Paragraph E: "change should be gradual… introduced street by street". Castelmar’s quick ban failed.', d: 4 },
+    { statement: 'Disabled people should still be allowed to reach the centre by car.', answer: 'YES', why: 'Paragraph F: "people with disabilities must be able to reach the places they need by car or taxi".', d: 4 },
+    { statement: 'Public transport in most cities is already good enough to replace the car.', answer: 'NO', why: 'Paragraph F: "few cities at present have buses and trains good enough to make a car unnecessary".' },
+  ],
+  mc: [
+    {
+      question: 'What does the writer mean by saying that streets designed for traffic "belong to whoever is fastest and heaviest"?',
+      answer: 'Vulnerable road users lose out to vehicles.',
+      wrong: ['Drivers of large cars pay more for road space.', 'Fast traffic is necessary in valuable city land.', 'Cyclists should be allowed to use the main roads.'],
+      why: 'Paragraph B continues: "children, elderly people and cyclists are pushed to the edges". The other options reuse words (cyclists, valuable land) but not this meaning.',
+    },
+    {
+      question: 'What does the writer suggest about the Castelmar scheme?',
+      answer: 'Its failure made people more opposed to the whole idea.',
+      wrong: ['It failed because there were too many buses.', 'It was cancelled completely within a few weeks.', 'It succeeded because delivery companies changed their routes.'],
+      why: 'Paragraph E: "the very idea of a car-free centre had become unpopular in the city". It was "partly reversed" within a year — not cancelled within weeks; buses were "too few".',
+      d: 4,
+    },
+  ],
+  chooseTwo: [
+    {
+      question: 'Which TWO changes were found in Lindemark after its centre was closed to cars?',
+      answers: ['More people walked into the centre.', 'Fewer shops were left empty.'],
+      wrong: ['Traders’ incomes doubled.', 'Most visitors started arriving by bus.', 'Out-of-town shopping centres closed.', 'Restaurants found it harder to attract customers.'],
+      why: 'Paragraph D: visits "on foot had risen by a third" and "empty shops had become fewer". Restaurants did "particularly well" (opposite), and the bus is only one of the ways customers already came.',
+    },
+  ],
+  summaryList: {
+    title: 'What went wrong in Castelmar',
+    gaps: [
+      { text: 'Castelmar closed its centre ___ after the decision was made.', answer: 'rapidly', why: 'Paragraph E: "within a few weeks of the decision". within a few weeks = rapidly. "gradually" is what the writer recommends instead.' },
+      { text: 'There were not enough buses to carry the ___ number of passengers.', answer: 'increased', why: '"Buses were too few to cope with the extra passengers". extra = increased.', d: 4 },
+      { text: 'Residents who depended on cars to see a doctor felt ___.', answer: 'neglected', why: '"residents who relied on their cars for medical appointments felt abandoned". abandoned ≈ neglected.' },
+      { text: 'Within a year, the scheme was ___ undone.', answer: 'partially', why: '"Within a year the scheme had been partly reversed". partly = partially; reversed = undone. "completely" is the trap.' },
+    ],
+    distractors: ['gradually', 'completely', 'reduced', 'satisfied'],
+  },
+};
+
+export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION, LANGUAGES, SLEEP, CARFREE];
