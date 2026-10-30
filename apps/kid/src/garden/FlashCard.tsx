@@ -98,7 +98,7 @@ export function FlashCardView({ card, q, onAnswer }: { card: Flashcard; q: Prese
 
       {answered && !result.current?.correct && (
         <div className="mt-3 animate-pop">
-          {q.explanation && <p className="text-sm text-ink-soft">💡 {q.explanation}</p>}
+          {q.explanation && <p className="whitespace-pre-line text-sm text-ink-soft">💡 {q.explanation}</p>}
           <p className="mt-1 text-xs text-ink-soft">
             <T en="📕 Saved to your Mistake Book" />
           </p>

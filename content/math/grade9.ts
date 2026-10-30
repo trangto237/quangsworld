@@ -248,6 +248,31 @@ const systems: Generator = (d, r) => {
 };
 
 // ── Quadratic equations ───────────────────────────────────────────
+/** A number inside a calculation: negatives in brackets, (−3). */
+const pv = (n: number) => (n < 0 ? `(${num(n)})` : num(n));
+/** "−4/6 = −2/3", or just "−2" when it is already whole / simplest. */
+const divide = (top: number, bottom: number) => {
+  const raw = `${num(top)}/${bottom}`;
+  const simple = fracN(top, bottom);
+  return raw === simple ? raw : `${raw} = ${simple}`;
+};
+/** Full working of the quadratic formula for ax² + bx + c = 0 (Δ a perfect square ≥ 0). */
+function formulaSteps(a: number, b: number, c: number, lang: 'en' | 'vi') {
+  const D = b * b - 4 * a * c, q = Math.round(Math.sqrt(D));
+  const en = lang === 'en';
+  const lines = [
+    `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.`,
+    `Δ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}${D > 0 ? ` > 0, √Δ = ${q}` : ''}.`,
+  ];
+  if (D === 0) lines.push(en ? `Δ = 0, so there is one (double) solution: x = −b/(2a) = ${divide(-b, 2 * a)}.` : `Δ = 0 nên phương trình có nghiệm kép: x = −b/(2a) = ${divide(-b, 2 * a)}.`);
+  else {
+    lines.push(`x₁ = (−b + √Δ)/(2a) = (${num(-b)} + ${q})/(2·${pv(a)}) = ${divide(-b + q, 2 * a)}.`);
+    lines.push(`x₂ = (−b − √Δ)/(2a) = (${num(-b)} − ${q})/(2·${pv(a)}) = ${divide(-b - q, 2 * a)}.`);
+    lines.push(en ? `Careful: divide by 2a = ${2 * a}, not by a or 4a.` : `Chú ý: chia cho 2a = ${2 * a}, không phải chia cho a hay 4a.`);
+  }
+  return lines.join('\n');
+}
+
 const quadratics: Generator = (d, r) => {
   if (d <= 2) {
     const p = d === 1 ? int(r, 1, 7) : nz(r, -8, 8), q = d === 1 ? int(r, 1, 7) : nz(r, -8, 8);
@@ -257,10 +282,10 @@ const quadratics: Generator = (d, r) => {
         prompt: `Solve: ${e}`,
         answer: roots([[p, 1], [q, 1]]),
         distractors: [roots([[-p, 1], [-q, 1]]), roots([[p, 1], [-q, 1]]), roots([[p + 1, 1], [q, 1]])],
-        explanation: `Factorise: ${factor(p)}${factor(q)} = 0.`,
+        explanation: `Look for two numbers with sum ${num(p + q)} and product ${num(p * q)}: they are ${num(p)} and ${num(q)} (${num(p)} + ${pv(q)} = ${num(p + q)}, ${num(p)}·${pv(q)} = ${num(p * q)}).\nSo ${e.replace(' = 0', '')} = ${factor(p)}${factor(q)} = 0.\nA product is 0 when one factor is 0: x = ${num(p)} or x = ${num(q)}.`,
       },
       `Giải phương trình: ${e}`,
-      `Phân tích: ${factor(p)}${factor(q)} = 0.`,
+      `Tìm hai số có tổng bằng ${num(p + q)} và tích bằng ${num(p * q)}: đó là ${num(p)} và ${num(q)} (${num(p)} + ${pv(q)} = ${num(p + q)}, ${num(p)}·${pv(q)} = ${num(p * q)}).\nNên ${e.replace(' = 0', '')} = ${factor(p)}${factor(q)} = 0.\nTích bằng 0 khi một thừa số bằng 0: x = ${num(p)} hoặc x = ${num(q)}.`,
     );
   }
   if (d === 3) {
@@ -275,10 +300,10 @@ const quadratics: Generator = (d, r) => {
           prompt: `Solve: ${e}`,
           answer: roots([[m, a], [n, 1]]),
           distractors: [roots([[-m, a], [-n, 1]]), roots([[m, 1], [n, 1]]), roots([[m, 2 * a], [n, 1]])],
-          explanation: `Δ = b² − 4ac = ${num(D)}, √Δ = ${Math.sqrt(D)}, x = (−b ± √Δ)/(2a).`,
+          explanation: formulaSteps(a, B, C, 'en'),
         },
         `Giải phương trình: ${e}`,
-        `Δ = b² − 4ac = ${num(D)}, √Δ = ${Math.sqrt(D)}, x = (−b ± √Δ)/(2a).`,
+        formulaSteps(a, B, C, 'vi'),
       );
     }
     // x² + 2b′x + c = 0 with Δ′ not a square: x = −b′ ± √Δ′
@@ -291,10 +316,10 @@ const quadratics: Generator = (d, r) => {
         prompt: `Solve: ${e}`,
         answer: pm(-bp, rad(t, s)),
         distractors: [pm(bp, rad(t, s)), pm(-bp, rad(2 * t, s)), pm(-2 * bp, rad(t, s))],
-        explanation: `b = 2b′ with b′ = ${num(bp)}: Δ′ = b′² − ac = ${t * t * s}, so x = −b′ ± √Δ′ = ${num(-bp)} ± ${rad(t, s)}.`,
+        explanation: `a = 1, b = ${num(2 * bp)}, c = ${num(c)}. b is even, so use b′ = b/2 = ${num(bp)}.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (not a whole number, so keep the root).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
       },
       `Giải phương trình: ${e}`,
-      `b = 2b′ với b′ = ${num(bp)}: Δ′ = b′² − ac = ${t * t * s}, nên x = −b′ ± √Δ′ = ${num(-bp)} ± ${rad(t, s)}.`,
+      `a = 1, b = ${num(2 * bp)}, c = ${num(c)}. b chẵn nên dùng b′ = b/2 = ${num(bp)}.\nΔ′ = b′² − ac = ${pv(bp)}² − 1·${pv(c)} = ${bp * bp} ${c < 0 ? '+' : '−'} ${Math.abs(c)} = ${t * t * s} > 0.\n√Δ′ = √${t * t * s}${t > 1 ? ` = ${rad(t, s)}` : ''} (không phải số nguyên nên giữ dấu căn).\nx = (−b′ ± √Δ′)/a = ${num(-bp)} ± ${rad(t, s)}.`,
     );
   }
   if (d === 4) {
@@ -319,10 +344,10 @@ const quadratics: Generator = (d, r) => {
         prompt: `How many real solutions does ${e} have?`,
         answer: String(n),
         distractors: ['0', '1', '2', 'Infinitely many'].filter((x) => x !== String(n)),
-        explanation: `Δ = b² − 4ac = ${num(D)} ${why}.`,
+        explanation: `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.\nΔ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${why}.`,
       },
       `Phương trình ${e} có bao nhiêu nghiệm?`,
-      `Δ = b² − 4ac = ${num(D)} ${whyVi}.`,
+      `a = ${num(a)}, b = ${num(b)}, c = ${num(c)}.\nΔ = b² − 4ac = ${pv(b)}² − 4·${pv(a)}·${pv(c)} = ${b * b} ${4 * a * c < 0 ? '+' : '−'} ${Math.abs(4 * a * c)} = ${num(D)}.\nΔ ${whyVi}.`,
     );
   }
   // d5: a parameter m. x² − 2bx + m + k = 0, Δ′ = b² − m − k

@@ -99,7 +99,7 @@ export function Explanation({ question: q, picked }: { question: Question; picke
         </div>
       )}
       {q.explanation && !(mistake && q.conceptId.startsWith('en.pron')) && (
-        <p className="text-slate-700 dark:text-slate-200">
+        <p className="whitespace-pre-line text-slate-700 dark:text-slate-200">
           💡 <GlossText text={q.explanation} enabled={help && !viet} />
           {explanationVi && (
             <span lang="vi" className="mt-1 block text-rose-900 dark:text-rose-200">

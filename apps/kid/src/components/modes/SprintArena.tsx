@@ -237,7 +237,7 @@ export function SprintArena(p: ModeProps) {
                       ✓ <b>{question.options[question.answer]}</b>
                     </p>
                   )}
-                  {!result.correct && question.explanation && <p className="mt-1 opacity-80">💡 {question.explanation}</p>}
+                  {!result.correct && question.explanation && <p className="mt-1 whitespace-pre-line opacity-80">💡 {question.explanation}</p>}
                   {!result.correct && p.wrongNote && (
                     <p className="mt-1 opacity-70">
                       <T en={p.wrongNote} />
