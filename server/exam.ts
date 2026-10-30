@@ -123,11 +123,59 @@ export interface ExamRequest {
   kind: Kind;
   images: { mediaType: string; data: string }[];
   text?: string;
+  /** Write a NEW original IELTS Reading passage with questions instead of reading a paper. */
+  generate?: IeltsGenerate;
 }
+
+export const IELTS_GEN_TYPES = ['headings', 'tfng', 'ynng', 'features', 'endings', 'mc', 'choose-two', 'summary-list', 'completion'] as const;
+export type IeltsGenType = (typeof IELTS_GEN_TYPES)[number];
+export interface IeltsGenerate {
+  topic: string;
+  /** 3 ≈ band 5.5, 4 ≈ band 6.5, 5 ≈ band 7+. */
+  level: 3 | 4 | 5;
+  types: IeltsGenType[];
+}
+
+const GEN_TYPE_TEXT: Record<IeltsGenType, string> = {
+  headings:
+    'Matching headings: a list of 6–8 headings (correct ones plus 2–3 plausible distractors that mention a detail); one question per paragraph asked ("Paragraph B"), options = the full heading list in the same order every time.',
+  tfng: 'Identifying information: statements with options ["TRUE","FALSE","NOT GIVEN"], a balanced mix, in passage order; NOT GIVEN statements must be about something the passage really does not say.',
+  ynng: "Identifying the writer's views/claims: statements with options [\"YES\",\"NO\",\"NOT GIVEN\"]; the passage must clearly contain the writer's opinions.",
+  features: 'Matching features: 3–5 named people/groups/dates from the passage as options; paraphrased statements, not in passage order; an option may be the answer more than once.',
+  endings: 'Matching sentence endings: sentence beginnings as prompts ending with "…"; options = all endings (correct ones plus 2 distractors), same list each time.',
+  mc: 'Multiple choice: a question or sentence stem with exactly 4 options, one correct; wrong options reuse passage words but change the meaning.',
+  'choose-two':
+    'Choose TWO: write it as two questions that each have ONE correct option — the first lists the first correct answer with the 4–5 wrong ones, the second lists the other correct answer with the same wrong ones. Prompts end with "(first answer)" and "(the other answer)".',
+  'summary-list': 'Summary completion from a list: a short summary with gaps; options = a list of 6–8 words (answers are synonyms of passage words, not copies); same list for each gap.',
+  completion:
+    'Completion with words from the passage (summary, sentence, notes, table or flow-chart): options [], answer_index -1, answer_text copied EXACTLY from the passage, at most the word limit stated in the instructions (e.g. NO MORE THAN TWO WORDS).',
+};
+
+export const IELTS_GEN_PROMPT = `You write ORIGINAL IELTS Academic Reading practice for a 14-year-old Vietnamese student aiming for band 6.5–7. Write a new passage yourself — never copy or closely paraphrase a real IELTS / Cambridge test, a textbook or a published article. Invented researchers and studies are fine; real-world facts must be accurate.
+
+The passage: an academic text like a real IELTS passage, with a title on the first line, then paragraphs lettered "A  ", "B  ", … separated by blank lines.
+
+Return the same JSON as an exam paper: "title", "minutes" (20), and "sections" — one section per task type, each with "type": "ielts-reading", the FULL passage in "passage" (identical in every section), "transcript": null, the task instructions exactly as an IELTS paper words them in "instructions" (e.g. "Do the following statements agree with the information given in the passage? Choose TRUE, FALSE or NOT GIVEN."), a short Vietnamese version in "instructions_vi", and its "questions".
+For every question: "prompt", "options", "answer_index" (index of the correct option, or -1 for typed answers), "answer_text" (the correct option's text or the typed answer), "accept" ([] or other accepted forms), "answer_from": "key", "topic": "", and "explanation": one or two sentences saying where the answer is in the passage (quote a few words) and why the tempting wrong answer is wrong.
+13 or 14 questions in total, spread over the task types asked for. Check every answer against your passage before you finish.`;
+
+export const generateTask = (g: IeltsGenerate) =>
+  `Topic: ${g.topic || 'choose an interesting academic topic (science, history, society, technology or the environment)'}. Level: ${{ 3: 'band 5.5 (550–700 words, clear structure)', 4: 'band 6.5 (700–850 words)', 5: 'band 7+ (800–950 words, denser academic language, subtler traps)' }[g.level]}.
+Task types to use, in this order:
+${g.types.map((t, i) => `${i + 1}. ${GEN_TYPE_TEXT[t]}`).join('\n')}`;
 
 export function parseExamRequest(body: unknown): { ok: true; req: ExamRequest } | { ok: false; error: string } {
   const b = (body ?? {}) as Partial<ExamRequest>;
   if (!KINDS.includes(b.kind as Kind)) return { ok: false, error: 'Choose what kind of paper this is.' };
+  if (b.generate) {
+    const g = b.generate as Partial<IeltsGenerate>;
+    if (b.kind !== 'ielts-reading') return { ok: false, error: 'Only IELTS Reading tests can be generated.' };
+    const types = [...new Set((Array.isArray(g.types) ? g.types : []).filter((t): t is IeltsGenType => (IELTS_GEN_TYPES as readonly string[]).includes(t)))].slice(0, 4);
+    if (!types.length) return { ok: false, error: 'Choose at least one question type.' };
+    const level = g.level === 3 || g.level === 5 ? g.level : 4;
+    const topic = typeof g.topic === 'string' ? g.topic.replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+    return { ok: true, req: { kind: 'ielts-reading', images: [], generate: { topic, level, types } } };
+  }
   const images = Array.isArray(b.images) ? b.images : [];
   const text = typeof b.text === 'string' ? b.text.slice(0, EXAM_LIMITS.textChars) : '';
   if (!images.length && !text.trim()) return { ok: false, error: 'Send the pages of the paper.' };
@@ -149,7 +197,9 @@ const KIND_TASK: Record<Kind, string> = {
 };
 
 export const examTask = (req: ExamRequest) =>
-  `${KIND_TASK[req.kind]} There are ${req.images.length} page image(s)${req.text ? ' and the text layer of the PDF (use it for exact wording; use the images for underlining, layout and anything missing)' : ''}. Turn the whole paper into the JSON described.`;
+  req.generate
+    ? generateTask(req.generate)
+    : `${KIND_TASK[req.kind]} There are ${req.images.length} page image(s)${req.text ? ' and the text layer of the PDF (use it for exact wording; use the images for underlining, layout and anything missing)' : ''}. Turn the whole paper into the JSON described.`;
 
 interface GeminiReply {
   promptFeedback?: { blockReason?: string };
@@ -171,9 +221,9 @@ export async function examWithGemini(apiKey: string, model: string, req: ExamReq
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: EXAM_PROMPT }] },
+        systemInstruction: { parts: [{ text: req.generate ? IELTS_GEN_PROMPT : EXAM_PROMPT }] },
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: EXAM_GEMINI_SCHEMA, temperature: 0.1, maxOutputTokens: 65536 },
+        generationConfig: { responseMimeType: 'application/json', responseSchema: EXAM_GEMINI_SCHEMA, temperature: req.generate ? 0.9 : 0.1, maxOutputTokens: 65536 },
       }),
     });
   } catch {
@@ -216,7 +266,7 @@ export async function handleExam(request: Request, env: GenerateEnv, deps: Pick<
   const parsed = parseExamRequest(await request.json().catch(() => null));
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const req = parsed.req;
-  const viaOpenRouter = async () => (await askOpenRouterJson(env.OPENROUTER_API_KEY!, env.OPENROUTER_MODEL, EXAM_PROMPT, { images: req.images, text: req.text }, examTask(req), EXAM_JSON_SCHEMA, deps.fetch)).result;
+  const viaOpenRouter = async () => (await askOpenRouterJson(env.OPENROUTER_API_KEY!, env.OPENROUTER_MODEL, req.generate ? IELTS_GEN_PROMPT : EXAM_PROMPT, { images: req.images, text: req.text }, examTask(req), EXAM_JSON_SCHEMA, deps.fetch)).result;
   try {
     let exam: unknown;
     if (main === 'openrouter') exam = await viaOpenRouter();

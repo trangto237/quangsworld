@@ -3,12 +3,30 @@ import { KIND_INFO, buildImportedExam, examSize, type ImportedExam, type Importe
 import { PAGE_BREAK } from '@atlas/knowledge';
 import { uid } from '@atlas/shared';
 import { Button, Card, Field, cx, inputClass, useQuery, useRepo } from '@atlas/ui';
-import { BusyError, readExamWithAI } from '../lib/ai';
+import { BusyError, generateIeltsWithAI, readExamWithAI } from '../lib/ai';
 import { pdfText } from '../lib/extract';
 import { openPdf, pageJpeg, photoJpeg } from '../lib/ocr';
 import { useCloud } from './Cloud';
 
 const MAX_PAGES = 28;
+const GEN_TYPES = [
+  ['headings', 'Matching headings'],
+  ['tfng', 'True / False / Not Given'],
+  ['ynng', "Writer's views (Yes / No / Not Given)"],
+  ['features', 'Matching features'],
+  ['endings', 'Sentence endings'],
+  ['mc', 'Multiple choice'],
+  ['choose-two', 'Choose TWO'],
+  ['summary-list', 'Summary (from a list)'],
+  ['completion', 'Summary / notes / flow-chart (words from the text)'],
+] as const;
+
+/** Typed answers of a generated test must be words from the passage; the ones that aren't go to the parent to check. */
+function flagUnsure(e: ImportedExam): ImportedExam {
+  const low = (s: string) => s.toLowerCase().replace(/[’']/g, "'");
+  const unsure = e.sections.flatMap((s) => s.questions.filter((q) => q.type === 'input' && !low(q.passage ?? '').includes(low(q.options[0]))).map((q) => q.id));
+  return { ...e, aiAnswered: [...new Set([...e.aiAnswered, ...unsure])] };
+}
 const KINDS: ImportedKind[] = ['hn10', 'ielts-reading', 'ielts-listening'];
 
 interface Picked {
@@ -37,6 +55,37 @@ export function ExamImport() {
   const [error, setError] = useState<string | null>(null);
   const [exam, setExam] = useState<ImportedExam | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [genTopic, setGenTopic] = useState('');
+  const [genLevel, setGenLevel] = useState<3 | 4 | 5>(4);
+  const [genTypes, setGenTypes] = useState<string[]>(['headings', 'tfng', 'completion']);
+
+  const generate = async () => {
+    setError(null);
+    setExam(null);
+    setDone(null);
+    try {
+      const token = await cloud.parentAccessToken();
+      if (!token) throw new Error('Sign in to your family cloud account first (Settings → Cloud sync).');
+      setBusy('Writing a new passage and questions with AI… (about a minute)');
+      const opts = { topic: genTopic, level: genLevel, types: genTypes };
+      let raw: unknown;
+      try {
+        raw = await generateIeltsWithAI(token, opts);
+      } catch (e) {
+        if (!(e instanceof BusyError)) throw e;
+        setBusy('The AI is busy — trying again in 20 seconds…');
+        await new Promise((r) => setTimeout(r, 20_000));
+        raw = await generateIeltsWithAI(token, opts);
+      }
+      setKind('ielts-reading');
+      setFile({ name: 'AI-generated IELTS Reading', kind: 'text', size: 0, pages: 0 });
+      setExam(flagUnsure(buildImportedExam(raw as object, { id: uid('exam_'), name: name || undefined, kind: 'ielts-reading' })));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const pick = async (files: FileList | null) => {
     setError(null);
@@ -192,6 +241,42 @@ export function ExamImport() {
             ✨ Read the paper with AI
           </Button>
           {busy && <span className="text-sm text-slate-500">{busy}</span>}
+        </div>
+        <div className="space-y-3 rounded-xl p-4 ring-1 ring-slate-300 dark:ring-slate-700">
+          <p className="text-sm">
+            <b>✨ Or generate a new IELTS Reading test</b> — AI writes an original passage with 13–14 questions of the types you pick (up to 4). You check it, then it is saved
+            to the family's Exam Hall like an imported paper.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Topic (optional)" hint="e.g. coral reefs, the history of maps — empty = AI chooses">
+              <input className={inputClass} value={genTopic} onChange={(e) => setGenTopic(e.target.value)} />
+            </Field>
+            <Field label="Level">
+              <select className={inputClass} value={genLevel} onChange={(e) => setGenLevel(Number(e.target.value) as 3 | 4 | 5)}>
+                <option value={3}>Band 5.5</option>
+                <option value={4}>Band 6.5</option>
+                <option value={5}>Band 7+</option>
+              </select>
+            </Field>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {GEN_TYPES.map(([id, label]) => {
+              const on = genTypes.includes(id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => setGenTypes((t) => (on ? t.filter((x) => x !== id) : t.length >= 4 ? t : [...t, id]))}
+                  className={cx('rounded-full px-3 py-1 text-xs ring-1', on ? 'bg-brand-50 font-semibold ring-2 ring-brand-500 dark:bg-brand-950' : 'ring-slate-300 dark:ring-slate-700')}
+                >
+                  {on ? '✓ ' : ''}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <Button disabled={!!busy || !genTypes.length} onClick={() => void generate()}>
+            ✨ Generate a test
+          </Button>
         </div>
         {error && <p className="text-sm text-rose-600">{error}</p>}
         {done && <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">✓ {done}</p>}

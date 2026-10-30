@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EXAM_PROMPT, handleExam, parseExamRequest } from './exam';
+import { EXAM_PROMPT, examTask, handleExam, parseExamRequest } from './exam';
 import type { GenerateEnv } from './generate-core';
 
 const ENV: GenerateEnv = { GEMINI_API_KEY: 'AIza-test', SUPABASE_URL: 'https://proj.supabase.co', SUPABASE_ANON_KEY: 'anon' };
@@ -40,5 +40,16 @@ describe('exam paper import (server)', () => {
   it('needs an AI key', async () => {
     const res = await handleExam(post({ kind: 'hn10', images: [IMG] }), { SUPABASE_URL: 'x', SUPABASE_ANON_KEY: 'y' }, { fetch: fakeFetch() });
     expect(res.status).toBe(503);
+  });
+
+  it('accepts a request to generate a new IELTS Reading test', () => {
+    expect(parseExamRequest({ kind: 'hn10', generate: { types: ['tfng'] } }).ok).toBe(false);
+    expect(parseExamRequest({ kind: 'ielts-reading', generate: { types: ['nonsense'] } }).ok).toBe(false);
+    const r = parseExamRequest({ kind: 'ielts-reading', generate: { topic: '  coral   reefs ', level: 5, types: ['tfng', 'headings', 'tfng', 'completion', 'mc', 'endings'] } });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.req.generate).toEqual({ topic: 'coral reefs', level: 5, types: ['tfng', 'headings', 'completion', 'mc'] });
+    expect(examTask(r.req)).toContain('coral reefs');
+    expect(examTask(r.req)).toContain('TRUE');
   });
 });

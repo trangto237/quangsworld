@@ -76,6 +76,19 @@ export async function diagnoseAI(token: string): Promise<Check[]> {
 }
 
 /** Reads a real exam paper (page images, plus the PDF's text layer if any) into structured questions. */
+/** A NEW original IELTS Reading passage with questions, written by AI (same shape as an imported paper). */
+export async function generateIeltsWithAI(token: string, generate: { topic: string; level: 3 | 4 | 5; types: string[] }): Promise<unknown> {
+  const res = await fetch('/api/exam', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ kind: 'ielts-reading', images: [], generate }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { exam?: unknown; error?: string };
+  if (res.status === 429 && !/daily|tomorrow/i.test(body.error ?? '')) throw new BusyError(body.error ?? 'Busy');
+  if (!res.ok) throw new Error(body.error ?? `The server answered ${res.status}.`);
+  return body.exam;
+}
+
 export async function readExamWithAI(token: string, kind: 'hn10' | 'ielts-reading' | 'ielts-listening', images: { mediaType: string; data: string }[], text?: string): Promise<unknown> {
   const res = await fetch('/api/exam', {
     method: 'POST',
