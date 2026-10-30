@@ -80,3 +80,18 @@ export function roots(list: [number, number][]): string {
 
 /** Flip an inequality sign (multiplying by a negative). */
 export const FLIP: Record<string, string> = { '<': '>', '>': '<', '≤': '≥', '≥': '≤' };
+
+/** A number inside a calculation: negatives in brackets, (−3). */
+export const pn = (n: number) => (n < 0 ? `(${num(n)})` : num(n));
+/** "12/(−8) = −3/2", or just "4/2 = 2"; a plain "5" when dividing by 1. */
+export const ratio = (top: number, bottom: number) => {
+  if (bottom === 1) return num(top);
+  const raw = `${num(top)}/${pn(bottom)}`;
+  const simple = fracN(top, bottom);
+  return raw === simple ? raw : `${raw} = ${simple}`;
+};
+export const lcm = (a: number, b: number) => Math.abs(a * b) / gcd(a, b);
+/** Pick the English or Vietnamese wording. */
+export const tr = (en: boolean, e: string, v: string) => (en ? e : v);
+/** A fraction inside a calculation: (−1/3) in brackets when negative. */
+export const pf = (n: number, d: number) => (n * d < 0 ? `(${fracN(n, d)})` : fracN(n, d));

@@ -6,7 +6,7 @@
  * English and Vietnamese, and difficulty 5 is entrance-exam level.
  */
 import type { Generated, Generator } from './generators';
-import { FLIP, factor, frac, fracN, int, nz, num, numeric, pick, poly, rad, roots, signed, terms } from './util';
+import { FLIP, factor, frac, fracN, int, lcm, nz, num, numeric, pf, pick, pn, poly, rad, ratio, roots, signed, terms, tr } from './util';
 
 /** Square-free numbers used under a root. */
 const SQ = [2, 3, 5, 6, 7, 10, 11];
@@ -25,46 +25,84 @@ const expressions: Generator = (d, r) => {
   if (d <= 2) {
     const a = int(r, 2, 9), b = nz(r, -9, 9), c = int(r, 1, 9), e = nz(r, -5, 5);
     const ans = terms([[a + b, 'x'], [c, 'y'], [e, '']]);
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Like terms have exactly the same letter part: ${terms([[a, 'x']])} and ${terms([[b, 'x']])} are like terms; ${terms([[c, 'y']])} has a different letter and ${num(e)} is a plain number.`, `Các hạng tử đồng dạng có cùng phần biến: ${terms([[a, 'x']])} và ${terms([[b, 'x']])} là hạng tử đồng dạng; ${terms([[c, 'y']])} có biến khác, còn ${num(e)} là số.`),
+        tr(en, `Add the x terms by adding the numbers in front: ${terms([[a, 'x'], [b, 'x']])} = (${a} + ${pn(b)})x = ${terms([[a + b, 'x']])}.`, `Cộng các hạng tử chứa x bằng cách cộng các hệ số (số đứng trước x): ${terms([[a, 'x'], [b, 'x']])} = (${a} + ${pn(b)})x = ${terms([[a + b, 'x']])}.`),
+        tr(en, `The y term and the number stay as they are. Answer: ${ans}.`, `Hạng tử chứa y và số giữ nguyên. Vậy kết quả là ${ans}.`),
+        tr(en, `Careful: x and y are different letters, so ${terms([[c, 'y']])} cannot be added to the x terms.`, `Chú ý: x và y là hai biến khác nhau nên không cộng ${terms([[c, 'y']])} vào các hạng tử chứa x.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Simplify: ${terms([[a, 'x'], [c, 'y'], [b, 'x'], [e, '']])}`,
         answer: ans,
         distractors: [terms([[a + b + c, 'x'], [e, '']]), terms([[a - b, 'x'], [c, 'y'], [e, '']]), terms([[a + b, 'x'], [c + e, 'y']])],
+        explanation: ex(true),
       },
       `Rút gọn: ${terms([[a, 'x'], [c, 'y'], [b, 'x'], [e, '']])}`,
+      ex(false),
     );
   }
   if (d === 3) {
     if (r() < 0.5) {
       const a = pick(r, [-5, -4, -3, -2, 2, 3, 4, 5, 6]), b = nz(r, -9, 9);
       const e = `${num(a)}(x ${signed(b)})`;
-      return vi({ prompt: `Expand: ${e}`, answer: poly([a, a * b]), distractors: [poly([a, b]), poly([a, -a * b]), poly([1, a * b])] }, `Khai triển: ${e}`);
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Rule (distributive law): the number outside the bracket multiplies EVERY term inside: k(A + B) = kA + kB.`, `Quy tắc nhân đơn thức với đa thức: số ngoài ngoặc nhân với TỪNG hạng tử trong ngoặc: k(A + B) = kA + kB.`),
+          tr(en, `Here k = ${num(a)}: ${num(a)}·x = ${terms([[a, 'x']])} and ${num(a)}·${pn(b)} = ${num(a * b)}.`, `Ở đây k = ${num(a)}: ${num(a)}·x = ${terms([[a, 'x']])} và ${num(a)}·${pn(b)} = ${num(a * b)}.`),
+          tr(en, `So ${e} = ${poly([a, a * b])}.`, `Vậy ${e} = ${poly([a, a * b])}.`),
+          tr(en, `Careful: multiply the second term too, and watch the signs (− × − = +, − × + = −).`, `Chú ý: phải nhân cả hạng tử thứ hai và để ý dấu (− nhân − thành +, − nhân + thành −).`),
+        ].join('\n');
+      return vi({ prompt: `Expand: ${e}`, answer: poly([a, a * b]), distractors: [poly([a, b]), poly([a, -a * b]), poly([1, a * b])], explanation: ex(true) }, `Khai triển: ${e}`, ex(false));
     }
     const a = nz(r, -3, 4), b = nz(r, -6, 6), x = nz(r, -4, 5);
     const ans = a * x * x + b * x;
     const e = poly([a, b, 0]);
-    return vi(
-      { prompt: `If x = ${num(x)}, find ${e}`, ...numeric(ans, [(a * x) ** 2 + b * x, a * x * 2 + b * x, -a * x * x + b * x], r, num) },
-      `Với x = ${num(x)}, tính ${e}`,
-    );
+    const t2 = b * x;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Replace x by ${num(x)} (a negative number goes in brackets): ${num(a)}·${pn(x)}² ${b < 0 ? '−' : '+'} ${Math.abs(b)}·${pn(x)}.`, `Thay x = ${num(x)} vào biểu thức (số âm đặt trong ngoặc): ${num(a)}·${pn(x)}² ${b < 0 ? '−' : '+'} ${Math.abs(b)}·${pn(x)}.`),
+        tr(en, `Power first: ${pn(x)}² = ${pn(x)}·${pn(x)} = ${x * x}.`, `Tính luỹ thừa trước: ${pn(x)}² = ${pn(x)}·${pn(x)} = ${x * x}.`),
+        tr(en, `Then multiply: ${num(a)}·${x * x} = ${num(a * x * x)} and ${num(b)}·${pn(x)} = ${num(t2)}.`, `Rồi nhân: ${num(a)}·${x * x} = ${num(a * x * x)} và ${num(b)}·${pn(x)} = ${num(t2)}.`),
+        tr(en, `Add them: ${num(a * x * x)} + ${pn(t2)} = ${num(ans)}.`, `Cộng lại: ${num(a * x * x)} + ${pn(t2)} = ${num(ans)}.`),
+        tr(en, `Careful: only x is squared, not the number in front of it.`, `Chú ý: chỉ bình phương x, không bình phương hệ số đứng trước.`),
+      ].join('\n');
+    return vi({ prompt: `If x = ${num(x)}, find ${e}`, ...numeric(ans, [(a * x) ** 2 + b * x, a * x * 2 + b * x, -a * x * x + b * x], r, num), explanation: ex(true) }, `Với x = ${num(x)}, tính ${e}`, ex(false));
   }
   if (d === 4) {
     if (r() < 0.5) {
       const p = nz(r, -7, 7), q = nz(r, -7, 7);
       const e = `${factor(-p)}${factor(-q)}`;
-      return vi({ prompt: `Expand: ${e}`, answer: poly([1, p + q, p * q]), distractors: [poly([1, p * q, p + q]), poly([1, 0, p * q]), poly([1, p + q, -p * q])] }, `Khai triển: ${e}`);
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Multiply each term of the first bracket by each term of the second: (x + m)(x + n) = x·x + x·n + m·x + m·n.`, `Nhân từng hạng tử của ngoặc thứ nhất với từng hạng tử của ngoặc thứ hai: (x + m)(x + n) = x·x + x·n + m·x + m·n.`),
+          tr(en, `Here m = ${num(p)}, n = ${num(q)}: ${e} = ${terms([[1, 'x²'], [q, 'x'], [p, 'x'], [p * q, '']])}.`, `Ở đây m = ${num(p)}, n = ${num(q)}: ${e} = ${terms([[1, 'x²'], [q, 'x'], [p, 'x'], [p * q, '']])}.`),
+          tr(en, `Collect the x terms: ${num(q)} + ${pn(p)} = ${num(p + q)}, and the last term is ${num(p)}·${pn(q)} = ${num(p * q)}.`, `Thu gọn các hạng tử chứa x: ${num(q)} + ${pn(p)} = ${num(p + q)}; số hạng cuối là ${num(p)}·${pn(q)} = ${num(p * q)}.`),
+          tr(en, `Answer: ${poly([1, p + q, p * q])}.`, `Vậy kết quả là ${poly([1, p + q, p * q])}.`),
+        ].join('\n');
+      return vi({ prompt: `Expand: ${e}`, answer: poly([1, p + q, p * q]), distractors: [poly([1, p * q, p + q]), poly([1, 0, p * q]), poly([1, p + q, -p * q])], explanation: ex(true) }, `Khai triển: ${e}`, ex(false));
     }
     const a = int(r, 1, 3), p = nz(r, -6, 6);
     const e = `(${poly([a, p])})²`;
+    const A = terms([[a, 'x']]);
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Use the identity (A + B)² = A² + 2AB + B² (square of a sum).`, `Dùng hằng đẳng thức bình phương của một tổng: (A + B)² = A² + 2AB + B².`),
+        tr(en, `Here A = ${A}, B = ${num(p)}.`, `Ở đây A = ${A}, B = ${num(p)}.`),
+        `A² = ${a === 1 ? 'x²' : `(${A})² = ${a * a}x²`}; 2AB = 2·${A}·${pn(p)} = ${terms([[2 * a * p, 'x']])}; B² = ${pn(p)}² = ${p * p}.`,
+        tr(en, `So ${e} = ${poly([a * a, 2 * a * p, p * p])}.`, `Vậy ${e} = ${poly([a * a, 2 * a * p, p * p])}.`),
+        tr(en, `Careful: don't forget the middle term 2AB, and B² is always positive.`, `Chú ý: đừng quên hạng tử giữa 2AB, và B² luôn dương.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Expand: ${e}`,
         answer: poly([a * a, 2 * a * p, p * p]),
         distractors: [poly([a * a, 0, p * p]), poly([a * a, a * p, p * p]), poly([a * a, -2 * a * p, p * p])],
-        explanation: '(A + B)² = A² + 2AB + B² and (A − B)² = A² − 2AB + B².',
+        explanation: ex(true),
       },
       `Khai triển: ${e}`,
-      '(A + B)² = A² + 2AB + B² và (A − B)² = A² − 2AB + B².',
+      ex(false),
     );
   }
   // d5: factorise
@@ -72,48 +110,52 @@ const expressions: Generator = (d, r) => {
   if (kind === 'diff') {
     const k = int(r, 2, 12);
     const e = poly([1, 0, -k * k]);
-    return vi(
-      {
-        prompt: `Factorise: ${e}`,
-        answer: `(x − ${k})(x + ${k})`,
-        distractors: [`(x − ${k})²`, `(x + ${k})²`, `(x − ${k * k})(x + 1)`],
-        explanation: 'A² − B² = (A − B)(A + B).',
-      },
-      `Phân tích thành nhân tử: ${e}`,
-      'A² − B² = (A − B)(A + B).',
-    );
+    const ex = (en: boolean) =>
+      [
+        tr(en, `${k * k} = ${k}², so this is a difference of two squares: A² − B² = (A − B)(A + B).`, `${k * k} = ${k}² nên đây là hiệu hai bình phương: A² − B² = (A − B)(A + B).`),
+        tr(en, `Here A = x, B = ${k}: x² − ${k}² = (x − ${k})(x + ${k}).`, `Ở đây A = x, B = ${k}: x² − ${k}² = (x − ${k})(x + ${k}).`),
+        tr(en, `Careful: (x − ${k})² = x² − ${2 * k}x + ${k * k} has a middle term, so it is not the answer.`, `Chú ý: (x − ${k})² = x² − ${2 * k}x + ${k * k} có hạng tử giữa nên không phải đáp án.`),
+      ].join('\n');
+    return vi({ prompt: `Factorise: ${e}`, answer: `(x − ${k})(x + ${k})`, distractors: [`(x − ${k})²`, `(x + ${k})²`, `(x − ${k * k})(x + 1)`], explanation: ex(true) }, `Phân tích thành nhân tử: ${e}`, ex(false));
   }
   if (kind === 'common') {
     const a = int(r, 2, 5), k = int(r, 1, 6);
     const e = poly([a, 0, -a * k * k]);
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Both terms are divisible by ${a}, so take out the common factor ${a}: ${e} = ${a}(x² − ${k * k}).`, `Cả hai hạng tử đều chia hết cho ${a}, nên đặt nhân tử chung ${a} ra ngoài: ${e} = ${a}(x² − ${k * k}).`),
+        tr(en, `${k * k} = ${k}², so x² − ${k * k} is a difference of two squares: A² − B² = (A − B)(A + B) with A = x, B = ${k}.`, `${k * k} = ${k}² nên x² − ${k * k} là hiệu hai bình phương: A² − B² = (A − B)(A + B) với A = x, B = ${k}.`),
+        tr(en, `So ${e} = ${a}(x − ${k})(x + ${k}).`, `Vậy ${e} = ${a}(x − ${k})(x + ${k}).`),
+      ].join('\n');
     return vi(
-      {
-        prompt: `Factorise: ${e}`,
-        answer: `${a}(x − ${k})(x + ${k})`,
-        distractors: [`${a}(x − ${k})²`, `(${a}x − ${k})(x + ${k})`, `${a}(x − ${k * k})(x + ${k * k})`],
-        explanation: 'Take out the common factor first, then use A² − B² = (A − B)(A + B).',
-      },
+      { prompt: `Factorise: ${e}`, answer: `${a}(x − ${k})(x + ${k})`, distractors: [`${a}(x − ${k})²`, `(${a}x − ${k})(x + ${k})`, `${a}(x − ${k * k})(x + ${k * k})`], explanation: ex(true) },
       `Phân tích thành nhân tử: ${e}`,
-      'Đặt nhân tử chung ra ngoài trước, rồi dùng A² − B² = (A − B)(A + B).',
+      ex(false),
     );
   }
   let p = nz(r, -8, 8), q = nz(r, -8, 8);
   if (p === -q) q = q + 1 || 2;
   const e = poly([1, p + q, p * q]);
   const f = (u: number, v: number) => (u === v ? `${factor(-u)}²` : `${factor(-Math.min(u, v))}${factor(-Math.max(u, v))}`);
-  return vi(
-    {
-      prompt: `Factorise: ${e}`,
-      answer: f(p, q),
-      distractors: [f(-p, -q), f(p, -q), f(-p, q), f(p * q, 1)],
-      explanation: 'Find two numbers that multiply to c and add to b.',
-    },
-    `Phân tích thành nhân tử: ${e}`,
-    'Tìm hai số có tích bằng c và tổng bằng b.',
-  );
+  const [lo, hi] = [Math.min(p, q), Math.max(p, q)];
+  const ex = (en: boolean) =>
+    [
+      tr(en, `Expanding (x + m)(x + n) gives x² + (m + n)x + m·n. So we need two numbers m, n that add to ${num(p + q)} (the number in front of x) and multiply to ${num(p * q)} (the number on its own).`, `Khai triển (x + m)(x + n) = x² + (m + n)x + m·n. Vậy cần tìm hai số m, n có tổng bằng ${num(p + q)} (hệ số của x) và tích bằng ${num(p * q)} (hệ số tự do).`),
+      tr(en, `${p * q > 0 ? `The product is positive, so both numbers have the same sign as ${num(p + q)}.` : 'The product is negative, so the two numbers have opposite signs.'}`, `${p * q > 0 ? `Tích dương nên hai số cùng dấu với ${num(p + q)}.` : 'Tích âm nên hai số trái dấu.'}`),
+      tr(en, `They are ${num(lo)} and ${num(hi)}: ${num(lo)} + ${pn(hi)} = ${num(p + q)}, ${num(lo)}·${pn(hi)} = ${num(p * q)}.`, `Đó là ${num(lo)} và ${num(hi)}: ${num(lo)} + ${pn(hi)} = ${num(p + q)}, ${num(lo)}·${pn(hi)} = ${num(p * q)}.`),
+      tr(en, `So ${e} = ${f(p, q)}.`, `Vậy ${e} = ${f(p, q)}.`),
+    ].join('\n');
+  return vi({ prompt: `Factorise: ${e}`, answer: f(p, q), distractors: [f(-p, -q), f(p, -q), f(-p, q), f(p * q, 1)], explanation: ex(true) }, `Phân tích thành nhân tử: ${e}`, ex(false));
 };
 
 // ── Inequalities ────────────────────────────────────────────────
+/** "Divide both sides by k" with the rule about the sign. */
+const divideLine = (en: boolean, k: number, out: string, rhs: number, v = 'x') =>
+  k === 1
+    ? ''
+    : k > 0
+      ? tr(en, `Divide both sides by ${k} (a positive number, so the sign stays ${out}): ${v} ${out} ${ratio(rhs, k)}.`, `Chia hai vế cho ${k} (số dương nên giữ nguyên chiều ${out}): ${v} ${out} ${ratio(rhs, k)}.`)
+      : tr(en, `Divide both sides by ${num(k)}. Dividing by a NEGATIVE number flips the sign, so it becomes ${out}: ${v} ${out} ${ratio(rhs, k)}.`, `Chia hai vế cho ${num(k)}. Chia cho số ÂM thì phải đổi chiều bất đẳng thức, nên được dấu ${out}: ${v} ${out} ${ratio(rhs, k)}.`);
 const inequalities: Generator = (d, r) => {
   const signs = d >= 3 ? (['<', '>', '≤', '≥'] as const) : (['<', '>'] as const);
   if (d <= 4) {
@@ -122,16 +164,24 @@ const inequalities: Generator = (d, r) => {
     const b = nz(r, -12, 12);
     const sign = pick(r, signs);
     const out = a < 0 ? FLIP[sign] : sign;
-    const e = `${poly([a, b])} ${sign} ${num(a * x + b)}`;
+    const R = a * x + b;
+    const e = `${poly([a, b])} ${sign} ${num(R)}`;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Solve it like an equation: get x on its own, step by step.`, `Giải giống như phương trình: đưa x về một mình một vế.`),
+        tr(en, `Move ${num(b)} to the right side, changing its sign: ${terms([[a, 'x']])} ${sign} ${num(R)} ${signed(-b)} = ${num(a * x)}.`, `Chuyển ${num(b)} sang vế phải và đổi dấu: ${terms([[a, 'x']])} ${sign} ${num(R)} ${signed(-b)} = ${num(a * x)}.`),
+        divideLine(en, a, out, a * x),
+        tr(en, `Answer: x ${out} ${num(x)}.`, `Vậy nghiệm của bất phương trình là x ${out} ${num(x)}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Solve: ${e}`,
         answer: `x ${out} ${num(x)}`,
         distractors: [`x ${FLIP[out]} ${num(x)}`, `x ${out} ${num(-x || x + 1)}`, `x ${out} ${num(x + 1)}`],
-        explanation: a < 0 ? 'Dividing by a negative number flips the inequality sign.' : undefined,
+        explanation: ex(true),
       },
       `Giải bất phương trình: ${e}`,
-      a < 0 ? 'Chia cho số âm thì phải đổi chiều bất đẳng thức.' : undefined,
+      ex(false),
     );
   }
   if (r() < 0.5) {
@@ -140,15 +190,23 @@ const inequalities: Generator = (d, r) => {
     const sign = pick(r, signs);
     const x0 = 6 * k + 3 * p + 2 * q;
     const e = `(x ${signed(-p)})/2 − (x ${signed(q)})/3 ${sign} ${num(k)}`;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Clear the fractions: multiply both sides by 6, the lowest common multiple of the denominators 2 and 3 (6 is positive, so the sign stays ${sign}).`, `Quy đồng bỏ mẫu: nhân hai vế với 6 (bội chung nhỏ nhất của hai mẫu 2 và 3; 6 dương nên giữ nguyên chiều ${sign}).`),
+        `3(x ${signed(-p)}) − 2(x ${signed(q)}) ${sign} ${num(6 * k)}.`,
+        tr(en, `Expand the brackets: ${terms([[3, 'x'], [-3 * p, ''], [-2, 'x'], [-2 * q, '']])} ${sign} ${num(6 * k)}.`, `Phá ngoặc: ${terms([[3, 'x'], [-3 * p, ''], [-2, 'x'], [-2 * q, '']])} ${sign} ${num(6 * k)}.`),
+        tr(en, `Collect: ${terms([[1, 'x'], [-3 * p - 2 * q, '']])} ${sign} ${num(6 * k)}, so x ${sign} ${3 * p + 2 * q === 0 ? num(x0) : `${num(6 * k)} ${signed(3 * p + 2 * q)} = ${num(x0)}`}.`, `Thu gọn: ${terms([[1, 'x'], [-3 * p - 2 * q, '']])} ${sign} ${num(6 * k)}, nên x ${sign} ${3 * p + 2 * q === 0 ? num(x0) : `${num(6 * k)} ${signed(3 * p + 2 * q)} = ${num(x0)}`}.`),
+        tr(en, `Careful: the minus in front of the second bracket changes both signs: −2(x ${signed(q)}) = ${terms([[-2, 'x'], [-2 * q, '']])}.`, `Chú ý: dấu trừ trước ngoặc thứ hai đổi dấu cả hai hạng tử: −2(x ${signed(q)}) = ${terms([[-2, 'x'], [-2 * q, '']])}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Solve: ${e}`,
         answer: `x ${sign} ${num(x0)}`,
         distractors: [`x ${FLIP[sign]} ${num(x0)}`, `x ${sign} ${num(6 * k + 3 * p - 2 * q)}`, `x ${sign} ${num(k + p + q)}`],
-        explanation: `Multiply both sides by 6: 3(x ${signed(-p)}) − 2(x ${signed(q)}) ${sign} ${num(6 * k)}. Careful with the minus in front of the second bracket.`,
+        explanation: ex(true),
       },
       `Giải bất phương trình: ${e}`,
-      `Nhân cả hai vế với 6: 3(x ${signed(-p)}) − 2(x ${signed(q)}) ${sign} ${num(6 * k)}. Chú ý dấu trừ trước ngoặc thứ hai.`,
+      ex(false),
     );
   }
   // a(x − p) + b  ?  cx + e, asking for the largest / smallest whole number
@@ -162,19 +220,77 @@ const inequalities: Generator = (d, r) => {
   const ans = out === '<' ? x0 - 1 : out === '>' ? x0 + 1 : x0;
   const lhs = `${a === 1 ? '' : a === -1 ? '−' : num(a)}(x ${signed(-p)}) ${signed(b)}`;
   const ineq = `${lhs} ${sign} ${poly([c, e])}`;
+  const pickLine = (en: boolean) =>
+    out === '<'
+      ? tr(en, `x must be smaller than ${num(x0)} (not equal), so the largest integer is ${num(x0)} − 1 = ${num(ans)}.`, `x phải nhỏ hơn ${num(x0)} (không được bằng), nên số nguyên lớn nhất là ${num(x0)} − 1 = ${num(ans)}.`)
+      : out === '>'
+        ? tr(en, `x must be bigger than ${num(x0)} (not equal), so the smallest integer is ${num(x0)} + 1 = ${num(ans)}.`, `x phải lớn hơn ${num(x0)} (không được bằng), nên số nguyên nhỏ nhất là ${num(x0)} + 1 = ${num(ans)}.`)
+        : tr(en, `x = ${num(x0)} is allowed (the sign has "or equal"), so the ${largest ? 'largest' : 'smallest'} integer is ${num(x0)}.`, `Dấu ${out} cho phép x = ${num(x0)}, nên số nguyên ${largest ? 'lớn nhất' : 'nhỏ nhất'} là ${num(x0)}.`);
+  const ex = (en: boolean) =>
+    [
+      tr(en, `First solve the inequality. Expand the bracket: ${terms([[a, 'x'], [-a * p + b, '']])} ${sign} ${poly([c, e])}.`, `Trước hết giải bất phương trình. Phá ngoặc: ${terms([[a, 'x'], [-a * p + b, '']])} ${sign} ${poly([c, e])}.`),
+      tr(en, `x terms to the left, numbers to the right (each changes sign when it crosses): ${terms([[a, 'x'], [-c, 'x']])} ${sign} ${num(e)} ${signed(a * p - b)}, so ${terms([[a - c, 'x']])} ${sign} ${num((a - c) * x0)}.`, `Chuyển hạng tử chứa x sang trái, số sang phải (chuyển vế thì đổi dấu): ${terms([[a, 'x'], [-c, 'x']])} ${sign} ${num(e)} ${signed(a * p - b)}, nên ${terms([[a - c, 'x']])} ${sign} ${num((a - c) * x0)}.`),
+      divideLine(en, a - c, out, (a - c) * x0),
+      pickLine(en),
+    ]
+      .filter(Boolean)
+      .join('\n');
   return vi(
     {
       prompt: `Find the ${largest ? 'largest' : 'smallest'} integer x such that ${ineq}`,
       ...numeric(ans, [out === '<' || out === '>' ? x0 : largest ? x0 - 1 : x0 + 1, largest ? x0 + 1 : x0 - 1, -ans], r, num),
-      explanation: `Solving gives x ${out} ${num(x0)}${a - c < 0 ? ' (the sign flips: the x-coefficient is negative)' : ''}.`,
+      explanation: ex(true),
     },
     `Tìm số nguyên x ${largest ? 'lớn nhất' : 'nhỏ nhất'} thoả mãn ${ineq}`,
-    `Giải ra được x ${out} ${num(x0)}${a - c < 0 ? ' (đổi chiều vì hệ số của x âm)' : ''}.`,
+    ex(false),
   );
 };
 
 // ── Systems of two equations ───────────────────────────────────────
 const lin2 = (a: number, b: number) => terms([[a, 'x'], [b, 'y']]);
+/**
+ * Worked elimination for a1x + b1y = c1, a2x + b2y = c2: scale so one letter has matching
+ * coefficients, add or subtract, solve, then substitute back into (1).
+ */
+function elimSteps(a1: number, b1: number, c1: number, a2: number, b2: number, c2: number, en: boolean): string[] {
+  // eliminate y when its coefficients already match in size, otherwise x
+  const elimY = Math.abs(b1) === Math.abs(b2) || (Math.abs(a1) !== Math.abs(a2) && lcm(b1, b2) < lcm(a1, a2));
+  const [K, E] = elimY ? ['x', 'y'] : ['y', 'x'];
+  const [p1, q1, p2, q2] = elimY ? [a1, b1, a2, b2] : [b1, a1, b2, a2];
+  const L = lcm(q1, q2), m1 = L / Math.abs(q1), m2 = L / Math.abs(q2);
+  const [P1, Q1, C1, P2, Q2, C2] = [m1 * p1, m1 * q1, m1 * c1, m2 * p2, m2 * q2, m2 * c2];
+  const eq = (p: number, q: number, c: number) => `${elimY ? lin2(p, q) : lin2(q, p)} = ${num(c)}`;
+  const sub = Q1 === Q2;
+  const op = sub ? '−' : '+';
+  const Kc = sub ? P1 - P2 : P1 + P2, rhs = sub ? C1 - C2 : C1 + C2;
+  const lines = [
+    tr(en, `Call the equations (1) ${eq(p1, q1, c1)} and (2) ${eq(p2, q2, c2)}. Method: elimination — make the ${E} terms cancel by adding or subtracting the equations.`, `Gọi (1) là ${eq(p1, q1, c1)}, (2) là ${eq(p2, q2, c2)}. Phương pháp cộng đại số: làm cho các hạng tử chứa ${E} triệt tiêu khi cộng hoặc trừ hai phương trình.`),
+  ];
+  if (Kc === 0) return lines; // no unique solution (never for the generated systems)
+  const kv = rhs / Kc;
+  if (m1 !== 1 || m2 !== 1) {
+    const parts = [m1 !== 1 ? `(1) × ${m1}: ${eq(P1, Q1, C1)}` : '', m2 !== 1 ? `(2) × ${m2}: ${eq(P2, Q2, C2)}` : ''].filter(Boolean).join('; ');
+    lines.push(tr(en, `Multiply so the ${E} coefficients have the same size: ${parts}.`, `Nhân để hệ số của ${E} có cùng giá trị tuyệt đối: ${parts}.`));
+  }
+  lines.push(
+    tr(
+      en,
+      `${sub ? 'Subtract' : 'Add'} the equations (the ${E} terms cancel): (${num(P1)} ${op} ${pn(P2)})${K} = ${num(C1)} ${op} ${pn(C2)}, so ${terms([[Kc, K]])} = ${num(rhs)}${Kc === 1 ? '' : `, ${K} = ${ratio(rhs, Kc)}`}.`,
+      `${sub ? 'Trừ' : 'Cộng'} từng vế hai phương trình (hạng tử chứa ${E} triệt tiêu): (${num(P1)} ${op} ${pn(P2)})${K} = ${num(C1)} ${op} ${pn(C2)}, nên ${terms([[Kc, K]])} = ${num(rhs)}${Kc === 1 ? '' : `, ${K} = ${ratio(rhs, Kc)}`}.`,
+    ),
+  );
+  const rest = c1 - p1 * kv, ev = rest / q1;
+  lines.push(
+    tr(
+      en,
+      `Put ${K} = ${num(kv)} into (1): ${p1 === 1 ? '' : `${num(p1)}·${pn(kv)} = ${num(p1 * kv)}, so `}${terms([[q1, E]])} = ${num(c1)} − ${pn(p1 * kv)} = ${num(rest)}${q1 === 1 ? '' : `, ${E} = ${ratio(rest, q1)}`}.`,
+      `Thay ${K} = ${num(kv)} vào (1): ${p1 === 1 ? '' : `${num(p1)}·${pn(kv)} = ${num(p1 * kv)}, nên `}${terms([[q1, E]])} = ${num(c1)} − ${pn(p1 * kv)} = ${num(rest)}${q1 === 1 ? '' : `, ${E} = ${ratio(rest, q1)}`}.`,
+    ),
+  );
+  const [x, y] = elimY ? [kv, ev] : [ev, kv];
+  lines.push(tr(en, `Answer: x = ${num(x)}, y = ${num(y)}.`, `Vậy hệ có nghiệm x = ${num(x)}, y = ${num(y)}.`));
+  return lines;
+}
 const systems: Generator = (d, r) => {
   const sysDistractors = (x: number, y: number) => [pair(y, x), pair(-x, y), pair(x, -y), pair(x + 1, y - 1), pair(x - 1, y + 2)];
   if (d <= 3) {
@@ -189,16 +305,8 @@ const systems: Generator = (d, r) => {
       } while (a1 * b2 - a2 * b1 === 0);
     const x = nz(r, -5, 8), y = nz(r, -5, 8);
     const s = `${lin2(a1, b1)} = ${num(a1 * x + b1 * y)} and ${lin2(a2, b2)} = ${num(a2 * x + b2 * y)}`;
-    return vi(
-      {
-        prompt: `Solve the system: ${s}`,
-        answer: pair(x, y),
-        distractors: sysDistractors(x, y),
-        explanation: 'Multiply the equations so one letter has equal (or opposite) coefficients, add or subtract to eliminate it, then substitute back.',
-      },
-      `Giải hệ phương trình: ${s.replace(' and ', ' và ')}`,
-      'Nhân các phương trình để hệ số của một ẩn bằng nhau (hoặc đối nhau), cộng hoặc trừ để khử ẩn đó, rồi thế ngược lại.',
-    );
+    const ex = (en: boolean) => elimSteps(a1, b1, a1 * x + b1 * y, a2, b2, a2 * x + b2 * y, en).join('\n');
+    return vi({ prompt: `Solve the system: ${s}`, answer: pair(x, y), distractors: sysDistractors(x, y), explanation: ex(true) }, `Giải hệ phương trình: ${s.replace(' and ', ' và ')}`, ex(false));
   }
   if (d === 4) {
     const [p, q] = pick(r, [[2, 3], [3, 2], [2, 5], [4, 3], [3, 4], [5, 2]]);
@@ -206,16 +314,12 @@ const systems: Generator = (d, r) => {
     const x = p * u, y = q * v;
     const a = nz(r, -3, 3), b = nz(r, -3, 3);
     const s = `x/${p} + y/${q} = ${num(u + v)} and ${lin2(a, b)} = ${num(a * x + b * y)}`;
-    return vi(
-      {
-        prompt: `Solve the system: ${s}`,
-        answer: pair(x, y),
-        distractors: sysDistractors(x, y),
-        explanation: `Multiply the first equation by ${p * q} to clear the fractions: ${lin2(q, p)} = ${num(p * q * (u + v))}.`,
-      },
-      `Giải hệ phương trình: ${s.replace(' and ', ' và ')}`,
-      `Nhân phương trình thứ nhất với ${p * q} để bỏ mẫu: ${lin2(q, p)} = ${num(p * q * (u + v))}.`,
-    );
+    const ex = (en: boolean) =>
+      [
+        tr(en, `First clear the fractions: multiply the first equation by ${p}·${q} = ${p * q} (x/${p}·${p * q} = ${q}x, y/${q}·${p * q} = ${p}y): ${lin2(q, p)} = ${num(p * q * (u + v))}.`, `Trước hết bỏ mẫu: nhân phương trình thứ nhất với ${p}·${q} = ${p * q} (x/${p}·${p * q} = ${q}x, y/${q}·${p * q} = ${p}y): ${lin2(q, p)} = ${num(p * q * (u + v))}.`),
+        ...elimSteps(q, p, p * q * (u + v), a, b, a * x + b * y, en),
+      ].join('\n');
+    return vi({ prompt: `Solve the system: ${s}`, answer: pair(x, y), distractors: sysDistractors(x, y), explanation: ex(true) }, `Giải hệ phương trình: ${s.replace(' and ', ' và ')}`, ex(false));
   }
   // d5: new unknowns u = 1/(x + sx), v = 1/(y + sy)
   const X = pick(r, [1, 2, -1, -2, 3]), Y = pick(r, [1, 2, -1, 3, -3]);
@@ -235,15 +339,19 @@ const systems: Generator = (d, r) => {
   };
   const x = X - sx, y = Y - sy;
   const s = `${side(p1, q1)} and ${side(p2, q2)}`;
+  const uv = (p: number, q: number) => `${terms([[p, 'u'], [q, 'v']])} = ${fracN(p * Y + q * X, X * Y)}`;
+  const ex = (en: boolean) =>
+    [
+      tr(en, `The unknowns sit in denominators, so use new letters: u = 1/${den('x', sx)}, v = 1/${den('y', sy)} (condition: x ≠ ${num(-sx)}, y ≠ ${num(-sy)}).`, `Ẩn nằm ở mẫu nên đặt ẩn phụ: u = 1/${den('x', sx)}, v = 1/${den('y', sy)} (điều kiện: x ≠ ${num(-sx)}, y ≠ ${num(-sy)}).`),
+      tr(en, `The system becomes an ordinary one: ${uv(p1, q1)} and ${uv(p2, q2)}.`, `Hệ trở thành hệ bậc nhất quen thuộc: ${uv(p1, q1)} và ${uv(p2, q2)}.`),
+      tr(en, `Solve it by elimination: u = ${fracN(1, X)}, v = ${fracN(1, Y)} (check: ${num(p1)}·${pf(1, X)} + ${pn(q1)}·${pf(1, Y)} = ${fracN(p1 * Y + q1 * X, X * Y)}).`, `Giải bằng phương pháp cộng đại số: u = ${fracN(1, X)}, v = ${fracN(1, Y)} (thử lại: ${num(p1)}·${pf(1, X)} + ${pn(q1)}·${pf(1, Y)} = ${fracN(p1 * Y + q1 * X, X * Y)}).`),
+      tr(en, `Go back to x and y: 1/${den('x', sx)} = ${fracN(1, X)} ⇒ x ${signed(sx)} = ${num(X)} ⇒ x = ${num(x)}; 1/${den('y', sy)} = ${fracN(1, Y)} ⇒ y ${signed(sy)} = ${num(Y)} ⇒ y = ${num(y)}.`, `Trở lại x, y: 1/${den('x', sx)} = ${fracN(1, X)} ⇒ x ${signed(sx)} = ${num(X)} ⇒ x = ${num(x)}; 1/${den('y', sy)} = ${fracN(1, Y)} ⇒ y ${signed(sy)} = ${num(Y)} ⇒ y = ${num(y)}.`),
+      tr(en, `Careful: u and v are not the answer — always turn them back into x and y.`, `Chú ý: u, v chưa phải đáp án — phải tính lại x và y.`),
+    ].join('\n');
   return vi(
-    {
-      prompt: `Solve the system: ${s}`,
-      answer: pair(x, y),
-      distractors: [pair(X, Y), pair(y, x), pair(X + sx, Y + sy), pair(x, -y)],
-      explanation: `Put u = 1/${den('x', sx)} and v = 1/${den('y', sy)}. Solving gives u = ${fracN(1, X)}, v = ${fracN(1, Y)}, so x ${signed(sx)} = ${num(X)} and y ${signed(sy)} = ${num(Y)}.`,
-    },
+    { prompt: `Solve the system: ${s}`, answer: pair(x, y), distractors: [pair(X, Y), pair(y, x), pair(X + sx, Y + sy), pair(x, -y)], explanation: ex(true) },
     `Giải hệ phương trình: ${s.replace(' and ', ' và ')}`,
-    `Đặt u = 1/${den('x', sx)}, v = 1/${den('y', sy)}. Giải ra u = ${fracN(1, X)}, v = ${fracN(1, Y)}, nên x ${signed(sx)} = ${num(X)} và y ${signed(sy)} = ${num(Y)}.`,
+    ex(false),
   );
 };
 
@@ -377,6 +485,13 @@ const quadratics: Generator = (d, r) => {
 };
 
 // ── Viète's theorem ─────────────────────────────────────────────
+/** "x² − Sx + P = 0: a = 1, b = −S, c = P, so S = …, P = …" */
+const vietaSP = (en: boolean, S: number, P: number, c = 'c') =>
+  tr(
+    en,
+    `Viète's theorem: for ax² + bx + c = 0 with roots x₁, x₂, the sum x₁ + x₂ = −b/a and the product x₁x₂ = c/a. Here a = 1, b = ${num(-S)}, c = ${c === 'c' ? num(P) : c}, so x₁ + x₂ = ${num(S)} and x₁x₂ = ${c === 'c' ? num(P) : c}.`,
+    `Định lí Vi-ét: nếu ax² + bx + c = 0 có hai nghiệm x₁, x₂ thì tổng x₁ + x₂ = −b/a và tích x₁x₂ = c/a. Ở đây a = 1, b = ${num(-S)}, c = ${c === 'c' ? num(P) : c}, nên x₁ + x₂ = ${num(S)} và x₁x₂ = ${c === 'c' ? num(P) : c}.`,
+  );
 const vieta: Generator = (d, r) => {
   /** x² − Sx + P = 0 with two real roots that (usually) aren't whole numbers, so Viète beats solving. */
   const sp = () => {
@@ -399,29 +514,36 @@ const vieta: Generator = (d, r) => {
     const e = `${poly([a, b, c])} = 0`;
     const sum = r() < 0.5;
     const [ask, n, dd] = sum ? ['x₁ + x₂', -b, a] : ['x₁·x₂', c, a];
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Viète's theorem: if ax² + bx + c = 0 has roots x₁, x₂, then x₁ + x₂ = −b/a and x₁·x₂ = c/a.`, `Định lí Vi-ét: nếu ax² + bx + c = 0 có hai nghiệm x₁, x₂ thì x₁ + x₂ = −b/a và x₁·x₂ = c/a.`),
+        tr(en, `Read off the numbers: a = ${num(a)} (in front of x²), b = ${num(b)} (in front of x), c = ${num(c)} (the number on its own).`, `Xác định hệ số: a = ${num(a)} (hệ số của x²), b = ${num(b)} (hệ số của x), c = ${num(c)} (hệ số tự do).`),
+        sum ? `x₁ + x₂ = −b/a = ${ratio(-b, a)}.` : `x₁·x₂ = c/a = ${ratio(c, a)}.`,
+        sum ? tr(en, `Careful: the sum has a minus sign (−b/a); the product c/a does not.`, `Chú ý: tổng có dấu trừ (−b/a), còn tích c/a thì không.`) : tr(en, `Careful: the product is c/a with no minus sign; only the sum has one (−b/a).`, `Chú ý: tích là c/a, không có dấu trừ; chỉ tổng mới có dấu trừ (−b/a).`),
+      ].join('\n');
     return vi(
       {
         prompt: `${e} ${has}. Find ${ask}.`,
         answer: fracN(n, dd),
         distractors: sum ? [fracN(b, a), fracN(c, a), fracN(-c, a), fracN(-b, 1), fracN(-b + 1, a)] : [fracN(-c, a), fracN(-b, a), fracN(b, a), fracN(c, 1), fracN(c + 1, a)],
-        explanation: 'Viète: x₁ + x₂ = −b/a and x₁·x₂ = c/a.',
+        explanation: ex(true),
       },
       `Phương trình ${e} ${hasVi}. Tính ${ask}.`,
-      'Định lí Vi-ét: x₁ + x₂ = −b/a và x₁·x₂ = c/a.',
+      ex(false),
     );
   }
   if (d === 3) {
     const [S, P] = sp();
     const e = `${poly([1, -S, P])} = 0`;
-    return vi(
-      {
-        prompt: `${e} ${has}. Find x₁² + x₂².`,
-        ...numeric(S * S - 2 * P, [S * S + 2 * P, S * S - P, S - 2 * P], r, num),
-        explanation: `x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${num(S)}² − 2·(${num(P)}).`,
-      },
-      `Phương trình ${e} ${hasVi}. Tính x₁² + x₂².`,
-      `x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${num(S)}² − 2·(${num(P)}).`,
-    );
+    const ans = S * S - 2 * P;
+    const ex = (en: boolean) =>
+      [
+        vietaSP(en, S, P),
+        tr(en, `Write x₁² + x₂² using the sum and product: (x₁ + x₂)² = x₁² + 2x₁x₂ + x₂², so x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂.`, `Biến đổi x₁² + x₂² theo tổng và tích: (x₁ + x₂)² = x₁² + 2x₁x₂ + x₂², nên x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂.`),
+        tr(en, `Substitute: ${pn(S)}² − 2·${pn(P)} = ${S * S} ${signed(-2 * P)} = ${num(ans)}.`, `Thay số: ${pn(S)}² − 2·${pn(P)} = ${S * S} ${signed(-2 * P)} = ${num(ans)}.`),
+        tr(en, `Careful: subtract 2x₁x₂ (not add it).`, `Chú ý: phải trừ 2x₁x₂ (không phải cộng).`),
+      ].join('\n');
+    return vi({ prompt: `${e} ${has}. Find x₁² + x₂².`, ...numeric(ans, [S * S + 2 * P, S * S - P, S - 2 * P], r, num), explanation: ex(true) }, `Phương trình ${e} ${hasVi}. Tính x₁² + x₂².`, ex(false));
   }
   if (d === 4) {
     const kind = pick(r, ['recip', 'diff', 'cube', 'numbers'] as const);
@@ -431,26 +553,51 @@ const vieta: Generator = (d, r) => {
       if (w === u) w = u + 3;
       const [lo, hi] = [Math.min(u, w), Math.max(u, w)];
       const ans = `${num(lo)} and ${num(hi)}`;
+      const S = u + w, P = u * w, D = S * S - 4 * P, q = hi - lo;
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Viète in reverse: two numbers with sum S and product P are the solutions of t² − St + P = 0.`, `Vi-ét đảo: hai số có tổng S và tích P là nghiệm của phương trình t² − St + P = 0.`),
+          tr(en, `Here S = ${num(S)}, P = ${num(P)}: ${poly([1, -S, P], 't')} = 0.`, `Ở đây S = ${num(S)}, P = ${num(P)}: ${poly([1, -S, P], 't')} = 0.`),
+          `Δ = S² − 4P = ${pn(S)}² − 4·${pn(P)} = ${S * S} ${signed(-4 * P)} = ${D}, √Δ = ${q}.`,
+          `t₁ = (${num(S)} + ${q})/2 = ${num(hi)}, t₂ = (${num(S)} − ${q})/2 = ${num(lo)}.`,
+          tr(en, `Check: ${num(lo)} + ${pn(hi)} = ${num(S)} and ${num(lo)}·${pn(hi)} = ${num(P)}. The numbers are ${num(lo)} and ${num(hi)}.`, `Thử lại: ${num(lo)} + ${pn(hi)} = ${num(S)} và ${num(lo)}·${pn(hi)} = ${num(P)}. Vậy hai số là ${num(lo)} và ${num(hi)}.`),
+        ].join('\n');
       return vi(
         {
-          prompt: `Find two numbers whose sum is ${num(u + w)} and whose product is ${num(u * w)}.`,
+          prompt: `Find two numbers whose sum is ${num(S)} and whose product is ${num(P)}.`,
           answer: ans,
-          distractors: [`${num(-hi)} and ${num(-lo)}`, `${num(lo + 1)} and ${num(hi - 1)}`, `${num(lo)} and ${num(u * w)}`].filter((s) => s !== ans),
-          explanation: `They are the roots of t² − St + P = 0: ${poly([1, -(u + w), u * w], 't')} = 0.`,
+          distractors: [`${num(-hi)} and ${num(-lo)}`, `${num(lo + 1)} and ${num(hi - 1)}`, `${num(lo)} and ${num(P)}`].filter((s) => s !== ans),
+          explanation: ex(true),
         },
-        `Tìm hai số biết tổng của chúng bằng ${num(u + w)} và tích bằng ${num(u * w)}.`,
-        `Hai số là nghiệm của t² − St + P = 0: ${poly([1, -(u + w), u * w], 't')} = 0.`,
+        `Tìm hai số biết tổng của chúng bằng ${num(S)} và tích bằng ${num(P)}.`,
+        ex(false),
       );
     }
     const [S, P] = sp();
     const e = `${poly([1, -S, P])} = 0`;
-    const [ask, ans, wrong, how, howVi] =
+    const [ask, ans, wrong] =
       kind === 'recip'
-        ? ['1/x₁ + 1/x₂', fracN(S, P), [fracN(P, S), fracN(-S, P), fracN(1, S), fracN(S, -2 * P)], '1/x₁ + 1/x₂ = (x₁ + x₂)/(x₁x₂) = S/P.', '1/x₁ + 1/x₂ = (x₁ + x₂)/(x₁x₂) = S/P.']
+        ? ['1/x₁ + 1/x₂', fracN(S, P), [fracN(P, S), fracN(-S, P), fracN(1, S), fracN(S, -2 * P)]]
         : kind === 'diff'
-          ? ['(x₁ − x₂)²', num(S * S - 4 * P), [num(S * S - 2 * P), num(S * S + 4 * P), num(S - 4 * P)], '(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = S² − 4P.', '(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = S² − 4P.']
-          : ['x₁³ + x₂³', num(S ** 3 - 3 * S * P), [num(S ** 3 + 3 * S * P), num(S ** 3 - 3 * P), num(S ** 3 - S * P)], 'x₁³ + x₂³ = (x₁ + x₂)³ − 3x₁x₂(x₁ + x₂) = S³ − 3PS.', 'x₁³ + x₂³ = (x₁ + x₂)³ − 3x₁x₂(x₁ + x₂) = S³ − 3PS.'];
-    return vi({ prompt: `${e} ${has}. Find ${ask}.`, answer: ans, distractors: wrong, explanation: `${how} Here S = ${num(S)}, P = ${num(P)}.` }, `Phương trình ${e} ${hasVi}. Tính ${ask}.`, `${howVi} Ở đây S = ${num(S)}, P = ${num(P)}.`);
+          ? ['(x₁ − x₂)²', num(S * S - 4 * P), [num(S * S - 2 * P), num(S * S + 4 * P), num(S - 4 * P)]]
+          : ['x₁³ + x₂³', num(S ** 3 - 3 * S * P), [num(S ** 3 + 3 * S * P), num(S ** 3 - 3 * P), num(S ** 3 - S * P)]];
+    const how = (en: boolean) =>
+      kind === 'recip'
+        ? [
+            tr(en, `Add the fractions with the common denominator x₁x₂: 1/x₁ + 1/x₂ = (x₂ + x₁)/(x₁x₂) = sum/product.`, `Quy đồng mẫu chung x₁x₂: 1/x₁ + 1/x₂ = (x₂ + x₁)/(x₁x₂) = tổng/tích.`),
+            `= ${ratio(S, P)}.`,
+          ]
+        : kind === 'diff'
+          ? [
+              tr(en, `(x₁ − x₂)² = x₁² − 2x₁x₂ + x₂² = (x₁ + x₂)² − 4x₁x₂ (because (x₁ + x₂)² = x₁² + 2x₁x₂ + x₂²).`, `(x₁ − x₂)² = x₁² − 2x₁x₂ + x₂² = (x₁ + x₂)² − 4x₁x₂ (vì (x₁ + x₂)² = x₁² + 2x₁x₂ + x₂²).`),
+              `= ${pn(S)}² − 4·${pn(P)} = ${S * S} ${signed(-4 * P)} = ${ans}.`,
+            ]
+          : [
+              tr(en, `Use the identity x₁³ + x₂³ = (x₁ + x₂)³ − 3x₁x₂(x₁ + x₂).`, `Dùng hằng đẳng thức x₁³ + x₂³ = (x₁ + x₂)³ − 3x₁x₂(x₁ + x₂).`),
+              `= ${pn(S)}³ − 3·${pn(P)}·${pn(S)} = ${num(S ** 3)} ${signed(-3 * P * S)} = ${ans}.`,
+            ];
+    const ex = (en: boolean) => [vietaSP(en, S, P), ...how(en)].join('\n');
+    return vi({ prompt: `${e} ${has}. Find ${ask}.`, answer: ans, distractors: wrong, explanation: ex(true) }, `Phương trình ${e} ${hasVi}. Tính ${ask}.`, ex(false));
   }
   // d5: find the parameter from a condition on the roots
   const S = nz(r, -6, 6);
@@ -458,28 +605,42 @@ const vieta: Generator = (d, r) => {
   if (r() < 0.5) {
     const m0 = int(r, -8, Math.floor((S * S - 1) / 4));
     const T = S * S - 2 * m0;
+    const ex = (en: boolean) =>
+      [
+        vietaSP(en, S, 0, 'm'),
+        tr(en, `x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${pn(S)}² − 2m = ${S * S} − 2m.`, `x₁² + x₂² = (x₁ + x₂)² − 2x₁x₂ = ${pn(S)}² − 2m = ${S * S} − 2m.`),
+        tr(en, `So ${S * S} − 2m = ${T} ⇒ 2m = ${S * S} − ${pn(T)} = ${num(2 * m0)} ⇒ m = ${num(m0)}.`, `Nên ${S * S} − 2m = ${T} ⇒ 2m = ${S * S} − ${pn(T)} = ${num(2 * m0)} ⇒ m = ${num(m0)}.`),
+        tr(en, `Check the equation really has two roots (Δ, the discriminant b² − 4ac, must be > 0): Δ = ${pn(-S)}² − 4·${pn(m0)} = ${S * S - 4 * m0} > 0 ✓.`, `Kiểm tra phương trình có hai nghiệm (biệt thức Δ = b² − 4ac phải > 0): Δ = ${pn(-S)}² − 4·${pn(m0)} = ${S * S - 4 * m0} > 0 ✓.`),
+      ].join('\n');
     return vi(
       {
         prompt: `${eq} has two solutions x₁, x₂ with x₁² + x₂² = ${T}. Find m.`,
         answer: `m = ${num(m0)}`,
         distractors: [`m = ${num(-m0 || 2)}`, `m = ${num(S * S - T)}`, `m = ${num(T - S * S)}`, `m = ${num(m0 + 1)}`],
-        explanation: `x₁ + x₂ = ${num(S)}, x₁x₂ = m, so ${num(S)}² − 2m = ${T}. Check Δ = ${S * S} − 4m > 0.`,
+        explanation: ex(true),
       },
       `Cho phương trình ${eq}. Tìm m để phương trình có hai nghiệm x₁, x₂ thoả mãn x₁² + x₂² = ${T}.`,
-      `x₁ + x₂ = ${num(S)}, x₁x₂ = m, nên ${num(S)}² − 2m = ${T}. Kiểm tra lại Δ = ${S * S} − 4m > 0.`,
+      ex(false),
     );
   }
   const D = pick(r, [1, 2, 3, 4, 5, 6].filter((x) => (x - S) % 2 === 0));
   const m0 = (S * S - D * D) / 4;
+  const ex = (en: boolean) =>
+    [
+      vietaSP(en, S, 0, 'm'),
+      tr(en, `(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = ${S * S} − 4m. And |x₁ − x₂| = ${D} means (x₁ − x₂)² = ${D}² = ${D * D}.`, `(x₁ − x₂)² = (x₁ + x₂)² − 4x₁x₂ = ${S * S} − 4m. Mà |x₁ − x₂| = ${D} nên (x₁ − x₂)² = ${D}² = ${D * D}.`),
+      tr(en, `So ${S * S} − 4m = ${D * D} ⇒ 4m = ${S * S} − ${D * D} = ${num(4 * m0)} ⇒ m = ${num(m0)}.`, `Nên ${S * S} − 4m = ${D * D} ⇒ 4m = ${S * S} − ${D * D} = ${num(4 * m0)} ⇒ m = ${num(m0)}.`),
+      tr(en, `Check: Δ = ${S * S} − 4·${pn(m0)} = ${D * D} > 0, so there are two roots ✓. Careful: square ${D} — the condition is on (x₁ − x₂)², not on x₁ − x₂.`, `Kiểm tra: Δ = ${S * S} − 4·${pn(m0)} = ${D * D} > 0 nên có hai nghiệm ✓. Chú ý: phải bình phương ${D}.`),
+    ].join('\n');
   return vi(
     {
       prompt: `${eq} has two solutions x₁, x₂ with |x₁ − x₂| = ${D}. Find m.`,
       answer: `m = ${num(m0)}`,
       distractors: [`m = ${fracN(S * S - D, 4)}`, `m = ${fracN(S * S + D * D, 4)}`, `m = ${num(-m0 || 1)}`, `m = ${num(m0 + 1)}`],
-      explanation: `(x₁ − x₂)² = S² − 4P: ${D * D} = ${S * S} − 4m.`,
+      explanation: ex(true),
     },
     `Cho phương trình ${eq}. Tìm m để phương trình có hai nghiệm x₁, x₂ thoả mãn |x₁ − x₂| = ${D}.`,
-    `(x₁ − x₂)² = S² − 4P: ${D * D} = ${S * S} − 4m.`,
+    ex(false),
   );
 };
 
@@ -492,31 +653,45 @@ const parabola: Generator = (d, r) => {
     const a = pick(r, A);
     const x = a[1] === 2 ? pick(r, [-4, -2, 2, 4, 6]) : d === 2 ? pick(r, [-4, -3, -2, 2, 3, 4]) : nz(r, -4, 4);
     const y = (a[0] * x * x) / a[1];
-    if (d === 1)
-      return vi(
-        { prompt: `For ${P(a)}, find y when x = ${num(x)}.`, ...numeric(y, [(a[0] * a[0] * x * x) / a[1], -y, (2 * a[0] * x) / a[1]], r, num) },
-        `Cho hàm số ${P(a)}. Tính y khi x = ${num(x)}.`,
-      );
-    if (d === 2)
+    const av = fracN(a[0], a[1]);
+    const calc = `${av}·${pn(x)}² = ${av}·${x * x} = ${num(y)}`;
+    if (d === 1) {
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Put x = ${num(x)} into ${P(a)} (here a = ${av} is the number in front of x²): y = ${calc}.`, `Thay x = ${num(x)} vào ${P(a)} (a = ${av} là hệ số của x²): y = ${calc}.`),
+          tr(en, `Careful: square x first (${pn(x)}² = ${x * x}, always positive), then multiply by a.`, `Chú ý: bình phương x trước (${pn(x)}² = ${x * x}, luôn dương), rồi mới nhân với a.`),
+        ].join('\n');
+      return vi({ prompt: `For ${P(a)}, find y when x = ${num(x)}.`, ...numeric(y, [(a[0] * a[0] * x * x) / a[1], -y, (2 * a[0] * x) / a[1]], r, num), explanation: ex(true) }, `Cho hàm số ${P(a)}. Tính y khi x = ${num(x)}.`, ex(false));
+    }
+    if (d === 2) {
+      const ex = (en: boolean) =>
+        [
+          tr(en, `The point ${pt(x, y)} means x = ${num(x)}, y = ${num(y)}. It lies on the parabola, so these numbers satisfy y = ax².`, `Điểm ${pt(x, y)} có x = ${num(x)}, y = ${num(y)}. Điểm thuộc parabol nên toạ độ thoả mãn y = ax².`),
+          tr(en, `Substitute: ${num(y)} = a·${pn(x)}² = a·${x * x}.`, `Thay vào: ${num(y)} = a·${pn(x)}² = a·${x * x}.`),
+          tr(en, `Divide by ${x * x}: a = ${ratio(y, x * x)}.`, `Chia cho ${x * x}: a = ${ratio(y, x * x)}.`),
+          tr(en, `Careful: divide by x² = ${x * x}, not by x.`, `Chú ý: chia cho x² = ${x * x}, không phải chia cho x.`),
+        ].join('\n');
       return vi(
         {
           prompt: `The parabola y = ax² passes through the point ${pt(x, y)}. Find a.`,
           answer: fracN(a[0], a[1]),
           distractors: [fracN(-a[0], a[1]), fracN(y, x), fracN(x * x, y), fracN(y * x * x, 1), fracN(2 * a[0], a[1])],
-          explanation: `Put the point into y = ax²: ${num(y)} = a·${num(x)}².`,
+          explanation: ex(true),
         },
         `Parabol y = ax² đi qua điểm ${pt(x, y)}. Tìm a.`,
-        `Thay toạ độ điểm vào y = ax²: ${num(y)} = a·${num(x)}².`,
+        ex(false),
       );
+    }
+    const ex = (en: boolean) =>
+      [
+        tr(en, `A point (x₀; y₀) lies on the parabola when its y-coordinate equals a·x₀² (x first, y second).`, `Điểm (x₀; y₀) thuộc parabol khi tung độ y₀ = a·x₀² (hoành độ viết trước, tung độ viết sau).`),
+        tr(en, `For x = ${num(x)}: ${calc}.`, `Với x = ${num(x)}: ${calc}.`),
+        tr(en, `So ${pt(x, y)} is on the parabola. Careful: ${pt(x, -y)} has the wrong sign of y.`, `Vậy điểm ${pt(x, y)} thuộc parabol. Chú ý: điểm ${pt(x, -y)} sai dấu tung độ.`),
+      ].join('\n');
     return vi(
-      {
-        prompt: `Which point lies on the parabola ${P(a)}?`,
-        answer: pt(x, y),
-        distractors: [pt(x, -y), pt(y, x), pt(x, y + (y > 0 ? 1 : -1)), pt(-x, -y)],
-        explanation: 'A point (x₀; y₀) is on the parabola when y₀ = a·x₀².',
-      },
+      { prompt: `Which point lies on the parabola ${P(a)}?`, answer: pt(x, y), distractors: [pt(x, -y), pt(y, x), pt(x, y + (y > 0 ? 1 : -1)), pt(-x, -y)], explanation: ex(true) },
       `Điểm nào thuộc parabol ${P(a)}?`,
-      'Điểm (x₀; y₀) thuộc parabol khi y₀ = a·x₀².',
+      ex(false),
     );
   }
   if (d === 4) {
@@ -528,15 +703,25 @@ const parabola: Generator = (d, r) => {
     const k = a * (p + q), m = -a * p * q;
     const line = `y = ${poly([k, m])}`;
     const pts = (u: number, v: number, f: (x: number) => number) => `${pt(u, f(u))}, ${pt(v, f(v))}`;
+    const sq = a === 1 ? 'x²' : '−x²';
+    const yv = (x: number) => `${a === 1 ? '' : '−'}${pn(x)}² = ${num(a * x * x)}`;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `At a common point both equations give the same y, so set them equal (the equation for the x-coordinates): ${sq} = ${poly([k, m])}.`, `Tại giao điểm hai hàm số có cùng y, nên ta có phương trình hoành độ giao điểm: ${sq} = ${poly([k, m])}.`),
+        tr(en, `Bring everything to one side: ${poly([1, -(p + q), p * q])} = 0.`, `Chuyển hết sang một vế: ${poly([1, -(p + q), p * q])} = 0.`),
+        tr(en, `Two numbers with sum ${num(p + q)} and product ${num(p * q)} are ${num(lo)} and ${num(hi)}, so ${factor(lo)}${factor(hi)} = 0: x = ${num(lo)} or x = ${num(hi)}.`, `Hai số có tổng ${num(p + q)} và tích ${num(p * q)} là ${num(lo)} và ${num(hi)}, nên ${factor(lo)}${factor(hi)} = 0: x = ${num(lo)} hoặc x = ${num(hi)}.`),
+        tr(en, `Find y from y = ${sq}: x = ${num(lo)} → y = ${yv(lo)}; x = ${num(hi)} → y = ${yv(hi)}.`, `Tính y từ y = ${sq}: x = ${num(lo)} → y = ${yv(lo)}; x = ${num(hi)} → y = ${yv(hi)}.`),
+        tr(en, `Answer: ${pts(lo, hi, (x) => a * x * x)}.`, `Vậy giao điểm là ${pts(lo, hi, (x) => a * x * x)}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Find the points where the parabola ${a === 1 ? 'y = x²' : 'y = −x²'} meets the line ${line}.`,
         answer: pts(lo, hi, (x) => a * x * x),
         distractors: [pts(-hi, -lo, (x) => a * x * x), pts(lo, hi, (x) => a * x), pts(lo, hi, (x) => -a * x * x)],
-        explanation: `Solve ${a === 1 ? 'x²' : '−x²'} = ${poly([k, m])}: x = ${num(lo)} or x = ${num(hi)}, then y = ${a === 1 ? 'x²' : '−x²'}.`,
+        explanation: ex(true),
       },
       `Tìm toạ độ giao điểm của parabol ${a === 1 ? 'y = x²' : 'y = −x²'} và đường thẳng ${line}.`,
-      `Giải phương trình hoành độ giao điểm ${a === 1 ? 'x²' : '−x²'} = ${poly([k, m])}: x = ${num(lo)} hoặc x = ${num(hi)}, rồi tính y = ${a === 1 ? 'x²' : '−x²'}.`,
+      ex(false),
     );
   }
   // d5: the line y = kx + m against the parabola y = ax²: ax² − kx − m = 0, Δ = k² + 4am
@@ -550,15 +735,24 @@ const parabola: Generator = (d, r) => {
   const askVi = { touch: 'tiếp xúc với parabol (có đúng một điểm chung)', two: 'cắt parabol tại hai điểm phân biệt', none: 'không cắt parabol' }[kind];
   const par = a === 1 ? 'y = x²' : 'y = −x²';
   const line = `y = ${poly([k, 0])} + m`;
+  const rel = kind === 'touch' ? '=' : kind === 'two' ? '>' : '<';
+  const relOut = a === 1 || rel === '=' ? rel : FLIP[rel];
+  const ex = (en: boolean) =>
+    [
+      tr(en, `Common points: set the two y's equal: ${a === 1 ? 'x²' : '−x²'} = ${poly([k, 0])} + m, i.e. ${poly([a, -k, 0])} − m = 0. Each solution x gives one common point.`, `Phương trình hoành độ giao điểm: ${a === 1 ? 'x²' : '−x²'} = ${poly([k, 0])} + m, tức ${poly([a, -k, 0])} − m = 0. Mỗi nghiệm x cho một giao điểm.`),
+      tr(en, `This is a quadratic with a = ${num(a)}, b = ${num(-k)}, c = −m. Its discriminant Δ = b² − 4ac = ${pn(-k)}² − 4·${pn(a)}·(−m) = ${k * k} ${a === 1 ? '+' : '−'} 4m.`, `Đây là phương trình bậc hai với a = ${num(a)}, b = ${num(-k)}, c = −m. Biệt thức Δ = b² − 4ac = ${pn(-k)}² − 4·${pn(a)}·(−m) = ${k * k} ${a === 1 ? '+' : '−'} 4m.`),
+      tr(en, `${kind === 'touch' ? 'One common point (touching) ⇔ Δ = 0' : kind === 'two' ? 'Two common points ⇔ two solutions ⇔ Δ > 0' : 'No common point ⇔ no solution ⇔ Δ < 0'}: ${k * k} ${a === 1 ? '+' : '−'} 4m ${rel} 0 ⇒ ${a === 1 ? '4m' : '−4m'} ${rel} ${num(-k * k)}.`, `${kind === 'touch' ? 'Tiếp xúc ⇔ phương trình có nghiệm kép ⇔ Δ = 0' : kind === 'two' ? 'Cắt tại hai điểm ⇔ hai nghiệm phân biệt ⇔ Δ > 0' : 'Không cắt ⇔ vô nghiệm ⇔ Δ < 0'}: ${k * k} ${a === 1 ? '+' : '−'} 4m ${rel} 0 ⇒ ${a === 1 ? '4m' : '−4m'} ${rel} ${num(-k * k)}.`),
+      tr(en, `Divide by ${a === 1 ? '4' : '−4'}${a === 1 || rel === '=' ? '' : ' (negative, so the sign flips)'}: m ${relOut} ${num(v)}.`, `Chia cho ${a === 1 ? '4' : '−4'}${a === 1 || rel === '=' ? '' : ' (số âm nên đổi chiều)'}: m ${relOut} ${num(v)}.`),
+    ].join('\n');
   return vi(
     {
       prompt: `Find m so that the line ${line} ${ask.replace('the parabola', `the parabola ${par}`)}.`,
       answer,
       distractors: kind === 'touch' ? [`m = ${num(-v)}`, `m = ${fracN(v, 4)}`, `m ${two} ${num(v)}`] : [`m ${kind === 'two' ? FLIP[two] : two} ${num(v)}`, `m = ${num(v)}`, `m ${kind === 'two' ? two : FLIP[two]} ${num(-v)}`],
-      explanation: `x-coordinates of common points: ${a === 1 ? 'x²' : '−x²'} = ${poly([k, 0])} + m, i.e. ${poly([a, -k, 0])} − m = 0, Δ = ${k * k} ${a === 1 ? '+' : '−'} 4m. Touch: Δ = 0; two points: Δ > 0; none: Δ < 0.`,
+      explanation: ex(true),
     },
     `Tìm m để đường thẳng ${line} ${askVi.replace('parabol', `parabol ${par}`)}.`,
-    `Phương trình hoành độ giao điểm: ${a === 1 ? 'x²' : '−x²'} = ${poly([k, 0])} + m, tức ${poly([a, -k, 0])} − m = 0, Δ = ${k * k} ${a === 1 ? '+' : '−'} 4m. Tiếp xúc: Δ = 0; hai điểm: Δ > 0; không cắt: Δ < 0.`,
+    ex(false),
   );
 };
 
@@ -568,28 +762,36 @@ const radicals: Generator = (d, r) => {
     const kind = pick(r, ['take-out', 'cube', 'product'] as const);
     if (kind === 'cube') {
       const n = nz(r, -6, 6);
-      return vi({ prompt: `Calculate: ∛(${num(n ** 3)})`, ...numeric(n, [-n, n * 3, n * n], r, num), explanation: '∛(a³) = a, and the cube root of a negative number is negative.' }, `Tính ∛(${num(n ** 3)})`, '∛(a³) = a; căn bậc ba của số âm là số âm.');
+      const ex = (en: boolean) =>
+        [
+          tr(en, `∛ is the cube root: the number which, multiplied by itself three times, gives the number inside.`, `∛ là căn bậc ba: số mà nhân với chính nó ba lần thì được số trong căn.`),
+          tr(en, `${pn(n)}·${pn(n)}·${pn(n)} = ${num(n ** 3)}, so ∛(${num(n ** 3)}) = ${num(n)}.`, `${pn(n)}·${pn(n)}·${pn(n)} = ${num(n ** 3)}, nên ∛(${num(n ** 3)}) = ${num(n)}.`),
+          n < 0 ? tr(en, `Careful: unlike √, a cube root of a negative number exists and is negative.`, `Chú ý: khác với căn bậc hai, căn bậc ba của số âm vẫn có và là số âm.`) : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
+      return vi({ prompt: `Calculate: ∛(${num(n ** 3)})`, ...numeric(n, [-n, n * 3, n * n], r, num), explanation: ex(true) }, `Tính ∛(${num(n ** 3)})`, ex(false));
     }
     if (kind === 'product') {
       const s = pick(r, SQ.slice(0, 5)), u = int(r, 1, 3), w = u + int(r, 1, 2);
       const [p, q] = [s * u * u, s * w * w];
-      return vi(
-        { prompt: `Calculate: √${p} · √${q}`, ...numeric(s * u * w, [s * (u + w), s * u * w * s, u * w], r, num), explanation: `√a · √b = √(ab) = √${p * q}.` },
-        `Tính √${p} · √${q}`,
-        `√a · √b = √(ab) = √${p * q}.`,
-      );
+      const v = s * u * w;
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Rule: √a · √b = √(a·b) (for a, b ≥ 0), so multiply the numbers under the roots.`, `Quy tắc nhân các căn bậc hai: √a · √b = √(a·b) (với a, b ≥ 0), nên nhân các số trong căn với nhau.`),
+          `√${p} · √${q} = √(${p}·${q}) = √${p * q}.`,
+          tr(en, `${p * q} = ${v}² (because ${v}·${v} = ${p * q}), so √${p * q} = ${v}.`, `${p * q} = ${v}² (vì ${v}·${v} = ${p * q}), nên √${p * q} = ${v}.`),
+        ].join('\n');
+      return vi({ prompt: `Calculate: √${p} · √${q}`, ...numeric(v, [s * (u + w), v * s, u * w], r, num), explanation: ex(true) }, `Tính √${p} · √${q}`, ex(false));
     }
     const s = pick(r, SQ), k = int(r, 2, 7);
-    return vi(
-      {
-        prompt: `Simplify: √${k * k * s}`,
-        answer: rad(k, s),
-        distractors: [rad(k * k, s), rad(k, s * k), rad(k + 1, s), rad(k - 1, s)],
-        explanation: `${k * k * s} = ${k * k} · ${s}, and √${k * k} = ${k}.`,
-      },
-      `Rút gọn: √${k * k * s}`,
-      `${k * k * s} = ${k * k} · ${s}, mà √${k * k} = ${k}.`,
-    );
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Look for the biggest perfect square (4, 9, 16, 25, 36, 49…) that divides ${k * k * s}: it is ${k * k} = ${k}².`, `Tìm số chính phương lớn nhất (4, 9, 16, 25, 36, 49…) mà ${k * k * s} chia hết: đó là ${k * k} = ${k}².`),
+        tr(en, `${k * k * s} = ${k * k}·${s}, so √${k * k * s} = √${k * k}·√${s} = ${k}√${s} (taking a factor out of the root).`, `${k * k * s} = ${k * k}·${s}, nên √${k * k * s} = √${k * k}·√${s} = ${k}√${s} (đưa thừa số ra ngoài dấu căn).`),
+        tr(en, `Careful: what comes out is √${k * k} = ${k}, not ${k * k}.`, `Chú ý: đưa ra ngoài là √${k * k} = ${k}, không phải ${k * k}.`),
+      ].join('\n');
+    return vi({ prompt: `Simplify: √${k * k * s}`, answer: rad(k, s), distractors: [rad(k * k, s), rad(k, s * k), rad(k + 1, s), rad(k - 1, s)], explanation: ex(true) }, `Rút gọn: √${k * k * s}`, ex(false));
   }
   if (d === 2) {
     const a = nz(r, -3, 4), x0 = int(r, -5, 6);
@@ -597,15 +799,27 @@ const radicals: Generator = (d, r) => {
     const strict = r() < 0.35;
     const e = strict ? `1/√(${inner})` : `√(${inner})`;
     const sgn = a > 0 ? (strict ? '>' : '≥') : strict ? '<' : '≤';
+    const rel = strict ? '>' : '≥';
+    const ex = (en: boolean) =>
+      [
+        strict
+          ? tr(en, `√A only exists when A ≥ 0, and here the root is in a denominator, which must not be 0. So we need ${inner} > 0.`, `√A chỉ xác định khi A ≥ 0; ở đây căn nằm ở mẫu nên còn phải khác 0. Vậy cần ${inner} > 0.`)
+          : tr(en, `√A only exists when A ≥ 0 (there is no square root of a negative number). So we need ${inner} ≥ 0.`, `√A xác định khi A ≥ 0 (không có căn bậc hai của số âm). Vậy cần ${inner} ≥ 0.`),
+        -a * x0 === 0 ? '' : tr(en, `Move the number to the right side: ${terms([[a, 'x']])} ${rel} ${num(a * x0)}.`, `Chuyển số sang vế phải: ${terms([[a, 'x']])} ${rel} ${num(a * x0)}.`),
+        a === 1 ? '' : divideLine(en, a, sgn, a * x0),
+        tr(en, `Answer: x ${sgn} ${num(x0)}.`, `Vậy biểu thức xác định khi x ${sgn} ${num(x0)}.`),
+      ]
+        .filter(Boolean)
+        .join('\n');
     return vi(
       {
         prompt: `For which x is ${e} defined?`,
         answer: `x ${sgn} ${num(x0)}`,
         distractors: [`x ${FLIP[sgn]} ${num(x0)}`, `x ${sgn} ${num(-x0 || 1)}`, `x ${strict ? (a > 0 ? '≥' : '≤') : a > 0 ? '>' : '<'} ${num(x0)}`],
-        explanation: strict ? 'Under the root must be positive (not zero), because the root is in a denominator.' : '√A is defined when A ≥ 0.',
+        explanation: ex(true),
       },
       `Biểu thức ${e} xác định khi nào?`,
-      strict ? 'Biểu thức dưới căn phải dương (khác 0) vì căn nằm ở mẫu.' : '√A xác định khi A ≥ 0.',
+      ex(false),
     );
   }
   if (d === 3) {
@@ -614,15 +828,22 @@ const radicals: Generator = (d, r) => {
     const cs = ks.map(() => nz(r, -3, 3));
     const e = terms(ks.map((k, i) => [cs[i], `√${k * k * s}`] as [number, string]));
     const tot = ks.reduce((t, k, i) => t + cs[i] * k, 0);
+    const big = ks.filter((k) => k > 1);
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Take the square factors out of each root (√(k²·${s}) = k√${s}): ${big.map((k) => `√${k * k * s} = √(${k * k}·${s}) = ${k}√${s}`).join('; ')}.`, `Đưa thừa số ra ngoài dấu căn (√(k²·${s}) = k√${s}): ${big.map((k) => `√${k * k * s} = √(${k * k}·${s}) = ${k}√${s}`).join('; ')}.`),
+        tr(en, `Now every term is a multiple of √${s}: ${terms(ks.map((k, i) => [cs[i] * k, `√${s}`] as [number, string]))}.`, `Bây giờ mọi hạng tử đều là bội của √${s}: ${terms(ks.map((k, i) => [cs[i] * k, `√${s}`] as [number, string]))}.`),
+        tr(en, `Add the numbers in front: ${ks.map((k, i) => pn(cs[i] * k)).join(' + ')} = ${num(tot)}, so the answer is ${rad(tot, s)}.`, `Cộng các hệ số: ${ks.map((k, i) => pn(cs[i] * k)).join(' + ')} = ${num(tot)}, vậy kết quả là ${rad(tot, s)}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Simplify: ${e}`,
         answer: rad(tot, s),
         distractors: [rad(cs.reduce((t, c) => t + c, 0) || 7, s), rad(-tot || 2, s), rad(tot + 1, s), rad(tot, s * 2)],
-        explanation: `Take the squares out first: ${ks.map((k) => `√${k * k * s} = ${rad(k, s)}`).join(', ')}.`,
+        explanation: ex(true),
       },
       `Rút gọn: ${e}`,
-      `Đưa thừa số ra ngoài dấu căn trước: ${ks.map((k) => `√${k * k * s} = ${rad(k, s)}`).join(', ')}.`,
+      ex(false),
     );
   }
   if (d === 4) {
@@ -633,45 +854,50 @@ const radicals: Generator = (d, r) => {
       const plus = r() < 0.5;
       const e = `${n}/(√${a} ${plus ? '+' : '−'} √${b})`;
       const ans = `√${a} ${plus ? '−' : '+'} √${b}`;
+      const ex = (en: boolean) =>
+        [
+          tr(en, `To remove the root from the denominator, multiply top and bottom by the conjugate ${ans} (same two terms, opposite sign).`, `Để trục căn thức ở mẫu, nhân cả tử và mẫu với biểu thức liên hợp ${ans} (cùng hai số hạng, khác dấu).`),
+          tr(en, `Bottom: (√${a} + √${b})(√${a} − √${b}) = (√${a})² − (√${b})² = ${a} − ${b} = ${n} (difference of two squares).`, `Mẫu: (√${a} + √${b})(√${a} − √${b}) = (√${a})² − (√${b})² = ${a} − ${b} = ${n} (hằng đẳng thức hiệu hai bình phương).`),
+          tr(en, `So ${e} = ${n === 1 ? `(${ans})/1` : `${n}(${ans})/${n}`} = ${ans}${n === 1 ? '' : ` (cancel ${n})`}.`, `Vậy ${e} = ${n === 1 ? `(${ans})/1` : `${n}(${ans})/${n}`} = ${ans}${n === 1 ? '' : ` (rút gọn ${n})`}.`),
+        ].join('\n');
       return vi(
-        {
-          prompt: `Simplify: ${e}`,
-          answer: ans,
-          distractors: [`√${a} ${plus ? '+' : '−'} √${b}`, n === 1 ? `√${a + b}` : `(√${a} ${plus ? '−' : '+'} √${b})/${n}`, `√${b} ${plus ? '+' : '−'} √${a}`],
-          explanation: `Multiply top and bottom by √${a} ${plus ? '−' : '+'} √${b}: (√${a} + √${b})(√${a} − √${b}) = ${a} − ${b} = ${n}.`,
-        },
+        { prompt: `Simplify: ${e}`, answer: ans, distractors: [`√${a} ${plus ? '+' : '−'} √${b}`, n === 1 ? `√${a + b}` : `(√${a} ${plus ? '−' : '+'} √${b})/${n}`, `√${b} ${plus ? '+' : '−'} √${a}`], explanation: ex(true) },
         `Trục căn thức ở mẫu: ${e}`,
-        `Nhân cả tử và mẫu với √${a} ${plus ? '−' : '+'} √${b}: (√${a} + √${b})(√${a} − √${b}) = ${a} − ${b} = ${n}.`,
+        ex(false),
       );
     }
     if (kind === 'abs') {
       const s = pick(r, [2, 3, 5, 6, 7, 10, 11]), c = int(r, 1, 4);
       const big = c > Math.sqrt(s);
       const e = `√((${c} − √${s})²)`;
-      return vi(
-        {
-          prompt: `Simplify: ${e}`,
-          answer: big ? `${c} − √${s}` : `√${s} − ${c}`,
-          distractors: [big ? `√${s} − ${c}` : `${c} − √${s}`, `${c} + √${s}`, `−${c} − √${s}`],
-          explanation: `√(A²) = |A|. Here ${c} ${big ? '>' : '<'} √${s} (since ${c * c} ${big ? '>' : '<'} ${s}), so |${c} − √${s}| = ${big ? `${c} − √${s}` : `√${s} − ${c}`}.`,
-        },
-        `Rút gọn: ${e}`,
-        `√(A²) = |A|. Vì ${c} ${big ? '>' : '<'} √${s} (do ${c * c} ${big ? '>' : '<'} ${s}) nên |${c} − √${s}| = ${big ? `${c} − √${s}` : `√${s} − ${c}`}.`,
-      );
+      const res = big ? `${c} − √${s}` : `√${s} − ${c}`;
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Rule: √(A²) = |A|, the absolute value (a square root is never negative).`, `Quy tắc: √(A²) = |A| (giá trị tuyệt đối, vì căn bậc hai không bao giờ âm).`),
+          tr(en, `Compare ${c} and √${s}: ${c} = √${c * c} and ${c * c} ${big ? '>' : '<'} ${s}, so ${c} ${big ? '>' : '<'} √${s}, and ${c} − √${s} is ${big ? 'positive' : 'negative'}.`, `So sánh ${c} và √${s}: ${c} = √${c * c} mà ${c * c} ${big ? '>' : '<'} ${s}, nên ${c} ${big ? '>' : '<'} √${s}, tức ${c} − √${s} ${big ? 'dương' : 'âm'}.`),
+          tr(en, `So |${c} − √${s}| = ${res}${big ? '' : ' (change the sign to make it positive)'}.`, `Vậy |${c} − √${s}| = ${res}${big ? '' : ' (đổi dấu để được số dương)'}.`),
+        ].join('\n');
+      return vi({ prompt: `Simplify: ${e}`, answer: res, distractors: [big ? `√${s} − ${c}` : `${c} − √${s}`, `${c} + √${s}`, `−${c} − √${s}`], explanation: ex(true) }, `Rút gọn: ${e}`, ex(false));
     }
     const [u, w] = pick(r, [[3, 2], [5, 2], [5, 3], [6, 1], [7, 2], [7, 3], [6, 5], [10, 3], [5, 1], [3, 1]]);
     const plus = r() < 0.5;
     const e = `√(${u + w} ${plus ? '+' : '−'} 2√${u * w})`;
     const s = (n: number) => (n === 1 ? '1' : `√${n}`);
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Try to write the inside as a perfect square, using (A ${plus ? '+' : '−'} B)² = A² ${plus ? '+' : '−'} 2AB + B².`, `Viết biểu thức trong căn thành bình phương, dùng (A ${plus ? '+' : '−'} B)² = A² ${plus ? '+' : '−'} 2AB + B².`),
+        tr(en, `We need A² + B² = ${u + w} and AB = √${u * w}: A = ${s(u)}, B = ${s(w)} work (${u} + ${w} = ${u + w}, ${s(u)}·${s(w)} = √${u * w}).`, `Cần A² + B² = ${u + w} và AB = √${u * w}: chọn A = ${s(u)}, B = ${s(w)} (${u} + ${w} = ${u + w}, ${s(u)}·${s(w)} = √${u * w}).`),
+        tr(en, `So ${u + w} ${plus ? '+' : '−'} 2√${u * w} = (${s(u)} ${plus ? '+' : '−'} ${s(w)})², and √(A²) = |A| = ${s(u)} ${plus ? '+' : '−'} ${s(w)}${plus ? '' : ` (positive, because ${s(u)} > ${s(w)})`}.`, `Nên ${u + w} ${plus ? '+' : '−'} 2√${u * w} = (${s(u)} ${plus ? '+' : '−'} ${s(w)})², và √(A²) = |A| = ${s(u)} ${plus ? '+' : '−'} ${s(w)}${plus ? '' : ` (dương vì ${s(u)} > ${s(w)})`}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Simplify: ${e}`,
         answer: `${s(u)} ${plus ? '+' : '−'} ${s(w)}`,
         distractors: [plus ? `${s(u)} − ${s(w)}` : `${s(w)} − ${s(u)}`, `√${u + w} ${plus ? '+' : '−'} √${u * w}`, `${s(u)} ${plus ? '+' : '−'} ${s(w * 2)}`],
-        explanation: `${u + w} ${plus ? '+' : '−'} 2√${u * w} = (${s(u)} ${plus ? '+' : '−'} ${s(w)})², and ${s(u)} > ${s(w)}.`,
+        explanation: ex(true),
       },
       `Rút gọn: ${e}`,
-      `${u + w} ${plus ? '+' : '−'} 2√${u * w} = (${s(u)} ${plus ? '+' : '−'} ${s(w)})², và ${s(u)} > ${s(w)}.`,
+      ex(false),
     );
   }
   // d5: entrance-exam expressions in √x (x ≥ 0)
@@ -681,15 +907,18 @@ const radicals: Generator = (d, r) => {
     const top = kind === 'diff' ? poly([1, -n * n]) : `x − ${2 * n}√x + ${n * n}`;
     const ans = kind === 'diff' ? `√x + ${n}` : `√x − ${n}`;
     const e = `(${top})/(√x − ${n})`;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `For x ≥ 0 we can write x = (√x)². Factorise the top:`, `Với x ≥ 0 ta có x = (√x)². Phân tích tử thành nhân tử:`),
+        kind === 'diff'
+          ? tr(en, `${top} = (√x)² − ${n}² = (√x − ${n})(√x + ${n}) (difference of two squares).`, `${top} = (√x)² − ${n}² = (√x − ${n})(√x + ${n}) (hiệu hai bình phương).`)
+          : tr(en, `${top} = (√x)² − 2·√x·${n} + ${n}² = (√x − ${n})² (identity (A − B)² = A² − 2AB + B²).`, `${top} = (√x)² − 2·√x·${n} + ${n}² = (√x − ${n})² (hằng đẳng thức (A − B)² = A² − 2AB + B²).`),
+        tr(en, `Cancel the common factor (√x − ${n}) — allowed because x ≠ ${n * n} makes it non-zero: the result is ${ans}.`, `Rút gọn nhân tử chung (√x − ${n}) — khác 0 vì x ≠ ${n * n}: được ${ans}.`),
+      ].join('\n');
     return vi(
-      {
-        prompt: `Simplify, for x ≥ 0 and x ≠ ${n * n}: ${e}`,
-        answer: ans,
-        distractors: [kind === 'diff' ? `√x − ${n}` : `√x + ${n}`, `x + ${n}`, `√x + ${n * n}`, `x − ${n}`],
-        explanation: kind === 'diff' ? `x − ${n * n} = (√x − ${n})(√x + ${n}).` : `x − ${2 * n}√x + ${n * n} = (√x − ${n})².`,
-      },
+      { prompt: `Simplify, for x ≥ 0 and x ≠ ${n * n}: ${e}`, answer: ans, distractors: [kind === 'diff' ? `√x − ${n}` : `√x + ${n}`, `x + ${n}`, `√x + ${n * n}`, `x − ${n}`], explanation: ex(true) },
       `Rút gọn biểu thức (với x ≥ 0, x ≠ ${n * n}): ${e}`,
-      kind === 'diff' ? `x − ${n * n} = (√x − ${n})(√x + ${n}).` : `x − ${2 * n}√x + ${n * n} = (√x − ${n})².`,
+      ex(false),
     );
   }
   if (kind === 'value') {
@@ -697,15 +926,21 @@ const radicals: Generator = (d, r) => {
     let k = int(r, 1, 7);
     if (k === q) k++;
     const A = `A = (√x + ${p})/(√x − ${q})`;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `x = ${k * k} satisfies x ≥ 0 and x ≠ ${q * q}, and √${k * k} = ${k}.`, `x = ${k * k} thoả mãn điều kiện x ≥ 0, x ≠ ${q * q}, và √${k * k} = ${k}.`),
+        tr(en, `Replace √x by ${k}: A = (${k} + ${p})/(${k} − ${q}) = ${ratio(k + p, k - q)}.`, `Thay √x = ${k} vào A: A = (${k} + ${p})/(${k} − ${q}) = ${ratio(k + p, k - q)}.`),
+        tr(en, `Careful: put √x = ${k} into the formula, not x = ${k * k}.`, `Chú ý: thay √x = ${k}, không thay ${k * k} vào chỗ √x.`),
+      ].join('\n');
     return vi(
       {
         prompt: `${A}. Find A when x = ${k * k}.`,
         answer: fracN(k + p, k - q),
         distractors: [fracN(k * k + p, k * k - q), fracN(k + p, k + q), fracN(k - p, k - q), fracN(-(k + p), k - q), fracN(k * k + p, k - q)],
-        explanation: `√${k * k} = ${k}, so A = (${k} + ${p})/(${k} − ${q}).`,
+        explanation: ex(true),
       },
       `Cho ${A}. Tính giá trị của A khi x = ${k * k}.`,
-      `√${k * k} = ${k}, nên A = (${k} + ${p})/(${k} − ${q}).`,
+      ex(false),
     );
   }
   // √x + p = v(√x − q)  ⇒  √x = (p + vq)/(v − 1)
@@ -717,59 +952,58 @@ const radicals: Generator = (d, r) => {
     p = t * (v - 1) - v * q;
   } while (p < 1 || p > 9 || t === q);
   const A = `A = (√x + ${p})/(√x − ${q})`;
-  return vi(
-    {
-      prompt: `${A}. Find x so that A = ${v}.`,
-      answer: `x = ${t * t}`,
-      distractors: [`x = ${t}`, `x = ${(t + 1) ** 2}`, `x = ${t * t * v}`],
-      explanation: `√x + ${p} = ${v}(√x − ${q}) ⇒ ${v - 1}√x = ${p + v * q} ⇒ √x = ${t}.`,
-    },
-    `Cho ${A}. Tìm x để A = ${v}.`,
-    `√x + ${p} = ${v}(√x − ${q}) ⇒ ${v - 1}√x = ${p + v * q} ⇒ √x = ${t}.`,
-  );
+  const ex = (en: boolean) =>
+    [
+      tr(en, `A = ${v} means (√x + ${p})/(√x − ${q}) = ${v}. Multiply both sides by (√x − ${q}): √x + ${p} = ${v}(√x − ${q}) = ${v}√x − ${v * q}.`, `A = ${v} tức (√x + ${p})/(√x − ${q}) = ${v}. Nhân hai vế với (√x − ${q}): √x + ${p} = ${v}(√x − ${q}) = ${v}√x − ${v * q}.`),
+      tr(en, `Collect the √x terms on one side: ${p} + ${v * q} = ${v}√x − √x, so ${v - 1 === 1 ? '' : v - 1}√x = ${p + v * q}${v - 1 === 1 ? '' : `, √x = ${p + v * q}/${v - 1} = ${t}`}.`, `Chuyển các hạng tử chứa √x về một vế: ${p} + ${v * q} = ${v}√x − √x, nên ${v - 1 === 1 ? '' : v - 1}√x = ${p + v * q}${v - 1 === 1 ? '' : `, √x = ${p + v * q}/${v - 1} = ${t}`}.`),
+      tr(en, `So x = ${t}² = ${t * t} (it satisfies x ≥ 0, x ≠ ${q * q}). Careful: the answer is x, not √x.`, `Vậy x = ${t}² = ${t * t} (thoả mãn x ≥ 0, x ≠ ${q * q}). Chú ý: đề hỏi x chứ không phải √x.`),
+    ].join('\n');
+  return vi({ prompt: `${A}. Find x so that A = ${v}.`, answer: `x = ${t * t}`, distractors: [`x = ${t}`, `x = ${(t + 1) ** 2}`, `x = ${t * t * v}`], explanation: ex(true) }, `Cho ${A}. Tìm x để A = ${v}.`, ex(false));
 };
 
 // ── Equations reducible to linear ────────────────────────────────────
+/** "x − 3 = 0 ⇒ x = 3" or "2x + 5 = 0 ⇒ 2x = −5 ⇒ x = −5/2". */
+const linRoot = (a: number, b: number) => `${poly([a, b])} = 0 ⇒ ${a === 1 ? '' : `${terms([[a, 'x']])} = ${num(-b)} ⇒ `}x = ${ratio(-b, a)}`;
 const rationalEq: Generator = (d, r) => {
   const NONE = 'No solution';
+  const zeroRule = (en: boolean) => tr(en, `A product is 0 only when one of its factors is 0 (A·B = 0 ⇒ A = 0 or B = 0), so set each bracket equal to 0.`, `Tích bằng 0 khi một trong các thừa số bằng 0 (A·B = 0 ⇒ A = 0 hoặc B = 0), nên cho từng ngoặc bằng 0.`);
   if (d <= 2) {
     if (d === 1) {
       const p = nz(r, -9, 9);
       let q = nz(r, -9, 9);
       if (Math.abs(q) === Math.abs(p)) q = p > 0 ? p - 11 : p + 11;
       const e = `${factor(p)}${factor(q)} = 0`;
-      return vi(
-        { prompt: `Solve: ${e}`, answer: roots([[p, 1], [q, 1]]), distractors: [roots([[-p, 1], [-q, 1]]), roots([[p, 1], [-q, 1]]), `x = ${num(p)}`], explanation: 'A·B = 0 means A = 0 or B = 0.' },
-        `Giải phương trình: ${e}`,
-        'A·B = 0 khi A = 0 hoặc B = 0.',
-      );
+      const ex = (en: boolean) =>
+        [
+          zeroRule(en),
+          `${linRoot(1, -p)}; ${linRoot(1, -q)}.`,
+          tr(en, `Careful: the solution has the opposite sign to the number in the bracket: (x ${signed(-p)}) gives x = ${num(p)}.`, `Chú ý: nghiệm trái dấu với số trong ngoặc: (x ${signed(-p)}) cho x = ${num(p)}.`),
+        ].join('\n');
+      return vi({ prompt: `Solve: ${e}`, answer: roots([[p, 1], [q, 1]]), distractors: [roots([[-p, 1], [-q, 1]]), roots([[p, 1], [-q, 1]]), `x = ${num(p)}`], explanation: ex(true) }, `Giải phương trình: ${e}`, ex(false));
     }
     const a = int(r, 2, 5), b = nz(r, -9, 9), c = int(r, 1, 4), e2 = nz(r, -9, 9);
     const e = `(${poly([a, b])})(${poly([c, e2])}) = 0`;
+    const ex = (en: boolean) => [zeroRule(en), `${linRoot(a, b)}.`, `${linRoot(c, e2)}.`, tr(en, `So ${roots([[-b, a], [-e2, c]])}.`, `Vậy ${roots([[-b, a], [-e2, c]])}.`)].join('\n');
     return vi(
-      {
-        prompt: `Solve: ${e}`,
-        answer: roots([[-b, a], [-e2, c]]),
-        distractors: [roots([[b, a], [e2, c]]), roots([[-a, b], [-c, e2]]), roots([[-b, 1], [-e2, 1]])],
-        explanation: 'A·B = 0 means A = 0 or B = 0.',
-      },
+      { prompt: `Solve: ${e}`, answer: roots([[-b, a], [-e2, c]]), distractors: [roots([[b, a], [e2, c]]), roots([[-a, b], [-c, e2]]), roots([[-b, 1], [-e2, 1]])], explanation: ex(true) },
       `Giải phương trình: ${e}`,
-      'A·B = 0 khi A = 0 hoặc B = 0.',
+      ex(false),
     );
   }
   if (d === 3) {
     const k = nz(r, -9, 9);
-    const e = r() < 0.5 ? `${poly([1, -k, 0])} = 0` : `x² = ${poly([k, 0])}`;
-    return vi(
-      {
-        prompt: `Solve: ${e}`,
-        answer: roots([[0, 1], [k, 1]]),
-        distractors: [`x = ${num(k)}`, roots([[0, 1], [-k, 1]]), `x = ${num(-k)}`],
-        explanation: `Never divide by x (it might be 0). Factorise: x(x ${signed(-k)}) = 0.`,
-      },
-      `Giải phương trình: ${e}`,
-      `Không chia hai vế cho x (x có thể bằng 0). Phân tích: x(x ${signed(-k)}) = 0.`,
-    );
+    const first = r() < 0.5;
+    const e = first ? `${poly([1, -k, 0])} = 0` : `x² = ${poly([k, 0])}`;
+    const ex = (en: boolean) =>
+      [
+        first ? '' : tr(en, `Bring everything to one side: ${poly([1, -k, 0])} = 0.`, `Chuyển vế: ${poly([1, -k, 0])} = 0.`),
+        tr(en, `Both terms contain x, so take x out as a common factor: x(x ${signed(-k)}) = 0.`, `Hai hạng tử đều chứa x, nên đặt x làm nhân tử chung: x(x ${signed(-k)}) = 0.`),
+        tr(en, `A product is 0 when a factor is 0: x = 0 or x ${signed(-k)} = 0 ⇒ x = ${num(k)}.`, `Tích bằng 0 khi một thừa số bằng 0: x = 0 hoặc x ${signed(-k)} = 0 ⇒ x = ${num(k)}.`),
+        tr(en, `Careful: never divide both sides by x — x could be 0, and you would lose the solution x = 0.`, `Chú ý: không chia hai vế cho x vì x có thể bằng 0, sẽ mất nghiệm x = 0.`),
+      ]
+        .filter(Boolean)
+        .join('\n');
+    return vi({ prompt: `Solve: ${e}`, answer: roots([[0, 1], [k, 1]]), distractors: [`x = ${num(k)}`, roots([[0, 1], [-k, 1]]), `x = ${num(-k)}`], explanation: ex(true) }, `Giải phương trình: ${e}`, ex(false));
   }
   if (d === 4) {
     // (x + p)/(x − q) = k
@@ -780,32 +1014,30 @@ const rationalEq: Generator = (d, r) => {
       k = pick(r, [-3, -2, 2, 3, 4]);
       p = k * (x0 - q) - x0;
     } while (x0 === q || Math.abs(p) > 15);
+    const top = p === 0 ? 'x' : `x ${signed(p)}`;
     const e = `${p === 0 ? 'x' : `(x ${signed(p)})`}/(x ${signed(-q)}) = ${num(k)}`;
-    return vi(
-      {
-        prompt: `Solve: ${e}`,
-        answer: `x = ${num(x0)}`,
-        distractors: [`x = ${num(q)}`, `x = ${num(-x0)}`, `x = ${fracN(k * q + p, k + 1)}`, NONE],
-        explanation: `Condition: x ≠ ${num(q)}. Then x ${signed(p)} = ${num(k)}(x ${signed(-q)}).`,
-      },
-      `Giải phương trình: ${e}`,
-      `Điều kiện: x ≠ ${num(q)}. Khi đó x ${signed(p)} = ${num(k)}(x ${signed(-q)}).`,
-    );
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Condition: the denominator can't be 0, so x ${signed(-q)} ≠ 0, i.e. x ≠ ${num(q)}.`, `Điều kiện xác định: mẫu khác 0, tức x ${signed(-q)} ≠ 0, hay x ≠ ${num(q)}.`),
+        tr(en, `Multiply both sides by (x ${signed(-q)}): ${top} = ${num(k)}(x ${signed(-q)}) = ${terms([[k, 'x'], [-k * q, '']])}.`, `Nhân hai vế với (x ${signed(-q)}): ${top} = ${num(k)}(x ${signed(-q)}) = ${terms([[k, 'x'], [-k * q, '']])}.`),
+        tr(en, `x terms to the left, numbers to the right: ${terms([[1, 'x'], [-k, 'x']])} = ${num(-k * q)} ${signed(-p)}, so ${terms([[1 - k, 'x']])} = ${num(x0 * (1 - k))}, x = ${ratio(x0 * (1 - k), 1 - k)}.`, `Chuyển vế: ${terms([[1, 'x'], [-k, 'x']])} = ${num(-k * q)} ${signed(-p)}, nên ${terms([[1 - k, 'x']])} = ${num(x0 * (1 - k))}, x = ${ratio(x0 * (1 - k), 1 - k)}.`),
+        tr(en, `x = ${num(x0)} ≠ ${num(q)}, so it satisfies the condition. Answer: x = ${num(x0)}.`, `x = ${num(x0)} ≠ ${num(q)} nên thoả mãn điều kiện. Vậy x = ${num(x0)}.`),
+      ].join('\n');
+    return vi({ prompt: `Solve: ${e}`, answer: `x = ${num(x0)}`, distractors: [`x = ${num(q)}`, `x = ${num(-x0)}`, `x = ${fracN(k * q + p, k + 1)}`, NONE], explanation: ex(true) }, `Giải phương trình: ${e}`, ex(false));
   }
   // d5: the trap — a solution that breaks the condition
   const q = nz(r, -6, 6);
+  const cond = (en: boolean) => tr(en, `Condition: the denominator can't be 0, so x ≠ ${num(q)}.`, `Điều kiện xác định: mẫu khác 0, nên x ≠ ${num(q)}.`);
   if (r() < 0.4) {
     const e = `x²/(x ${signed(-q)}) = ${q * q}/(x ${signed(-q)})`;
-    return vi(
-      {
-        prompt: `Solve: ${e}`,
-        answer: `x = ${num(-q)}`,
-        distractors: [roots([[q, 1], [-q, 1]]), `x = ${num(q)}`, NONE],
-        explanation: `Condition: x ≠ ${num(q)}. x² = ${q * q} gives x = ±${Math.abs(q)}, but x = ${num(q)} is not allowed.`,
-      },
-      `Giải phương trình: ${e}`,
-      `Điều kiện: x ≠ ${num(q)}. x² = ${q * q} cho x = ±${Math.abs(q)}, nhưng x = ${num(q)} không thoả mãn điều kiện.`,
-    );
+    const ex = (en: boolean) =>
+      [
+        cond(en),
+        tr(en, `Both sides have the same denominator, so the tops must be equal: x² = ${q * q}.`, `Hai vế cùng mẫu nên hai tử bằng nhau: x² = ${q * q}.`),
+        tr(en, `x² = ${q * q} gives x = ${Math.abs(q)} or x = −${Math.abs(q)} (both square to ${q * q}).`, `x² = ${q * q} cho x = ${Math.abs(q)} hoặc x = −${Math.abs(q)} (đều có bình phương bằng ${q * q}).`),
+        tr(en, `x = ${num(q)} breaks the condition (it makes the denominator 0), so reject it. Answer: x = ${num(-q)}.`, `x = ${num(q)} không thoả mãn điều kiện (làm mẫu bằng 0) nên loại. Vậy x = ${num(-q)}.`),
+      ].join('\n');
+    return vi({ prompt: `Solve: ${e}`, answer: `x = ${num(-q)}`, distractors: [roots([[q, 1], [-q, 1]]), `x = ${num(q)}`, NONE], explanation: ex(true) }, `Giải phương trình: ${e}`, ex(false));
   }
   // (2x + a)/(x − q) = (x + b)/(x − q)  ⇒  x = b − a, rejected when it equals q
   const reject = r() < 0.4;
@@ -813,15 +1045,24 @@ const rationalEq: Generator = (d, r) => {
   const b = reject ? q + a : a + pick(r, [-5, -3, -2, 2, 3, 5].filter((t) => t !== q));
   const x0 = b - a;
   const e = `(${poly([2, a])})/(x ${signed(-q)}) = (${poly([1, b])})/(x ${signed(-q)})`;
+  const ex = (en: boolean) =>
+    [
+      cond(en),
+      tr(en, `Both sides have the same denominator, so the tops must be equal: 2x ${signed(a)} = x ${signed(b)}.`, `Hai vế cùng mẫu nên hai tử bằng nhau: 2x ${signed(a)} = x ${signed(b)}.`),
+      tr(en, `2x − x = ${num(b)} − ${pn(a)}, so x = ${num(x0)}.`, `2x − x = ${num(b)} − ${pn(a)}, nên x = ${num(x0)}.`),
+      reject
+        ? tr(en, `But x = ${num(x0)} breaks the condition x ≠ ${num(q)} (the denominator would be 0), so the equation has no solution.`, `Nhưng x = ${num(x0)} không thoả mãn điều kiện x ≠ ${num(q)} (mẫu bằng 0), vậy phương trình vô nghiệm.`)
+        : tr(en, `x = ${num(x0)} ≠ ${num(q)}, so it is allowed. Answer: x = ${num(x0)}.`, `x = ${num(x0)} ≠ ${num(q)} nên thoả mãn điều kiện. Vậy x = ${num(x0)}.`),
+    ].join('\n');
   return vi(
     {
       prompt: `Solve: ${e}`,
       answer: reject ? NONE : `x = ${num(x0)}`,
       distractors: reject ? [`x = ${num(x0)}`, `x = ${num(-x0)}`, `x = ${num(a + b)}`] : [NONE, `x = ${num(a + b)}`, `x = ${num(-x0)}`],
-      explanation: `Condition: x ≠ ${num(q)}. Then 2x ${signed(a)} = x ${signed(b)}, so x = ${num(x0)}${reject ? ' — but that breaks the condition, so there is no solution' : ''}.`,
+      explanation: ex(true),
     },
     `Giải phương trình: ${e}`,
-    `Điều kiện: x ≠ ${num(q)}. Khi đó 2x ${signed(a)} = x ${signed(b)}, nên x = ${num(x0)}${reject ? ' — không thoả mãn điều kiện, vậy phương trình vô nghiệm' : ''}.`,
+    ex(false),
   );
 };
 
@@ -831,14 +1072,22 @@ const equationProblems: Generator = (d, r) => {
     const p1 = pick(r, [5, 6, 8, 10, 12]), p2 = pick(r, [3, 4, 7, 9].filter((p) => p !== p1));
     const x = int(r, 3, 15), y = int(r, 3, 15);
     const total = (p1 * x + p2 * y) * 1000;
+    const N = x + y, T = p1 * x + p2 * y;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Let x = number of notebooks and y = number of pens.`, `Gọi x là số quyển vở, y là số cây bút (x, y nguyên dương).`),
+        tr(en, `Count of items: x + y = ${N}. Money (in thousands of VND): ${p1}x + ${p2}y = ${T}.`, `Tổng số món: x + y = ${N}. Số tiền (nghìn đồng): ${p1}x + ${p2}y = ${T}.`),
+        tr(en, `From the first equation y = ${N} − x. Substitute: ${p1}x + ${p2}(${N} − x) = ${T} ⇒ ${p1}x − ${p2}x = ${T} − ${p2 * N}.`, `Từ phương trình đầu y = ${N} − x. Thế vào: ${p1}x + ${p2}(${N} − x) = ${T} ⇒ ${p1}x − ${p2}x = ${T} − ${p2 * N}.`),
+        tr(en, `${terms([[p1 - p2, 'x']])} = ${num((p1 - p2) * x)} ⇒ x = ${ratio((p1 - p2) * x, p1 - p2)}. They bought ${x} notebooks (and ${y} pens).`, `${terms([[p1 - p2, 'x']])} = ${num((p1 - p2) * x)} ⇒ x = ${ratio((p1 - p2) * x, p1 - p2)}. Vậy lớp mua ${x} quyển vở (và ${y} cây bút).`),
+      ].join('\n');
     return vi(
       {
         prompt: `A class buys ${x + y} items in total: notebooks at ${vnd(p1 * 1000)} VND each and pens at ${vnd(p2 * 1000)} VND each, paying ${vnd(total)} VND. How many notebooks did they buy?`,
         ...numeric(x, [y, Math.round((x + y) / 2), x + 1], r),
-        explanation: `Let x notebooks and y pens: x + y = ${x + y} and ${p1 * 1000}x + ${p2 * 1000}y = ${total}.`,
+        explanation: ex(true),
       },
       `Một lớp mua tổng cộng ${x + y} món đồ gồm vở giá ${vndVi(p1 * 1000)} đồng/quyển và bút giá ${vndVi(p2 * 1000)} đồng/cây, hết ${vndVi(total)} đồng. Lớp đã mua bao nhiêu quyển vở?`,
-      `Gọi x là số vở, y là số bút: x + y = ${x + y} và ${p1 * 1000}x + ${p2 * 1000}y = ${total}.`,
+      ex(false),
     );
   }
   if (d === 2) {
@@ -849,41 +1098,65 @@ const equationProblems: Generator = (d, r) => {
     } while (t === u);
     const n = 10 * t + u, diff = 9 * (u - t);
     const word = diff > 0 ? 'greater' : 'smaller';
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Let a = tens digit, b = ones digit. The number is 10a + b; swapped it is 10b + a.`, `Gọi chữ số hàng chục là a, hàng đơn vị là b. Số đó là 10a + b; đổi chỗ được 10b + a.`),
+        tr(en, `Digit sum: a + b = ${t + u}. Swap: (10b + a) − (10a + b) = ${num(diff)} ⇒ 9b − 9a = ${num(diff)} ⇒ b − a = ${num(u - t)}.`, `Tổng các chữ số: a + b = ${t + u}. Đổi chỗ: (10b + a) − (10a + b) = ${num(diff)} ⇒ 9b − 9a = ${num(diff)} ⇒ b − a = ${num(u - t)}.`),
+        tr(en, `Add the two equations: 2b = ${t + u} + ${pn(u - t)} = ${2 * u} ⇒ b = ${u}; then a = ${t + u} − ${u} = ${t}.`, `Cộng hai phương trình: 2b = ${t + u} + ${pn(u - t)} = ${2 * u} ⇒ b = ${u}; khi đó a = ${t + u} − ${u} = ${t}.`),
+        tr(en, `The number is ${n}.`, `Vậy số cần tìm là ${n}.`),
+      ].join('\n');
     return vi(
       {
         prompt: `A two-digit number has digit sum ${t + u}. Swapping its digits gives a number ${Math.abs(diff)} ${word} than the original. Find the number.`,
         ...numeric(n, [10 * u + t, 10 * (t + 1) + (u - 1), 10 * (t - 1) + (u + 1)].filter((m) => m >= 10 && m <= 99), r),
-        explanation: `Let the digits be a (tens) and b (ones): a + b = ${t + u} and (10b + a) − (10a + b) = ${diff}, so b − a = ${u - t}.`,
+        explanation: ex(true),
       },
       `Một số có hai chữ số có tổng các chữ số bằng ${t + u}. Nếu đổi chỗ hai chữ số thì được số mới ${diff > 0 ? 'lớn' : 'nhỏ'} hơn số ban đầu ${Math.abs(diff)} đơn vị. Tìm số đó.`,
-      `Gọi chữ số hàng chục là a, hàng đơn vị là b: a + b = ${t + u} và (10b + a) − (10a + b) = ${diff}, nên b − a = ${u - t}.`,
+      ex(false),
     );
   }
   if (d === 3) {
     const pa = pick(r, [10, 15, 20]), pb = pick(r, [10, 15, 20, 25].filter((p) => p !== pa));
     const x = int(r, 6, 30) * 20, y = int(r, 6, 30) * 20;
     const made = x + (x * pa) / 100 + y + (y * pb) / 100;
+    const N = x + y, E = made - N;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Let x = factory A's target and y = factory B's target: x + y = ${N}.`, `Gọi x, y là số sản phẩm theo kế hoạch của nhà máy A và B: x + y = ${N}.`),
+        tr(en, `The extra made over target: ${made} − ${N} = ${E}. A's extra is ${pa}% of x, B's is ${pb}% of y: ${pa}x/100 + ${pb}y/100 = ${E}, i.e. ${pa}x + ${pb}y = ${100 * E}.`, `Số sản phẩm vượt mức: ${made} − ${N} = ${E}. A vượt ${pa}% của x, B vượt ${pb}% của y: ${pa}x/100 + ${pb}y/100 = ${E}, tức ${pa}x + ${pb}y = ${100 * E}.`),
+        tr(en, `Put y = ${N} − x: ${pa}x + ${pb}(${N} − x) = ${100 * E} ⇒ ${terms([[pa - pb, 'x']])} = ${100 * E} − ${pb * N} = ${num((pa - pb) * x)}.`, `Thế y = ${N} − x: ${pa}x + ${pb}(${N} − x) = ${100 * E} ⇒ ${terms([[pa - pb, 'x']])} = ${100 * E} − ${pb * N} = ${num((pa - pb) * x)}.`),
+        tr(en, `x = ${ratio((pa - pb) * x, pa - pb)}. Factory A's target was ${x} products.`, `x = ${ratio((pa - pb) * x, pa - pb)}. Vậy theo kế hoạch nhà máy A phải làm ${x} sản phẩm.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Two factories had to make ${x + y} products in total. Factory A went ${pa}% over its target and factory B went ${pb}% over, so together they made ${made}. What was factory A's target?`,
         ...numeric(x, [y, (x + y) / 2, x + 20], r),
-        explanation: `Let the targets be x and y: x + y = ${x + y} and ${1 + pa / 100}x + ${1 + pb / 100}y = ${made}.`,
+        explanation: ex(true),
       },
       `Hai nhà máy theo kế hoạch phải làm tổng cộng ${x + y} sản phẩm. Nhà máy A vượt mức ${pa}%, nhà máy B vượt mức ${pb}%, nên cả hai làm được ${made} sản phẩm. Theo kế hoạch nhà máy A phải làm bao nhiêu sản phẩm?`,
-      `Gọi số sản phẩm theo kế hoạch là x và y: x + y = ${x + y} và ${String(1 + pa / 100).replace('.', ',')}x + ${String(1 + pb / 100).replace('.', ',')}y = ${made}.`,
+      ex(false),
     );
   }
   if (d === 4) {
     // 1/a + 1/b = 1/T
     const [a, b, T] = pick(r, [[3, 6, 2], [4, 12, 3], [6, 12, 4], [10, 15, 6], [12, 24, 8], [20, 30, 12], [6, 30, 5], [5, 20, 4], [8, 24, 6], [9, 18, 6], [14, 35, 10], [15, 30, 10], [10, 40, 8], [12, 36, 9]]);
+    const g = b - a, B = g - 2 * T, C = -T * g, other = C / a, D = B * B - 4 * C, q = a - other;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Let x = days team A needs alone (x > ${T}); team B needs x + ${g} days.`, `Gọi x là số ngày đội A làm riêng xong việc (x > ${T}); đội B cần x + ${g} ngày.`),
+        tr(en, `In one day A does 1/x of the job, B does 1/(x + ${g}), together 1/${T}: 1/x + 1/(x + ${g}) = 1/${T}.`, `Mỗi ngày đội A làm được 1/x công việc, đội B làm được 1/(x + ${g}), cả hai làm được 1/${T}: 1/x + 1/(x + ${g}) = 1/${T}.`),
+        tr(en, `Multiply by ${T}x(x + ${g}): ${T}(x + ${g}) + ${T}x = x(x + ${g}) ⇒ ${poly([1, B, C])} = 0.`, `Nhân hai vế với ${T}x(x + ${g}): ${T}(x + ${g}) + ${T}x = x(x + ${g}) ⇒ ${poly([1, B, C])} = 0.`),
+        `a = 1, b = ${num(B)}, c = ${num(C)}: Δ = b² − 4ac = ${pn(B)}² − 4·1·${pn(C)} = ${D}, √Δ = ${q}.`,
+        tr(en, `x = (${num(-B)} + ${q})/2 = ${a} or x = (${num(-B)} − ${q})/2 = ${num(other)} (negative, rejected). Team A needs ${a} days.`, `x = (${num(-B)} + ${q})/2 = ${a} hoặc x = (${num(-B)} − ${q})/2 = ${num(other)} (âm, loại). Vậy đội A cần ${a} ngày.`),
+      ].join('\n');
     return vi(
       {
         prompt: `Two teams working together finish a job in ${T} days. Working alone, team A needs ${b - a} days fewer than team B. How many days does team A need alone?`,
         ...numeric(a, [b, 2 * T, T + (b - a) / 2], r),
-        explanation: `Let team A need x days (x > ${T}): 1/x + 1/(x + ${b - a}) = 1/${T}. Solve the quadratic and keep the root that fits.`,
+        explanation: ex(true),
       },
       `Hai đội cùng làm một công việc thì xong trong ${T} ngày. Nếu làm riêng, đội A cần ít hơn đội B ${b - a} ngày. Hỏi làm riêng thì đội A cần bao nhiêu ngày?`,
-      `Gọi số ngày đội A làm riêng là x (x > ${T}): 1/x + 1/(x + ${b - a}) = 1/${T}. Giải phương trình bậc hai và chọn nghiệm thoả mãn điều kiện.`,
+      ex(false),
     );
   }
   const kind = pick(r, ['motion', 'rectangle', 'diagonal'] as const);
@@ -896,14 +1169,23 @@ const equationProblems: Generator = (d, r) => {
       if (!options.length) continue;
       const D = pick(r, options);
       const t = (60 * D * v) / (x * (x + v));
+      const h = frac(t, 60), K = x * (x + v), q = 2 * x + v;
+      const ex = (en: boolean) =>
+        [
+          tr(en, `Let x = speed from A to B (km/h, x > 0); the way back is at x + ${v} km/h.`, `Gọi x là vận tốc lúc đi (km/h, x > 0); vận tốc lúc về là x + ${v} km/h.`),
+          tr(en, `Time = distance ÷ speed: going takes ${D}/x hours, returning ${D}/(x + ${v}) hours, and ${t} minutes = ${h} h. So ${D}/x − ${D}/(x + ${v}) = ${h}.`, `Thời gian = quãng đường : vận tốc: lúc đi ${D}/x giờ, lúc về ${D}/(x + ${v}) giờ; ${t} phút = ${h} giờ. Nên ${D}/x − ${D}/(x + ${v}) = ${h}.`),
+          tr(en, `Multiply by x(x + ${v}): ${D}(x + ${v}) − ${D}x = ${h}·x(x + ${v}) ⇒ ${D * v} = ${h}·x(x + ${v}) ⇒ x(x + ${v}) = ${K}.`, `Nhân hai vế với x(x + ${v}): ${D}(x + ${v}) − ${D}x = ${h}·x(x + ${v}) ⇒ ${D * v} = ${h}·x(x + ${v}) ⇒ x(x + ${v}) = ${K}.`),
+          `${poly([1, v, -K])} = 0: Δ = ${v}² − 4·1·(−${K}) = ${v * v + 4 * K}, √Δ = ${q}.`,
+          tr(en, `x = (−${v} + ${q})/2 = ${x} (the other root (−${v} − ${q})/2 = −${x + v} is negative, rejected). Speed: ${x} km/h.`, `x = (−${v} + ${q})/2 = ${x} (nghiệm (−${v} − ${q})/2 = −${x + v} âm, loại). Vậy vận tốc lúc đi là ${x} km/h.`),
+        ].join('\n');
       return vi(
         {
           prompt: `A cyclist rides ${D} km from A to B. On the way back he rides ${v} km/h faster, so the return trip takes ${t} minutes less. Find his speed from A to B (km/h).`,
           ...numeric(x, [x + v, x - v, Math.round(D / (t / 60))], r),
-          explanation: `Let the speed be x km/h: ${D}/x − ${D}/(x + ${v}) = ${frac(t, 60)} (hours). Clear the denominators and solve the quadratic; reject the negative root.`,
+          explanation: ex(true),
         },
         `Một người đi xe đạp từ A đến B dài ${D} km. Lúc về người đó đi nhanh hơn ${v} km/h nên thời gian về ít hơn thời gian đi ${t} phút. Tính vận tốc lúc đi từ A đến B (km/h).`,
-        `Gọi vận tốc lúc đi là x (km/h, x > 0): ${D}/x − ${D}/(x + ${v}) = ${frac(t, 60)} (giờ). Quy đồng, giải phương trình bậc hai và loại nghiệm âm.`,
+        ex(false),
       );
     }
   }
@@ -911,14 +1193,18 @@ const equationProblems: Generator = (d, r) => {
     const [a, b, c] = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29], [9, 40, 41]]);
     const k = pick(r, a * 3 < 30 ? [1, 2, 3] : [1]);
     const [w, l, dg] = [a * k, b * k, c * k];
+    const g = l - w;
+    const ex = (en: boolean) =>
+      [
+        tr(en, `Let x = width (cm, x > 0); the length is x + ${g}.`, `Gọi chiều rộng là x (cm, x > 0); chiều dài là x + ${g}.`),
+        tr(en, `The diagonal splits the rectangle into right triangles, so by Pythagoras (leg² + leg² = hypotenuse²): x² + (x + ${g})² = ${dg}².`, `Đường chéo chia hình chữ nhật thành hai tam giác vuông, theo định lí Py-ta-go: x² + (x + ${g})² = ${dg}².`),
+        tr(en, `Expand: x² + x² + ${2 * g}x + ${g * g} = ${dg * dg} ⇒ 2x² + ${2 * g}x − ${dg * dg - g * g} = 0 ⇒ (divide by 2) ${poly([1, g, -w * l])} = 0.`, `Khai triển: x² + x² + ${2 * g}x + ${g * g} = ${dg * dg} ⇒ 2x² + ${2 * g}x − ${dg * dg - g * g} = 0 ⇒ (chia cho 2) ${poly([1, g, -w * l])} = 0.`),
+        tr(en, `Two numbers with sum ${g} and product −${w * l}: ${l} and −${w}, so (x − ${w})(x + ${l}) = 0 ⇒ x = ${w} or x = −${l} (negative, rejected). Width: ${w} cm.`, `Phân tích: (x − ${w})(x + ${l}) = 0 ⇒ x = ${w} hoặc x = −${l} (âm, loại). Vậy chiều rộng là ${w} cm.`),
+      ].join('\n');
     return vi(
-      {
-        prompt: `A rectangle's length is ${l - w} cm more than its width, and its diagonal is ${dg} cm. Find the width (cm).`,
-        ...numeric(w, [l, dg - l, Math.round(dg / 2)], r),
-        explanation: `Let the width be x: x² + (x + ${l - w})² = ${dg}², then reject the negative root.`,
-      },
-      `Một hình chữ nhật có chiều dài hơn chiều rộng ${l - w} cm và đường chéo dài ${dg} cm. Tính chiều rộng (cm).`,
-      `Gọi chiều rộng là x (cm, x > 0): x² + (x + ${l - w})² = ${dg}², rồi loại nghiệm âm.`,
+      { prompt: `A rectangle's length is ${g} cm more than its width, and its diagonal is ${dg} cm. Find the width (cm).`, ...numeric(w, [l, dg - l, Math.round(dg / 2)], r), explanation: ex(true) },
+      `Một hình chữ nhật có chiều dài hơn chiều rộng ${g} cm và đường chéo dài ${dg} cm. Tính chiều rộng (cm).`,
+      ex(false),
     );
   }
   let w = 0, l = 0;
@@ -926,14 +1212,17 @@ const equationProblems: Generator = (d, r) => {
     w = int(r, 3, 15);
     l = int(r, 4, 25);
   } while (l <= w);
+  const ex = (en: boolean) =>
+    [
+      tr(en, `Perimeter = 2·(length + width), so length + width = ${2 * (l + w)} : 2 = ${l + w}. Area: length × width = ${l * w}.`, `Chu vi = 2·(dài + rộng), nên dài + rộng = ${2 * (l + w)} : 2 = ${l + w}. Diện tích: dài × rộng = ${l * w}.`),
+      tr(en, `Two numbers with sum S and product P are the roots of t² − St + P = 0 (Viète in reverse): ${poly([1, -(l + w), l * w], 't')} = 0.`, `Hai số có tổng S và tích P là nghiệm của t² − St + P = 0 (Vi-ét đảo): ${poly([1, -(l + w), l * w], 't')} = 0.`),
+      tr(en, `${w} + ${l} = ${l + w} and ${w}·${l} = ${l * w}, so (t − ${w})(t − ${l}) = 0: t = ${w} or t = ${l}.`, `${w} + ${l} = ${l + w} và ${w}·${l} = ${l * w}, nên (t − ${w})(t − ${l}) = 0: t = ${w} hoặc t = ${l}.`),
+      tr(en, `The length is the bigger one: ${l} cm.`, `Chiều dài là số lớn hơn: ${l} cm.`),
+    ].join('\n');
   return vi(
-    {
-      prompt: `A rectangle has perimeter ${2 * (l + w)} cm and area ${l * w} cm². Find its length (cm).`,
-      ...numeric(l, [w, (l + w) / 2, l + w], r),
-      explanation: `Length + width = ${l + w} and length × width = ${l * w}: they are the roots of t² − ${l + w}t + ${l * w} = 0.`,
-    },
+    { prompt: `A rectangle has perimeter ${2 * (l + w)} cm and area ${l * w} cm². Find its length (cm).`, ...numeric(l, [w, (l + w) / 2, l + w], r), explanation: ex(true) },
     `Một hình chữ nhật có chu vi ${2 * (l + w)} cm và diện tích ${l * w} cm². Tính chiều dài (cm).`,
-    `Chiều dài + chiều rộng = ${l + w}, chiều dài × chiều rộng = ${l * w}: chúng là nghiệm của t² − ${l + w}t + ${l * w} = 0.`,
+    ex(false),
   );
 };
 
