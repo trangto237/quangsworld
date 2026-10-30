@@ -49,13 +49,15 @@ export function Exam({ student, examId }: { student: StudentProfile; examId: str
     (imported
       ? {
           id: imported.id,
+          subject: 'english',
+          icon: KIND_INFO[imported.kind].emoji,
           name: imported.name,
           description: `${examSize(imported)} questions · ${imported.minutes} minutes · a real paper imported by your parent.`,
           minutes: imported.minutes,
           scoring: KIND_INFO[imported.kind].scoring,
           sections: [],
         }
-      : { id: examId, name: 'Paper not found', description: 'This paper was removed.', minutes: 60, scoring: 'ten', sections: [] });
+      : { id: examId, subject: 'english', icon: '📄', name: 'Paper not found', description: 'This paper was removed.', minutes: 60, scoring: 'ten', sections: [] });
   const [progress, setProgress] = useState<ExamProgress | null>(() => {
     const saved = repo.getKv<ExamProgress>(key(student.id));
     if (!saved || saved.examId !== examId) return null;
