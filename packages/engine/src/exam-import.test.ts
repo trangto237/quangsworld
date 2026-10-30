@@ -86,6 +86,16 @@ describe('imported exam papers', () => {
     expect(scriptLines('Welcome to the museum.\nIt has four floors.')).toEqual([{ who: 'C', text: 'Welcome to the museum. It has four floors.' }]);
   });
 
+  it('keeps IELTS matching-headings questions with up to 8 headings', () => {
+    const headings = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii'].map((n) => `Heading ${n}`);
+    const e = buildImportedExam(
+      { sections: [{ type: 'ielts-reading', passage: 'A  Text.', questions: [{ prompt: 'Section A', options: headings, answer_index: 6, answer_from: 'key' }] }] },
+      { id: 'x', kind: 'ielts-reading' },
+    );
+    expect(e.sections[0].questions[0].options).toHaveLength(8);
+    expect(e.sections[0].questions[0].answer).toBe(6);
+  });
+
   it('refuses a paper with nothing usable', () => {
     expect(() => buildImportedExam({ sections: [] }, { id: 'x', kind: 'hn10' })).toThrow();
   });

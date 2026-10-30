@@ -588,7 +588,7 @@ export class Repo {
   }
 
   /** Saves an imported paper (and its file, kept on this device only). Delete it like any other material. */
-  async saveImportedExam(exam: ImportedExam, file: { name: string; kind: 'pdf' | 'image'; bytes?: Uint8Array; size: number }) {
+  async saveImportedExam(exam: ImportedExam, file: { name: string; kind: 'pdf' | 'image' | 'text'; bytes?: Uint8Array; size: number }) {
     const materialId = uid('mat_');
     if (file.bytes) await this.db.putFile(materialId, file.bytes);
     const n = exam.sections.reduce((s, x) => s + x.questions.length, 0);

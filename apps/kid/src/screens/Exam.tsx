@@ -29,7 +29,7 @@ interface ExamProgress {
   pausedMs?: number;
 }
 
-const LETTER = 'ABCD';
+const LETTER = 'ABCDEFGH';
 const key = (studentId: string) => `exam-progress:${studentId}`;
 const fmt = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));

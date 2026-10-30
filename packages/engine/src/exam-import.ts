@@ -196,7 +196,8 @@ export function buildImportedExam(raw: RawExam, opts: { id: string; name?: strin
       };
       let q: Question | null = null;
       if (options.length >= 2) {
-        if (options.length > 6) continue;
+        // IELTS Matching Headings lists up to 8 headings.
+        if (options.length > 8) continue;
         const idx = Number(rq.answer_index);
         const byText = options.findIndex((o) => o.toLowerCase() === str(rq.answer_text).toLowerCase());
         const answer = Number.isInteger(idx) && idx >= 0 && idx < options.length ? idx : byText;

@@ -13,7 +13,7 @@ const KINDS: ImportedKind[] = ['hn10', 'ielts-reading', 'ielts-listening'];
 
 interface Picked {
   name: string;
-  kind: 'pdf' | 'image';
+  kind: 'pdf' | 'image' | 'text';
   size: number;
   bytes?: Uint8Array;
   pages: number;
@@ -44,6 +44,19 @@ export function ExamImport() {
     setDone(null);
     if (!files?.length) return;
     const list = [...files];
+    // A paper already written out as data (an Atlas .json paper): no AI needed, just check and save.
+    if (list.length === 1 && list[0].name.toLowerCase().endsWith('.json')) {
+      try {
+        const raw = JSON.parse(await list[0].text()) as { kind?: unknown };
+        const k = KINDS.includes(raw.kind as ImportedKind) ? (raw.kind as ImportedKind) : kind;
+        setKind(k);
+        setFile({ name: list[0].name, kind: 'text', size: list[0].size, pages: 0 });
+        setExam(buildImportedExam(raw as object, { id: uid('exam_'), name, kind: k }));
+      } catch (e) {
+        setError(`This file couldn't be read as an exam paper: ${(e as Error).message}`);
+      }
+      return;
+    }
     if (list.length === 1 && list[0].name.toLowerCase().endsWith('.pdf')) {
       const bytes = new Uint8Array(await list[0].arrayBuffer());
       try {
@@ -159,8 +172,8 @@ export function ExamImport() {
           <Field label="Name (optional)" hint="e.g. Hà Nội 2024, or Cambridge IELTS 18 — Test 1">
             <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="The paper: a PDF, or photos of the pages">
-            <input type="file" accept=".pdf,image/jpeg,image/png,image/webp" multiple className={inputClass} onChange={(e) => void pick(e.target.files)} />
+          <Field label="The paper: a PDF, photos of the pages, or an Atlas .json paper">
+            <input type="file" accept=".pdf,.json,image/jpeg,image/png,image/webp" multiple className={inputClass} onChange={(e) => void pick(e.target.files)} />
           </Field>
         </div>
         {file?.kind === 'pdf' && (
@@ -175,7 +188,7 @@ export function ExamImport() {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled={!file || !!busy || to - from + 1 > MAX_PAGES} onClick={() => void read()}>
+          <Button disabled={!file || file.kind === 'text' || !!busy || to - from + 1 > MAX_PAGES} onClick={() => void read()}>
             ✨ Read the paper with AI
           </Button>
           {busy && <span className="text-sm text-slate-500">{busy}</span>}
