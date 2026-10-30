@@ -164,4 +164,59 @@ const DESALINATION: IeltsPassage = {
   ],
 };
 
-export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION];
+const LANGUAGES: IeltsPassage = {
+  id: 'vanishing-languages',
+  title: 'When a language falls silent',
+  level: 4,
+  paragraphs: [
+    'Around 7,000 languages are spoken in the world today, but they are shared out very unequally. More than half of the world’s population speaks one of fewer than 25 major languages, such as Mandarin Chinese, Spanish, English and Hindi. At the other end of the scale, thousands of languages have only a few hundred or a few thousand speakers, often living in a single valley or on a single island. Linguists estimate that roughly 40 per cent of all languages are now endangered, and that many of them may not survive to the end of this century.',
+    'A language rarely disappears suddenly. Far more often, it fades over three or four generations through a process known as language shift. Parents who speak a minority language at home notice that a larger, more powerful language is needed for school, for jobs and for dealing with the government, and they start to use it with their children in the hope of giving them a better future. The result is a familiar pattern: the grandparents are fluent, the parents understand the old language but seldom speak it, and the children know only a few words. Once children stop learning a language from their families, it is in serious danger, even if many thousands of adults can still speak it.',
+    'Some people ask whether this matters, since speakers of a lost language can communicate perfectly well in the new one. Those who study endangered languages answer that each one holds knowledge which is not easily translated. Small languages often contain detailed names for local plants, words for the behaviour of particular fish or for small differences in the landscape, all built up over centuries of close observation. They also carry songs, stories and jokes that lose much of their meaning in another language. For many communities, finally, the language is bound up with a sense of who they are, and its loss can feel like the loss of a home.',
+    'The most famous example of a language brought back into daily life is Hebrew. For many centuries it was used for prayer, religious study and some writing, but it was not the language that families spoke at home. In the late nineteenth and early twentieth centuries, a group of enthusiasts, of whom Eliezer Ben-Yehuda is the best known, set out to change this. They created new words for modern objects, wrote dictionaries and, above all, insisted on raising children in Hebrew. Today the language has millions of native speakers. Experts point out, however, that the situation was unusual: Hebrew already had a huge written tradition, and its new speakers had strong political and social reasons to adopt a shared language.',
+    'Other revival efforts have focused on the very young. In New Zealand in the early 1980s, Māori communities, worried that few children were learning their ancestral language, set up preschools known as "language nests". In these centres, older speakers looked after small children and spoke to them only in Māori. The idea spread rapidly across the country, with hundreds of nests opening within a few years, and it was later taken up in Hawaii, where it helped to rescue a language that had almost no child speakers left. Some of the first children to attend these schools are now raising their own children in the language.',
+    'Technology offers new tools as well. Linguists can now record the last fluent speakers of a language in high-quality audio and video, and communities are producing online dictionaries, mobile apps and even video games in small languages. The linguist Dr Amara Kessling, who has worked with several communities in the Pacific, welcomes these developments but warns against expecting too much from them. In her view, recordings can preserve a language in the way that a museum preserves an object, but they cannot keep it alive. A language survives, she argues, only when people choose to use it at the kitchen table, in the playground and in the street.',
+    'This is perhaps the central lesson of revival work. Governments can help by funding schools, broadcasting and research, but they cannot force a language back into use. Success depends above all on whether a community, and especially its parents, believes that the effort is worthwhile.',
+  ],
+  glossary: ['generation: all the people born and living at about the same time', 'ancestral: belonging to the people in your family who lived long ago'],
+  headings: {
+    items: [
+      { para: 1, heading: 'A gradual change from one generation to the next', why: 'Paragraph B: a language "fades over three or four generations through… language shift". The trap about grandparents is only one detail of the pattern.' },
+      { para: 2, heading: 'What is lost when a language dies', why: 'Paragraph C answers "whether this matters": lost knowledge of plants and fish, stories, and identity.' },
+      { para: 3, heading: 'An exceptional success story', why: 'Paragraph D: Hebrew is "the most famous example", and experts say "the situation was unusual". Exceptional = unusual.', d: 5 },
+      { para: 4, heading: 'Starting with the youngest learners', why: 'Paragraph E: "Other revival efforts have focused on the very young" — the language nests for small children.' },
+      { para: 5, heading: 'The limits of modern tools', why: 'Paragraph F: technology offers "new tools", but Dr Kessling warns that recordings "cannot keep it alive". The main point is the limit, not the apps themselves.', d: 5 },
+    ],
+    distractors: ['The languages with the largest numbers of speakers', 'Why grandparents are the best language teachers', 'Creating words for modern objects'],
+  },
+  tfng: [
+    { statement: 'Most of the world’s people speak one of a small number of major languages.', answer: 'TRUE', why: 'Paragraph A: "More than half of the world’s population speaks one of fewer than 25 major languages."', d: 3 },
+    { statement: 'Parents usually stop using a minority language because their children ask them to.', answer: 'FALSE', why: 'Paragraph B: parents change because the larger language "is needed for school, for jobs" and to give their children "a better future" — the parents decide, not the children.' },
+    { statement: 'Hebrew was the first language ever to be revived.', answer: 'NOT GIVEN', why: 'Paragraph D calls Hebrew "the most famous example", not the first. The passage does not say which revival came first.', d: 5 },
+  ],
+  mc: [
+    {
+      question: 'According to paragraph D, why might the Hebrew revival be hard to repeat elsewhere?',
+      answer: 'Hebrew had special advantages that most small languages lack.',
+      wrong: ['Hebrew had too few written texts to learn from.', 'Families were not allowed to use Hebrew at home.', 'Eliezer Ben-Yehuda worked on it alone.'],
+      why: 'Experts say "the situation was unusual": Hebrew "already had a huge written tradition" and speakers had strong reasons to adopt it. Ben-Yehuda was one of "a group of enthusiasts", not alone.',
+    },
+    {
+      question: 'What is Dr Kessling’s opinion of recordings and apps?',
+      answer: 'They are useful but cannot save a language on their own.',
+      wrong: ['They are a waste of money for small communities.', 'They work better than teaching in schools.', 'They should be kept in museums.'],
+      why: 'Paragraph F: she "welcomes these developments but warns against expecting too much". The museum is only a comparison, not a suggestion.',
+    },
+  ],
+  summaryList: {
+    title: 'The language nests of New Zealand',
+    gaps: [
+      { text: 'In the early 1980s, Māori communities opened preschools in which ___ speakers cared for small children.', answer: 'elderly', why: 'Paragraph E: "older speakers looked after small children". older = elderly. "foreign" is wrong: they were Māori speakers from the community.' },
+      { text: 'The adults spoke to the children ___ in Māori.', answer: 'exclusively', why: '"spoke to them only in Māori". only = exclusively. "occasionally" means the opposite.' },
+      { text: 'The scheme proved very ___, and hundreds of nests opened within a few years.', answer: 'popular', why: '"The idea spread rapidly across the country, with hundreds of nests opening".', d: 5 },
+      { text: 'The model was later ___ in Hawaii.', answer: 'copied', why: '"it was later taken up in Hawaii". taken up = copied / adopted. "abandoned" is the opposite.' },
+    ],
+    distractors: ['foreign', 'occasionally', 'expensive', 'abandoned'],
+  },
+};
+
+export const passagesB: IeltsPassage[] = [OCTOPUS, PAPER, DESALINATION, LANGUAGES];
