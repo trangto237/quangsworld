@@ -275,4 +275,62 @@ const CONTAINERS: IeltsPassage = {
   ],
 };
 
-export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS, HABITS, CONTAINERS];
+const HOMEWORK: IeltsPassage = {
+  id: 'homework-debate',
+  title: 'Does homework deserve its bad reputation?',
+  level: 5,
+  paragraphs: [
+    'Few topics in education provoke such strong feelings as homework. Parents complain that evenings have become a battle, children complain that they have no time to play, and in recent years a number of schools have abolished homework altogether, at least for younger pupils. Meanwhile, defenders of homework insist that it builds discipline and raises standards. In my view, both camps are largely asking the wrong question. Whether homework helps depends far less on how much is set than on what it asks pupils to do, and a debate that treats all homework as the same thing is unlikely to produce sensible answers.',
+    'The research evidence is more modest than either side admits. A large review by the Marlow Institute, a fictional research centre, combined the results of more than sixty studies. For secondary school students, those who did a moderate amount of homework tended to achieve better results, although the benefit levelled off at around two hours a night and almost disappeared beyond that. For primary pupils, the link was weak or absent. Even the positive findings should be treated with caution, however. Students who are already motivated and well supported at home are more likely to complete their homework in the first place, so a simple comparison of those who do more and those who do less is bound to exaggerate what homework itself achieves.',
+    'Nevertheless, there are good reasons to believe that the right kind of homework is valuable. Studies of memory have repeatedly shown that we remember material far better when we are made to recall it from memory, rather than simply reading it again, and when this recall is spread out over days and weeks instead of being crowded into a single lesson. A short quiz on last week’s topic, attempted at the kitchen table, is exactly this kind of practice. So, too, is regular reading at home, which builds vocabulary in a way that no amount of classroom instruction can match. There is simply not enough time in the school day for all the practice that real learning requires.',
+    'The trouble is that much of the homework actually set has little to do with practice of this kind. Elaborate projects, such as building a model volcano or designing a poster, often reveal more about the craft skills and free time of parents than about the understanding of their children. Worksheets that are collected but never returned teach pupils that the work does not matter, and tasks that can be completed by copying from the internet teach nothing at all. Worse, homework of this kind widens the gap between advantaged and disadvantaged pupils. A child with a quiet room, a reliable computer and an educated parent nearby can finish a project in an evening; a child who shares a small flat with younger siblings may not be able to start it.',
+    'It does not follow, however, that homework should be banned. A ban removes the useful practice along with the useless tasks, and it does nothing to help the disadvantaged pupils who most need extra opportunities to learn. A more sensible response to the problem of inequality is to offer a quiet place to work at school. When one fictional secondary school, Riverside Academy, opened a supervised homework room for an hour after lessons, teachers found that the pupils who used it most were precisely those who had previously handed in the least work.',
+    'What, then, should good homework look like? First, it should be short and regular rather than long and occasional, and it should focus on practising what has already been taught rather than on introducing difficult new material. Second, every task should be marked or discussed in class, so that pupils receive feedback and understand that their effort is taken seriously. Third, the amount should grow gradually with age, from a little reading in the early years to a sensible limit for older teenagers. None of this is revolutionary. But if schools applied these principles consistently, I suspect that the angry arguments about homework would quickly lose much of their heat.',
+  ],
+  glossary: ['disadvantaged: having less money, support or opportunity than other people', 'recall: to bring back into your mind'],
+  ynng: [
+    { statement: 'People on both sides of the homework debate are focusing on the wrong issue.', answer: 'YES', why: '"In my view, both camps are largely asking the wrong question." The writer says WHAT pupils do matters more than how much.', d: 4 },
+    { statement: 'The Marlow review proves that homework causes better results in secondary school.', answer: 'NO', why: 'The writer warns that the simple comparison "is bound to exaggerate what homework itself achieves", because motivated students do more homework anyway. So it does not prove cause.' },
+    { statement: 'Older students ought to do more than two hours of homework every night.', answer: 'NO', why: 'The benefit "levelled off at around two hours a night and almost disappeared beyond that", and the writer wants homework "short and regular". The trap: "two hours" appears in the passage, but as a limit, not a target.' },
+    { statement: 'Most parents are able to help their children with mathematics homework.', answer: 'NOT GIVEN', why: 'The writer mentions "an educated parent nearby" as an advantage for some children, but never says how many parents can help, or mentions mathematics.' },
+    { statement: 'Large creative projects often show what parents can do rather than what pupils have learnt.', answer: 'YES', why: 'Such projects "often reveal more about the craft skills and free time of parents than about the understanding of their children".' },
+    { statement: 'Teachers generally prefer setting projects to setting short quizzes.', answer: 'NOT GIVEN', why: 'The writer compares the VALUE of projects and quizzes, but says nothing about which ones teachers prefer to set.', d: 5 },
+  ],
+  mc: [
+    {
+      question: 'What is the writer’s main criticism of the evidence in paragraph B?',
+      answer: 'It may make homework seem more effective than it really is.',
+      wrong: ['It shows that homework is of no use to secondary students.', 'It is based on too few studies to be reliable.', 'It suggests that primary pupils benefit most from homework.'],
+      why: 'Because motivated students do more homework anyway, the comparison "is bound to exaggerate what homework itself achieves". The review combined "more than sixty studies", and the link was weakest for primary pupils.',
+    },
+    {
+      question: 'What is the writer’s view of banning homework?',
+      answer: 'It would remove helpful practice and fail the pupils most in need.',
+      wrong: ['It is the best way to reduce the gap between rich and poor pupils.', 'It should be introduced for primary pupils but not older ones.', 'It is acceptable as long as schools open homework rooms.'],
+      why: '"A ban removes the useful practice along with the useless tasks, and it does nothing to help the disadvantaged pupils". The homework room is offered as an ALTERNATIVE to a ban, not something to go with it.',
+      d: 4,
+    },
+  ],
+  chooseTwo: [
+    {
+      question: 'Which TWO types of homework does the writer regard as useful?',
+      answers: ['short tests on material studied earlier', 'reading regularly at home'],
+      wrong: ['building models or designing posters', 'worksheets that the teacher collects', 'research using information found online', 'learning difficult new topics before the lesson'],
+      why: '"A short quiz on last week’s topic… is exactly this kind of practice. So, too, is regular reading at home". Projects, unreturned worksheets and copying from the internet are criticised, and the writer wants practice of what "has already been taught", not new material.',
+    },
+  ],
+  completion: [
+    {
+      kind: 'summary',
+      title: 'The writer’s recommendations',
+      limit: 1,
+      gaps: [
+        { text: 'Good homework should be brief and ___, and should practise what pupils have already been taught.', answer: 'regular', why: '"it should be short and regular rather than long and occasional". "Short" is already in the summary as "brief".' },
+        { text: 'Each task should be marked or ___ in class so that pupils get feedback.', answer: 'discussed', why: '"every task should be marked or discussed in class, so that pupils receive feedback".' },
+        { text: 'The quantity of homework should increase step by step with ___.', answer: 'age', why: '"the amount should grow gradually with age". "Feedback" or "effort" do not fit: the amount depends on how old the pupils are.', d: 4 },
+      ],
+    },
+  ],
+};
+
+export const passagesA: IeltsPassage[] = [TIMEKEEPING, BEES, HEAT_ISLANDS, HABITS, CONTAINERS, HOMEWORK];
